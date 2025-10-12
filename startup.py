@@ -579,6 +579,32 @@ def setup_llm():
     return True
 
 
+def cleanup_llm_server_on_exit():
+    """Stop any running LLM server when Django exits."""
+    pid_file = PROJECT_ROOT / "llama_server.pid"
+
+    if pid_file.exists():
+        try:
+            with open(pid_file, 'r') as f:
+                pid = int(f.read().strip())
+
+            print_status(f"Stopping LLM server (PID: {pid})...")
+
+            if sys.platform == "win32":
+                subprocess.run(['taskkill', '/F', '/PID', str(pid)],
+                             capture_output=True, check=False)
+            else:
+                try:
+                    os.kill(pid, signal.SIGTERM)
+                except ProcessLookupError:
+                    pass
+
+            pid_file.unlink()
+            print_status("LLM server stopped.")
+        except Exception as e:
+            print_status(f"Error stopping LLM server: {e}")
+
+
 def start_django():
     """Start the Django development server."""
     print_status("Starting Django development server...")
@@ -588,6 +614,19 @@ def start_django():
         print_status("manage.py not found. Please create a Django project first.")
         return False
 
+    # Register cleanup handler
+    atexit.register(cleanup_llm_server_on_exit)
+
+    # Also handle Ctrl+C gracefully
+    def signal_handler(sig, frame):
+        print_status("\nShutting down...")
+        cleanup_llm_server_on_exit()
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
+    if sys.platform != "win32":
+        signal.signal(signal.SIGTERM, signal_handler)
+
     try:
         # Use the venv Python to run Django
         subprocess.run([str(VENV_PYTHON), str(manage_py), "runserver"], check=True)
@@ -596,6 +635,7 @@ def start_django():
         return False
     except KeyboardInterrupt:
         print_status("Server stopped by user.")
+        cleanup_llm_server_on_exit()
 
     return True
 
@@ -622,7 +662,7 @@ def main():
         print_status("Migration failed. Exiting.")
         sys.exit(1)
 
-    # Step 4: Setup LLM infrastructure
+    # Step 4: Setup LLM infrastructure (download only, don't start server)
     setup_llm()  # Don't exit on failure, just continue without LLM
 
     # Step 5: Start Django
