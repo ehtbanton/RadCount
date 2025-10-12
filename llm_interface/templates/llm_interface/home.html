@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RadCount - Local LLM Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border-left: 4px solid #667eea;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.online {
+            background: #10b981;
+        }
+
+        .status-dot.offline {
+            background: #ef4444;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .model-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .model-dropdown {
+            padding: 8px 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 0.95em;
+            background: white;
+            cursor: pointer;
+            min-width: 200px;
+        }
+
+        .control-panel {
+            margin-bottom: 25px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .server-toggle-btn {
+            padding: 12px;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s, background 0.3s;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .server-toggle-btn.loading {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+
+        .server-toggle-btn.stop {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        .server-toggle-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+        }
+
+        .server-toggle-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .generate-btn {
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .generate-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .generate-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .response-area {
+            margin-top: 25px;
+        }
+
+        .response-label {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .response-box {
+            width: 100%;
+            min-height: 250px;
+            padding: 20px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.95em;
+            line-height: 1.6;
+            background: #f9fafb;
+            color: #1f2937;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .response-box.loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #9ca3af;
+        }
+
+        .spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-right: 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            color: #ef4444;
+            background: #fee2e2;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>RadCount</h1>
+            <p>Local LLM Vision Interface</p>
+        </div>
+
+        <div class="content">
+            <div class="status-bar">
+                <div class="status-indicator">
+                    <span class="status-dot {% if server_running %}online{% else %}offline{% endif %}" id="status-dot"></span>
+                    <span id="status-text"><strong>Server Status:</strong> {% if server_running %}Online{% else %}Offline{% endif %}</span>
+                </div>
+                <div class="model-info">
+                    <label for="model-select"><strong>Model:</strong></label>
+                    <select id="model-select" class="model-dropdown">
+                        {% if available_models %}
+                            {% for model in available_models %}
+                                <option value="{{ model.filename }}" {% if current_model == model.filename %}selected{% endif %}>{{ model.filename }} ({{ model.size_mb|floatformat:1 }} MB)</option>
+                            {% endfor %}
+                        {% else %}
+                            <option value="">No models found</option>
+                        {% endif %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="control-panel">
+                <button id="server-toggle-btn" class="server-toggle-btn" {% if not available_models %}disabled{% endif %}>
+                    {% if server_running %}Stop LLM Server{% else %}Start LLM Server{% endif %}
+                </button>
+                <button id="generate-btn" class="generate-btn" {% if not server_running %}disabled{% endif %}>
+                    Generate Response
+                </button>
+            </div>
+
+            <div class="response-area">
+                <div class="response-label">Response:</div>
+                <div id="response-box" class="response-box"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const serverToggleBtn = document.getElementById('server-toggle-btn');
+        const generateBtn = document.getElementById('generate-btn');
+        const modelSelect = document.getElementById('model-select');
+        const responseBox = document.getElementById('response-box');
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+
+        let statusCheckInterval = null;
+        let isLoading = false;
+        let isStopping = false;
+        let currentServerState = {{ server_running|lower }};
+
+        function updateServerStatus(isRunning, currentModel = null) {
+            currentServerState = isRunning;
+
+            if (isRunning) {
+                statusDot.className = 'status-dot online';
+                statusText.innerHTML = '<strong>Server Status:</strong> Online';
+                serverToggleBtn.textContent = 'Stop LLM Server';
+                serverToggleBtn.className = 'server-toggle-btn stop';
+                serverToggleBtn.disabled = false;
+                generateBtn.disabled = false;
+
+                // Update dropdown if we have current model info
+                if (currentModel) {
+                    modelSelect.value = currentModel;
+                }
+            } else {
+                statusDot.className = 'status-dot offline';
+                statusText.innerHTML = '<strong>Server Status:</strong> Offline';
+                serverToggleBtn.textContent = 'Start LLM Server';
+                serverToggleBtn.className = 'server-toggle-btn';
+                serverToggleBtn.disabled = false;
+                generateBtn.disabled = true;
+            }
+
+            // If loading, override the button state
+            if (isStopping) {
+                serverToggleBtn.textContent = 'Stopping server...';
+                serverToggleBtn.className = 'server-toggle-btn loading';
+                serverToggleBtn.disabled = true;
+            } else if (isLoading) {
+                serverToggleBtn.textContent = 'Loading server...';
+                serverToggleBtn.className = 'server-toggle-btn loading';
+                serverToggleBtn.disabled = true;
+            }
+        }
+
+        async function checkServerStatus() {
+            try {
+                const response = await fetch('/llm/status/', {
+                    method: 'GET',
+                });
+                const data = await response.json();
+                updateServerStatus(data.server_running, data.current_model);
+            } catch (error) {
+                // If fetch fails, assume server is offline
+                updateServerStatus(false);
+            }
+        }
+
+        // Check status every second
+        function startStatusChecking() {
+            if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
+            }
+            statusCheckInterval = setInterval(checkServerStatus, 1000);
+        }
+
+        // Initial check
+        checkServerStatus();
+        // Start periodic checking
+        startStatusChecking();
+
+        // Unified server toggle button
+        serverToggleBtn.addEventListener('click', async () => {
+            // Check current state to decide whether to start or stop
+            if (currentServerState) {
+                // Stop server
+                isStopping = true;
+                updateServerStatus(currentServerState);
+
+                try {
+                    const response = await fetch('/llm/stop/', {
+                        method: 'POST',
+                    });
+
+                    const data = await response.json();
+
+                    if (!data.success) {
+                        // Only show errors
+                        responseBox.innerHTML = `<div class="error">${data.error}</div>`;
+                    }
+                } catch (error) {
+                    responseBox.innerHTML = `<div class="error">Failed to stop server: ${error.message}</div>`;
+                } finally {
+                    isStopping = false;
+                }
+            } else {
+                // Start server
+                const selectedModel = modelSelect.value;
+                if (!selectedModel) {
+                    return;
+                }
+
+                isLoading = true;
+                updateServerStatus(currentServerState);
+
+                try {
+                    const response = await fetch('/llm/start/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            model: selectedModel
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        // Poll for server to be ready
+                        let attempts = 0;
+                        const maxAttempts = 15;
+                        const checkReady = setInterval(async () => {
+                            attempts++;
+                            try {
+                                const statusResp = await fetch('/llm/status/');
+                                const statusData = await statusResp.json();
+                                if (statusData.server_running) {
+                                    clearInterval(checkReady);
+                                    isLoading = false;
+                                }
+                            } catch (e) {
+                                // Ignore errors during startup
+                            }
+
+                            if (attempts >= maxAttempts) {
+                                clearInterval(checkReady);
+                                isLoading = false;
+                            }
+                        }, 1000);
+                    } else {
+                        responseBox.innerHTML = `<div class="error">${data.error}</div>`;
+                        isLoading = false;
+                    }
+                } catch (error) {
+                    responseBox.innerHTML = `<div class="error">Failed to start server: ${error.message}</div>`;
+                    isLoading = false;
+                }
+            }
+        });
+
+        generateBtn.addEventListener('click', async () => {
+            // Disable button during generation
+            generateBtn.disabled = true;
+            generateBtn.textContent = 'Generating...';
+
+            try {
+                const response = await fetch('/llm/generate/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        temperature: 0.7,
+                        max_tokens: 512
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    responseBox.className = 'response-box';
+                    responseBox.textContent = data.response;
+                } else {
+                    responseBox.className = 'response-box';
+                    responseBox.innerHTML = `<div class="error">${data.error}</div>`;
+                }
+            } catch (error) {
+                responseBox.className = 'response-box';
+                responseBox.innerHTML = `<div class="error">Failed to connect to server: ${error.message}</div>`;
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.textContent = 'Generate Response';
+            }
+        });
+
+        // Model switching - restart server with new model
+        modelSelect.addEventListener('change', async () => {
+            // Only restart if server is currently running
+            if (!currentServerState) {
+                return;
+            }
+
+            const selectedModel = modelSelect.value;
+            if (!selectedModel) {
+                return;
+            }
+
+            // Stop the current server
+            isStopping = true;
+            updateServerStatus(currentServerState);
+
+            try {
+                // Stop the server
+                const stopResponse = await fetch('/llm/stop/', {
+                    method: 'POST',
+                });
+
+                const stopData = await stopResponse.json();
+
+                if (!stopData.success) {
+                    responseBox.innerHTML = `<div class="error">Failed to stop server: ${stopData.error}</div>`;
+                    isStopping = false;
+                    return;
+                }
+
+                // Wait a moment for server to fully stop
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                isStopping = false;
+                isLoading = true;
+                updateServerStatus(false);
+
+                // Start server with new model
+                const startResponse = await fetch('/llm/start/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        model: selectedModel
+                    })
+                });
+
+                const startData = await startResponse.json();
+
+                if (startData.success) {
+                    // Poll for server to be ready
+                    let attempts = 0;
+                    const maxAttempts = 15;
+                    const checkReady = setInterval(async () => {
+                        attempts++;
+                        try {
+                            const statusResp = await fetch('/llm/status/');
+                            const statusData = await statusResp.json();
+                            if (statusData.server_running) {
+                                clearInterval(checkReady);
+                                isLoading = false;
+                            }
+                        } catch (e) {
+                            // Ignore errors during startup
+                        }
+
+                        if (attempts >= maxAttempts) {
+                            clearInterval(checkReady);
+                            isLoading = false;
+                        }
+                    }, 1000);
+                } else {
+                    responseBox.innerHTML = `<div class="error">Failed to start server: ${startData.error}</div>`;
+                    isLoading = false;
+                }
+            } catch (error) {
+                responseBox.innerHTML = `<div class="error">Failed to restart server: ${error.message}</div>`;
+                isStopping = false;
+                isLoading = false;
+            }
+        });
+    </script>
+</body>
+</html>
