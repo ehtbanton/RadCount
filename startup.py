@@ -2,16 +2,30 @@
 """
 Startup script that automatically manages virtual environment and dependencies.
 Checks requirements.txt and installs/removes packages as needed before starting Django.
+Also manages llama.cpp installation and LLM server startup.
 """
 import os
 import sys
 import subprocess
+import platform
+import zipfile
+import shutil
+import time
+import signal
+import atexit
 from pathlib import Path
+from urllib.request import urlretrieve
 
 # Get the project root directory
 PROJECT_ROOT = Path(__file__).parent.resolve()
 VENV_DIR = PROJECT_ROOT / "venv"
 REQUIREMENTS_FILE = PROJECT_ROOT / "requirements.txt"
+LLAMA_CPP_DIR = PROJECT_ROOT / "llama_cpp"
+MODELS_DIR = PROJECT_ROOT / "models"
+CONTEXT_DIR = PROJECT_ROOT / "Context"
+
+# Global variable to track llama.cpp server process
+llama_server_process = None
 
 # Platform-specific venv paths
 if sys.platform == "win32":
@@ -206,6 +220,365 @@ def run_migrations():
         return False
 
 
+def detect_gpu():
+    """Detect available GPU hardware."""
+    print_status("Detecting GPU hardware...")
+
+    # Check for NVIDIA GPU
+    try:
+        result = subprocess.run(
+            ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            gpu_name = result.stdout.strip().split('\n')[0]
+            print_status(f"NVIDIA GPU detected: {gpu_name}")
+            return "cuda"
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+
+    # Check for AMD GPU (basic check)
+    if platform.system() == "Linux":
+        try:
+            result = subprocess.run(
+                ["lspci"], capture_output=True, text=True, timeout=5
+            )
+            if "AMD" in result.stdout and "VGA" in result.stdout:
+                print_status("AMD GPU detected")
+                return "rocm"
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            pass
+
+    # Check for Apple Silicon
+    if platform.system() == "Darwin" and platform.machine() == "arm64":
+        print_status("Apple Silicon detected")
+        return "metal"
+
+    print_status("No GPU detected, using CPU")
+    return "cpu"
+
+
+def check_llama_cpp_installed():
+    """Check if llama.cpp is already installed."""
+    if not LLAMA_CPP_DIR.exists():
+        return False
+
+    # Check for server executable
+    if sys.platform == "win32":
+        server_exe = LLAMA_CPP_DIR / "llama-server.exe"
+    else:
+        server_exe = LLAMA_CPP_DIR / "llama-server"
+
+    return server_exe.exists()
+
+
+def download_llama_cpp(gpu_type):
+    """Download and install llama.cpp for the detected GPU type."""
+    print_status(f"Downloading llama.cpp ({gpu_type} build)...")
+
+    LLAMA_CPP_DIR.mkdir(exist_ok=True)
+
+    # Determine download URL based on platform and GPU
+    # Using pre-built releases from llama.cpp GitHub (latest release: b6736)
+    base_url = "https://github.com/ggml-org/llama.cpp/releases/download/b6736"
+
+    system = platform.system()
+
+    if system == "Windows":
+        if gpu_type == "cuda":
+            filename = "llama-b6736-bin-win-cuda-12.4-x64.zip"
+        else:
+            filename = "llama-b6736-bin-win-avx2-x64.zip"
+    elif system == "Linux":
+        if gpu_type == "cuda":
+            filename = "llama-b6736-bin-ubuntu-x64-cuda-cu12.4.1.zip"
+        else:
+            filename = "llama-b6736-bin-ubuntu-x64.zip"
+    elif system == "Darwin":
+        if platform.machine() == "arm64":
+            filename = "llama-b6736-bin-macos-arm64.zip"
+        else:
+            filename = "llama-b6736-bin-macos-x64.zip"
+    else:
+        print_status(f"Unsupported platform: {system}")
+        return False
+
+    download_url = f"{base_url}/{filename}"
+    zip_path = LLAMA_CPP_DIR / filename
+
+    try:
+        print_status(f"Downloading from {download_url}...")
+        print_status("This may take a few minutes depending on your connection...")
+        urlretrieve(download_url, zip_path)
+
+        print_status("Extracting llama.cpp...")
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(LLAMA_CPP_DIR)
+
+        # Clean up zip file
+        zip_path.unlink()
+
+        # Make executables executable on Unix-like systems
+        if system != "Windows":
+            for exe in LLAMA_CPP_DIR.glob("**/*"):
+                if exe.is_file() and not exe.suffix:
+                    os.chmod(exe, 0o755)
+
+        print_status("llama.cpp installed successfully")
+        return True
+
+    except Exception as e:
+        print_status(f"Failed to download llama.cpp: {e}")
+        return False
+
+
+def check_model_downloaded():
+    """Check if a vision model is already downloaded."""
+    if not MODELS_DIR.exists():
+        return False
+
+    # Check for any .gguf file
+    gguf_files = list(MODELS_DIR.glob("*.gguf"))
+    if gguf_files:
+        print_status(f"Found model: {gguf_files[0].name}")
+        return True
+
+    return False
+
+
+def download_progress_hook(block_num, block_size, total_size):
+    """Progress callback for urlretrieve."""
+    if total_size > 0:
+        downloaded = block_num * block_size
+        percent = min(100, (downloaded / total_size) * 100)
+        if block_num % 50 == 0 or downloaded >= total_size:  # Update every 50 blocks to avoid spam
+            # Use carriage return to overwrite the same line
+            print(f"\r[STARTUP] Download progress: {percent:.1f}% ({downloaded / 1024 / 1024:.1f} MB / {total_size / 1024 / 1024:.1f} MB)", end='', flush=True)
+            # Print newline when complete
+            if downloaded >= total_size:
+                print()
+
+
+def download_vision_model():
+    """Download a small quantized vision model."""
+    print_status("Downloading vision model (this may take several minutes)...")
+
+    MODELS_DIR.mkdir(exist_ok=True)
+
+    # Try multiple model sources in order of preference
+    model_options = [
+        # Option 1: LLaVA 1.5 7B Q4 (~4GB, most reliable)
+        {
+            "url": "https://huggingface.co/mys/ggml_llava-v1.5-7b/resolve/main/ggml-model-q4_k.gguf",
+            "filename": "llava-v1.5-7b-Q4_K.gguf",
+            "mmproj_url": "https://huggingface.co/mys/ggml_llava-v1.5-7b/resolve/main/mmproj-model-f16.gguf",
+            "mmproj_filename": "mmproj-llava-v1.5-f16.gguf"
+        },
+        # Option 2: Smaller alternative
+        {
+            "url": "https://huggingface.co/cjpais/llava-1.6-mistral-7b-gguf/resolve/main/llava-v1.6-mistral-7b.Q4_K_M.gguf",
+            "filename": "llava-v1.6-mistral-7b-Q4_K_M.gguf",
+            "mmproj_url": "https://huggingface.co/cjpais/llava-1.6-mistral-7b-gguf/resolve/main/mmproj-model-f16.gguf",
+            "mmproj_filename": "mmproj-llava-v1.6-f16.gguf"
+        }
+    ]
+
+    for i, model_option in enumerate(model_options, 1):
+        print_status(f"Trying model option {i}/{len(model_options)}...")
+
+        model_path = MODELS_DIR / model_option["filename"]
+        mmproj_path = MODELS_DIR / model_option["mmproj_filename"]
+
+        try:
+            # Download main model
+            print_status(f"Downloading {model_option['filename']}...")
+            urlretrieve(model_option["url"], model_path, reporthook=download_progress_hook)
+            print_status("Model downloaded successfully")
+
+            # Download mmproj (multimodal projector) if specified
+            if "mmproj_url" in model_option:
+                print_status(f"Downloading vision projector {model_option['mmproj_filename']}...")
+                urlretrieve(model_option["mmproj_url"], mmproj_path, reporthook=download_progress_hook)
+                print_status("Vision projector downloaded successfully")
+
+            return True
+
+        except Exception as e:
+            print_status(f"Failed to download model option {i}: {e}")
+            # Clean up partial downloads
+            if model_path.exists():
+                model_path.unlink()
+            if mmproj_path.exists():
+                mmproj_path.unlink()
+
+            if i < len(model_options):
+                print_status("Trying next model option...")
+            else:
+                print_status("All model download attempts failed.")
+                print_status("You can manually download a vision model (.gguf) to the 'models' folder")
+                print_status("Recommended: Any LLaVA model from https://huggingface.co/")
+                return False
+
+    return False
+
+
+def get_model_path():
+    """Get the path to the downloaded model."""
+    if not MODELS_DIR.exists():
+        return None
+
+    gguf_files = list(MODELS_DIR.glob("*.gguf"))
+    if gguf_files:
+        return gguf_files[0]
+
+    return None
+
+
+def cleanup_llama_server():
+    """Cleanup function to stop llama.cpp server on exit."""
+    # Note: Server is now managed by the web interface, not by startup.py
+    # This function is kept for backward compatibility but does nothing
+    pass
+
+
+def get_mmproj_path():
+    """Get the path to the multimodal projector file."""
+    if not MODELS_DIR.exists():
+        return None
+
+    mmproj_files = list(MODELS_DIR.glob("mmproj*.gguf"))
+    if mmproj_files:
+        return mmproj_files[0]
+
+    return None
+
+
+def start_llama_server(gpu_type):
+    """Start the llama.cpp server in the background."""
+    global llama_server_process
+
+    print_status("Starting llama.cpp server...")
+
+    # Get server executable path
+    if sys.platform == "win32":
+        server_exe = LLAMA_CPP_DIR / "llama-server.exe"
+        # Also check in build/bin for newer versions
+        if not server_exe.exists():
+            server_exe = LLAMA_CPP_DIR / "build" / "bin" / "llama-server.exe"
+        if not server_exe.exists():
+            # Check for the files extracted directly
+            for potential_exe in LLAMA_CPP_DIR.rglob("llama-server.exe"):
+                server_exe = potential_exe
+                break
+    else:
+        server_exe = LLAMA_CPP_DIR / "llama-server"
+        if not server_exe.exists():
+            server_exe = LLAMA_CPP_DIR / "build" / "bin" / "llama-server"
+        if not server_exe.exists():
+            for potential_exe in LLAMA_CPP_DIR.rglob("llama-server"):
+                server_exe = potential_exe
+                break
+
+    if not server_exe.exists():
+        print_status(f"llama-server executable not found at {server_exe}")
+        print_status("Server will not be started. Please check llama.cpp installation.")
+        return False
+
+    model_path = get_model_path()
+    if not model_path:
+        print_status("No model found. Server cannot start.")
+        return False
+
+    # Build command
+    cmd = [
+        str(server_exe),
+        "-m", str(model_path),
+        "--host", "127.0.0.1",
+        "--port", "8080",
+        "-c", "4096",  # context size
+        "--n-gpu-layers", "33" if gpu_type in ["cuda", "metal"] else "0",
+    ]
+
+    # Add mmproj for vision support
+    mmproj_path = get_mmproj_path()
+    if mmproj_path:
+        cmd.extend(["--mmproj", str(mmproj_path)])
+        print_status(f"Vision support enabled with {mmproj_path.name}")
+
+    try:
+        # Start server as background process
+        print_status(f"Starting server with model: {model_path.name}")
+        llama_server_process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=str(LLAMA_CPP_DIR)
+        )
+
+        # Register cleanup
+        atexit.register(cleanup_llama_server)
+
+        # Wait a bit to see if it starts successfully
+        time.sleep(5)  # Increased wait time for vision models
+
+        if llama_server_process.poll() is None:
+            print_status("llama.cpp server started successfully on http://127.0.0.1:8080")
+            return True
+        else:
+            print_status("llama.cpp server failed to start")
+            # Try to get error output
+            try:
+                stderr = llama_server_process.stderr.read().decode('utf-8', errors='ignore')
+                if stderr:
+                    print_status(f"Server error: {stderr[:500]}")
+            except:
+                pass
+            return False
+
+    except Exception as e:
+        print_status(f"Failed to start llama.cpp server: {e}")
+        return False
+
+
+def setup_llm():
+    """Setup LLM infrastructure (llama.cpp and model)."""
+    print_status("Setting up LLM infrastructure...")
+
+    # Create Context directory if it doesn't exist
+    if not CONTEXT_DIR.exists():
+        CONTEXT_DIR.mkdir(exist_ok=True)
+        print_status("Created Context directory")
+
+    # Detect GPU
+    gpu_type = detect_gpu()
+
+    # Check/install llama.cpp
+    if not check_llama_cpp_installed():
+        print_status("llama.cpp not found, installing...")
+        if not download_llama_cpp(gpu_type):
+            print_status("Failed to install llama.cpp. Continuing without LLM support.")
+            return False
+    else:
+        print_status("llama.cpp already installed")
+
+    # Check/download model
+    if not check_model_downloaded():
+        print_status("Vision model not found, downloading...")
+        if not download_vision_model():
+            print_status("Failed to download model. Continuing without LLM support.")
+            return False
+    else:
+        print_status("Vision model already downloaded")
+
+    # NOTE: Server is NOT started automatically
+    # Users must manually start the server from the web interface
+    print_status("LLM infrastructure ready. Start the server from the web interface.")
+
+    return True
+
+
 def start_django():
     """Start the Django development server."""
     print_status("Starting Django development server...")
@@ -249,7 +622,10 @@ def main():
         print_status("Migration failed. Exiting.")
         sys.exit(1)
 
-    # Step 4: Start Django
+    # Step 4: Setup LLM infrastructure
+    setup_llm()  # Don't exit on failure, just continue without LLM
+
+    # Step 5: Start Django
     print_status("Setup complete!")
     start_django()
 
