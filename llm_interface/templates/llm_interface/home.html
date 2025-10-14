@@ -394,6 +394,7 @@
                                 if (statusData.server_running) {
                                     clearInterval(checkReady);
                                     isLoading = false;
+                                    updateServerStatus(true, statusData.current_model);
                                 }
                             } catch (e) {
                                 // Ignore errors during startup
@@ -402,6 +403,7 @@
                             if (attempts >= maxAttempts) {
                                 clearInterval(checkReady);
                                 isLoading = false;
+                                updateServerStatus(false);
                             }
                         }, 1000);
                     } else {
@@ -512,6 +514,7 @@
                             if (statusData.server_running) {
                                 clearInterval(checkReady);
                                 isLoading = false;
+                                updateServerStatus(true, statusData.current_model);
                             }
                         } catch (e) {
                             // Ignore errors during startup
@@ -520,6 +523,7 @@
                         if (attempts >= maxAttempts) {
                             clearInterval(checkReady);
                             isLoading = false;
+                            updateServerStatus(false);
                         }
                     }, 1000);
                 } else {
