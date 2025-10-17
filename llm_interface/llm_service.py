@@ -48,6 +48,54 @@ class LlamaService:
         except requests.exceptions.RequestException:
             return None
 
+    def get_context_files_info(self) -> Dict[str, List]:
+        """
+        Get information about context files without loading full content.
+        Returns dict with lists of file info for display purposes.
+        """
+        context = {
+            'system_files': [],
+            'user_files': [],
+            'image_files': []
+        }
+
+        if not self.context_dir.exists():
+            return context
+
+        for file_path in self.context_dir.iterdir():
+            if file_path.is_file():
+                filename = file_path.name
+                file_size = file_path.stat().st_size
+
+                # Handle text files
+                if filename.endswith('.txt'):
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        content = f.read().strip()
+
+                    preview = content[:200] + '...' if len(content) > 200 else content
+
+                    file_info = {
+                        'filename': filename,
+                        'size': file_size,
+                        'content': content,
+                        'preview': preview
+                    }
+
+                    if filename.startswith('sys-'):
+                        context['system_files'].append(file_info)
+                    else:
+                        context['user_files'].append(file_info)
+
+                # Handle image files
+                elif filename.endswith(('.jpg', '.jpeg', '.png')):
+                    context['image_files'].append({
+                        'filename': filename,
+                        'size': file_size,
+                        'path': str(file_path)
+                    })
+
+        return context
+
     def load_context_files(self) -> Dict[str, List]:
         """
         Load all context files from Context folder.

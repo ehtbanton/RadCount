@@ -215,6 +215,117 @@
             border-radius: 8px;
             border-left: 4px solid #ef4444;
         }
+
+        .context-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #10b981;
+        }
+
+        .context-section h2 {
+            font-size: 1.2em;
+            color: #374151;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .context-badge {
+            background: #10b981;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .context-files-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .context-file {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+            transition: box-shadow 0.2s;
+        }
+
+        .context-file:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .file-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: #1f2937;
+            font-size: 0.95em;
+        }
+
+        .file-type-badge {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .file-type-badge.system {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .file-type-badge.user {
+            background: #e0e7ff;
+            color: #5b21b6;
+        }
+
+        .file-type-badge.image {
+            background: #fce7f3;
+            color: #9f1239;
+        }
+
+        .file-content {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.85em;
+            color: #4b5563;
+            background: #f9fafb;
+            padding: 10px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .file-size {
+            font-size: 0.8em;
+            color: #6b7280;
+        }
+
+        .no-context {
+            text-align: center;
+            padding: 30px;
+            color: #9ca3af;
+            font-style: italic;
+        }
+
+        .image-preview {
+            margin-top: 10px;
+            max-width: 200px;
+            border-radius: 4px;
+            border: 1px solid #e5e7eb;
+        }
     </style>
 </head>
 <body>
@@ -251,6 +362,55 @@
                 <button id="generate-btn" class="generate-btn" {% if not server_running %}disabled{% endif %}>
                     Generate Response
                 </button>
+            </div>
+
+            <div class="context-section">
+                <h2>
+                    Context Files
+                    <span class="context-badge">
+                        {{ context_files.system_files|length|add:context_files.user_files|length|add:context_files.image_files|length }} file(s)
+                    </span>
+                </h2>
+
+                {% if context_files.system_files or context_files.user_files or context_files.image_files %}
+                    <div class="context-files-grid">
+                        {% for file in context_files.system_files %}
+                            <div class="context-file">
+                                <div class="file-header">
+                                    <span class="file-name">{{ file.filename }}</span>
+                                    <span class="file-type-badge system">System</span>
+                                </div>
+                                <div class="file-content">{{ file.preview }}</div>
+                                <div class="file-size">{{ file.size }} bytes</div>
+                            </div>
+                        {% endfor %}
+
+                        {% for file in context_files.user_files %}
+                            <div class="context-file">
+                                <div class="file-header">
+                                    <span class="file-name">{{ file.filename }}</span>
+                                    <span class="file-type-badge user">User</span>
+                                </div>
+                                <div class="file-content">{{ file.preview }}</div>
+                                <div class="file-size">{{ file.size }} bytes</div>
+                            </div>
+                        {% endfor %}
+
+                        {% for file in context_files.image_files %}
+                            <div class="context-file">
+                                <div class="file-header">
+                                    <span class="file-name">{{ file.filename }}</span>
+                                    <span class="file-type-badge image">Image</span>
+                                </div>
+                                <div class="file-size">{{ file.size }} bytes</div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="no-context">
+                        No context files found. Add .txt or image files to the Context/ folder.
+                    </div>
+                {% endif %}
             </div>
 
             <div class="response-area">

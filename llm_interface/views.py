@@ -39,19 +39,29 @@ def detect_gpu():
 
 
 def get_available_models():
-    """Get list of available models in the models directory."""
-    if not MODELS_DIR.exists():
-        return []
-
+    """Get list of available models from both the models directory and F:/_llm_models/."""
     models = []
-    for model_file in MODELS_DIR.glob("*.gguf"):
-        # Skip mmproj files
-        if not model_file.name.startswith("mmproj"):
-            models.append({
-                'filename': model_file.name,
-                'path': str(model_file),
-                'size_mb': model_file.stat().st_size / 1024 / 1024
-            })
+
+    # Define directories to search
+    search_dirs = [MODELS_DIR]
+    external_models_dir = Path("F:/_llm_models")
+    if external_models_dir.exists():
+        search_dirs.append(external_models_dir)
+
+    # Search all directories
+    for models_dir in search_dirs:
+        if not models_dir.exists():
+            continue
+
+        for model_file in models_dir.glob("*.gguf"):
+            # Skip mmproj files
+            if not model_file.name.startswith("mmproj"):
+                models.append({
+                    'filename': model_file.name,
+                    'path': str(model_file),
+                    'size_mb': model_file.stat().st_size / 1024 / 1024
+                })
+
     return models
 
 
@@ -84,12 +94,14 @@ def clear_current_model():
 def home(request):
     """Render the main LLM interface page."""
     llm_service = LlamaService()
+    context_files = llm_service.get_context_files_info()
 
     context = {
         'server_running': llm_service.is_server_running(),
         'model_info': llm_service.get_model_info(),
         'available_models': get_available_models(),
         'current_model': get_current_model(),
+        'context_files': context_files,
     }
 
     return render(request, 'llm_interface/home.html', context)
@@ -165,13 +177,18 @@ def start_server(request):
                 'error': 'No model specified'
             }, status=400)
 
-        # Find the model file
+        # Find the model file in either directory
         model_path = MODELS_DIR / model_filename
         if not model_path.exists():
-            return JsonResponse({
-                'success': False,
-                'error': f'Model file not found: {model_filename}'
-            }, status=404)
+            # Try external models directory
+            external_model_path = Path("F:/_llm_models") / model_filename
+            if external_model_path.exists():
+                model_path = external_model_path
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Model file not found: {model_filename}'
+                }, status=404)
 
         # Check if server is already running
         llm_service = LlamaService()
