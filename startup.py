@@ -335,15 +335,19 @@ def download_llama_cpp(gpu_type):
 
 
 def check_model_downloaded():
-    """Check if a vision model is already downloaded."""
-    if not MODELS_DIR.exists():
-        return False
+    """Check if a model is already downloaded in either the relative models directory or F:/_llm_models/."""
+    # Define directories to search
+    search_dirs = [MODELS_DIR, Path("F:/_llm_models")]
 
-    # Check for any .gguf file
-    gguf_files = list(MODELS_DIR.glob("*.gguf"))
-    if gguf_files:
-        print_status(f"Found model: {gguf_files[0].name}")
-        return True
+    for models_dir in search_dirs:
+        if not models_dir.exists():
+            continue
+
+        # Check for any .gguf file (excluding mmproj files)
+        gguf_files = [f for f in models_dir.glob("*.gguf") if not f.name.startswith("mmproj")]
+        if gguf_files:
+            print_status(f"Found model: {gguf_files[0].name} in {models_dir}")
+            return True
 
     return False
 
@@ -362,45 +366,76 @@ def download_progress_hook(block_num, block_size, total_size):
 
 
 def download_vision_model():
-    """Download a small quantized vision model."""
-    print_status("Downloading vision model (this may take several minutes)...")
+    """Download a vision-language model."""
+    print_status("Downloading vision-language model (this may take several minutes)...")
 
     MODELS_DIR.mkdir(exist_ok=True)
 
     # Try multiple model sources in order of preference
     model_options = [
-        # Option 1: LLaVA 1.5 7B Q4 (~4GB, most reliable)
+        # Option 1: LLaVA 1.6 Mistral 7B Q4 (~4GB, recent and capable)
+        {
+            "url": "https://huggingface.co/cjpais/llava-1.6-mistral-7b-gguf/resolve/main/llava-v1.6-mistral-7b.Q4_K_M.gguf",
+            "filename": "llava-v1.6-mistral-7b.Q4_K_M.gguf",
+            "mmproj_url": "https://huggingface.co/cjpais/llava-1.6-mistral-7b-gguf/resolve/main/mmproj-model-f16.gguf",
+            "mmproj_filename": "mmproj-llava-v1.6-f16.gguf"
+        },
+        # Option 2: LLaVA 1.5 7B Q4 (~4GB, stable)
         {
             "url": "https://huggingface.co/mys/ggml_llava-v1.5-7b/resolve/main/ggml-model-q4_k.gguf",
             "filename": "llava-v1.5-7b-Q4_K.gguf",
             "mmproj_url": "https://huggingface.co/mys/ggml_llava-v1.5-7b/resolve/main/mmproj-model-f16.gguf",
             "mmproj_filename": "mmproj-llava-v1.5-f16.gguf"
-        },
-        # Option 2: Smaller alternative
-        {
-            "url": "https://huggingface.co/cjpais/llava-1.6-mistral-7b-gguf/resolve/main/llava-v1.6-mistral-7b.Q4_K_M.gguf",
-            "filename": "llava-v1.6-mistral-7b-Q4_K_M.gguf",
-            "mmproj_url": "https://huggingface.co/cjpais/llava-1.6-mistral-7b-gguf/resolve/main/mmproj-model-f16.gguf",
-            "mmproj_filename": "mmproj-llava-v1.6-f16.gguf"
         }
     ]
 
     for i, model_option in enumerate(model_options, 1):
-        print_status(f"Trying model option {i}/{len(model_options)}...")
+        print_status(f"Trying model option {i}/{len(model_options)}: {model_option['filename']}...")
 
         model_path = MODELS_DIR / model_option["filename"]
-        mmproj_path = MODELS_DIR / model_option["mmproj_filename"]
+        mmproj_path = MODELS_DIR / model_option.get("mmproj_filename", "")
 
         try:
             # Download main model
             print_status(f"Downloading {model_option['filename']}...")
-            urlretrieve(model_option["url"], model_path, reporthook=download_progress_hook)
+
+            import requests
+            headers = {'User-Agent': 'Mozilla/5.0'}
+
+            # Download main model
+            response = requests.get(model_option["url"], headers=headers, stream=True, timeout=30)
+            response.raise_for_status()
+
+            total_size = int(response.headers.get('content-length', 0))
+            downloaded = 0
+            block_size = 8192
+
+            with open(model_path, 'wb') as f:
+                for block_num, chunk in enumerate(response.iter_content(chunk_size=block_size)):
+                    if chunk:
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        download_progress_hook(block_num, block_size, total_size)
+
             print_status("Model downloaded successfully")
 
             # Download mmproj (multimodal projector) if specified
-            if "mmproj_url" in model_option:
+            if "mmproj_url" in model_option and model_option["mmproj_url"]:
                 print_status(f"Downloading vision projector {model_option['mmproj_filename']}...")
-                urlretrieve(model_option["mmproj_url"], mmproj_path, reporthook=download_progress_hook)
+
+                response = requests.get(model_option["mmproj_url"], headers=headers, stream=True, timeout=30)
+                response.raise_for_status()
+
+                total_size = int(response.headers.get('content-length', 0))
+                downloaded = 0
+
+                with open(mmproj_path, 'wb') as f:
+                    for block_num, chunk in enumerate(response.iter_content(chunk_size=block_size)):
+                        if chunk:
+                            f.write(chunk)
+                            downloaded += len(chunk)
+                            download_progress_hook(block_num, block_size, total_size)
+
                 print_status("Vision projector downloaded successfully")
 
             return True
@@ -410,15 +445,15 @@ def download_vision_model():
             # Clean up partial downloads
             if model_path.exists():
                 model_path.unlink()
-            if mmproj_path.exists():
+            if mmproj_path and mmproj_path.exists():
                 mmproj_path.unlink()
 
             if i < len(model_options):
                 print_status("Trying next model option...")
             else:
                 print_status("All model download attempts failed.")
-                print_status("You can manually download a vision model (.gguf) to the 'models' folder")
-                print_status("Recommended: Any LLaVA model from https://huggingface.co/")
+                print_status("You can manually download a vision model (.gguf) to the 'models' folder or F:/_llm_models/")
+                print_status("Recommended: LLaVA models from https://huggingface.co/")
                 return False
 
     return False
@@ -565,12 +600,12 @@ def setup_llm():
 
     # Check/download model
     if not check_model_downloaded():
-        print_status("Vision model not found, downloading...")
+        print_status("Model not found, downloading vision-language model...")
         if not download_vision_model():
             print_status("Failed to download model. Continuing without LLM support.")
             return False
     else:
-        print_status("Vision model already downloaded")
+        print_status("Model already downloaded")
 
     # NOTE: Server is NOT started automatically
     # Users must manually start the server from the web interface
