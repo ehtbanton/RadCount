@@ -365,6 +365,160 @@
             background: #6b7280;
         }
 
+        .create-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #333333;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1em;
+            transition: background 0.2s;
+            margin-left: 10px;
+        }
+
+        .create-btn:hover {
+            background: #1f1f1f;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            font-size: 1.5em;
+            color: #1f2937;
+            margin: 0;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 2em;
+            color: #6b7280;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            line-height: 1;
+        }
+
+        .close-modal:hover {
+            color: #1f2937;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        .form-group input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 0.95em;
+            font-family: inherit;
+        }
+
+        .form-group input[type="text"]:focus {
+            outline: none;
+            border-color: #10b981;
+        }
+
+        .form-group textarea {
+            width: 100%;
+            min-height: 300px;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+            line-height: 1.5;
+            resize: vertical;
+        }
+
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #10b981;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .btn-primary {
+            padding: 10px 24px;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: #059669;
+        }
+
+        .btn-secondary {
+            padding: 10px 24px;
+            background: #e5e7eb;
+            color: #374151;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: #d1d5db;
+        }
+
         .no-context {
             text-align: center;
             padding: 30px;
@@ -429,6 +583,9 @@
                     <label for="file-upload" class="upload-label">
                         Upload Context File
                     </label>
+                    <button class="create-btn" id="create-context-btn">
+                        Create Context File
+                    </button>
                     <div class="upload-status" id="upload-status"></div>
                 </div>
 
@@ -478,6 +635,30 @@
                 <div class="response-label">Response:</div>
                 <div id="response-box" class="response-box"></div>
             </div>
+        </div>
+    </div>
+
+    <!-- Create Context File Modal -->
+    <div id="create-context-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create Context File</h3>
+                <button class="close-modal" id="close-modal">&times;</button>
+            </div>
+            <form id="create-context-form">
+                <div class="form-group">
+                    <label for="context-filename">File Name</label>
+                    <input type="text" id="context-filename" name="filename" placeholder="e.g., my-prompt.txt or sys-instructions.txt" required />
+                </div>
+                <div class="form-group">
+                    <label for="context-content">Content</label>
+                    <textarea id="context-content" name="content" placeholder="Enter your context content here..." required></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" id="cancel-create">Cancel</button>
+                    <button type="submit" class="btn-primary">Import Context</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -758,6 +939,87 @@
 
         // Make deleteFile available globally for onclick handlers
         window.deleteFile = deleteFile;
+
+        // Create context file modal handlers
+        const createContextBtn = document.getElementById('create-context-btn');
+        const createContextModal = document.getElementById('create-context-modal');
+        const closeModalBtn = document.getElementById('close-modal');
+        const cancelCreateBtn = document.getElementById('cancel-create');
+        const createContextForm = document.getElementById('create-context-form');
+        const contextFilenameInput = document.getElementById('context-filename');
+        const contextContentInput = document.getElementById('context-content');
+
+        // Open modal
+        createContextBtn.addEventListener('click', () => {
+            createContextModal.classList.add('active');
+            contextFilenameInput.focus();
+        });
+
+        // Close modal
+        function closeModal() {
+            createContextModal.classList.remove('active');
+            createContextForm.reset();
+        }
+
+        closeModalBtn.addEventListener('click', closeModal);
+        cancelCreateBtn.addEventListener('click', closeModal);
+
+        // Close modal when clicking outside
+        createContextModal.addEventListener('click', (e) => {
+            if (e.target === createContextModal) {
+                closeModal();
+            }
+        });
+
+        // Handle form submission
+        createContextForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const filename = contextFilenameInput.value.trim();
+            const content = contextContentInput.value;
+
+            // Validate filename
+            if (!filename.endsWith('.txt')) {
+                alert('Filename must end with .txt');
+                return;
+            }
+
+            // Create a Blob and File object to upload
+            const blob = new Blob([content], { type: 'text/plain' });
+            const file = new File([blob], filename, { type: 'text/plain' });
+
+            // Use FormData to upload
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const submitBtn = createContextForm.querySelector('button[type="submit"]');
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Creating...';
+
+                const response = await fetch('/llm/upload/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Close modal and reload page
+                    closeModal();
+                    location.reload();
+                } else {
+                    alert(`Failed to create file: ${data.error}`);
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Import Context';
+                }
+            } catch (error) {
+                alert(`Failed to create file: ${error.message}`);
+                const submitBtn = createContextForm.querySelector('button[type="submit"]');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Import Context';
+            }
+        });
 
         // Model switching - restart server with new model
         modelSelect.addEventListener('change', async () => {
