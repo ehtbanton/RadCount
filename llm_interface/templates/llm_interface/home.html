@@ -28,7 +28,7 @@
         }
 
         .header {
-            background: #000000;
+            background: #1f2937;
             color: white;
             padding: 30px;
             text-align: center;
@@ -140,7 +140,7 @@
 
         .generate-btn {
             padding: 15px;
-            background: #333333;
+            background: #3b82f6;
             color: white;
             border: none;
             border-radius: 8px;
@@ -152,7 +152,7 @@
 
         .generate-btn:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4);
         }
 
         .generate-btn:disabled {
@@ -177,7 +177,6 @@
             padding: 20px;
             border: 2px solid #e5e7eb;
             border-radius: 8px;
-            font-family: 'Consolas', 'Monaco', monospace;
             font-size: 0.95em;
             line-height: 1.6;
             background: #f9fafb;
@@ -240,6 +239,44 @@
             border-radius: 12px;
             font-size: 0.85em;
             font-weight: 600;
+        }
+
+        .token-info {
+            display: flex;
+            gap: 15px;
+            padding: 12px 20px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+            margin-bottom: 15px;
+            align-items: center;
+            font-size: 0.9em;
+        }
+
+        .token-label {
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .token-count {
+            font-weight: 700;
+            color: #3b82f6;
+            font-size: 1.1em;
+        }
+
+        .token-breakdown {
+            color: #6b7280;
+            font-size: 0.85em;
+        }
+
+        .token-loading {
+            color: #9ca3af;
+            font-style: italic;
+        }
+
+        .token-error {
+            color: #ef4444;
+            font-size: 0.85em;
         }
 
         .context-files-grid {
@@ -338,7 +375,7 @@
         .upload-label {
             display: inline-block;
             padding: 10px 20px;
-            background: #10b981;
+            background: #3b82f6;
             color: white;
             border-radius: 6px;
             cursor: pointer;
@@ -347,7 +384,7 @@
         }
 
         .upload-label:hover {
-            background: #059669;
+            background: #2563eb;
         }
 
         .upload-status {
@@ -368,7 +405,7 @@
         .create-btn {
             display: inline-block;
             padding: 10px 20px;
-            background: #333333;
+            background: #3b82f6;
             color: white;
             border: none;
             border-radius: 6px;
@@ -380,7 +417,7 @@
         }
 
         .create-btn:hover {
-            background: #1f1f1f;
+            background: #2563eb;
         }
 
         .modal {
@@ -472,7 +509,6 @@
             padding: 12px;
             border: 2px solid #e5e7eb;
             border-radius: 6px;
-            font-family: 'Consolas', 'Monaco', monospace;
             font-size: 0.9em;
             line-height: 1.5;
             resize: vertical;
@@ -491,7 +527,7 @@
 
         .btn-primary {
             padding: 10px 24px;
-            background: #10b981;
+            background: #3b82f6;
             color: white;
             border: none;
             border-radius: 6px;
@@ -501,7 +537,7 @@
         }
 
         .btn-primary:hover {
-            background: #059669;
+            background: #2563eb;
         }
 
         .btn-secondary {
@@ -577,6 +613,12 @@
                         {{ total_context_files }} file(s)
                     </span>
                 </h2>
+
+                <div class="token-info" id="token-info">
+                    <span class="token-label">Total Tokens:</span>
+                    <span class="token-count" id="token-count">-</span>
+                    <span class="token-breakdown" id="token-breakdown"></span>
+                </div>
 
                 <div class="upload-section">
                     <input type="file" id="file-upload" accept=".txt,.jpg,.jpeg,.png" />
@@ -671,9 +713,54 @@
         const statusText = document.getElementById('status-text');
 
         let statusCheckInterval = null;
+        let tokenCheckInterval = null;
         let isLoading = false;
         let isStopping = false;
         let currentServerState = {{ server_running|lower }};
+
+        // Token count elements
+        const tokenCountEl = document.getElementById('token-count');
+        const tokenBreakdownEl = document.getElementById('token-breakdown');
+
+        async function updateTokenCount() {
+            try {
+                const response = await fetch('/llm/token-count/', {
+                    method: 'GET',
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+
+                    if (data.success) {
+                        const counts = data.counts;
+                        tokenCountEl.textContent = counts.total_tokens.toLocaleString();
+                        tokenCountEl.className = 'token-count';
+
+                        if (counts.system_tokens > 0 || counts.user_tokens > 0) {
+                            tokenBreakdownEl.textContent = `(System: ${counts.system_tokens.toLocaleString()}, User: ${counts.user_tokens.toLocaleString()})`;
+                        } else {
+                            tokenBreakdownEl.textContent = '';
+                        }
+                    } else {
+                        tokenCountEl.textContent = '-';
+                        tokenCountEl.className = 'token-count token-error';
+                        tokenBreakdownEl.textContent = '';
+                    }
+                } else if (response.status === 503) {
+                    tokenCountEl.textContent = 'Server offline';
+                    tokenCountEl.className = 'token-count token-loading';
+                    tokenBreakdownEl.textContent = '';
+                } else {
+                    tokenCountEl.textContent = 'Error';
+                    tokenCountEl.className = 'token-count token-error';
+                    tokenBreakdownEl.textContent = '';
+                }
+            } catch (error) {
+                tokenCountEl.textContent = 'N/A';
+                tokenCountEl.className = 'token-count token-loading';
+                tokenBreakdownEl.textContent = '';
+            }
+        }
 
         function updateServerStatus(isRunning, currentModel = null) {
             currentServerState = isRunning;
@@ -690,6 +777,12 @@
                 if (currentModel) {
                     modelSelect.value = currentModel;
                 }
+
+                // Start token count updates when server is online
+                if (!tokenCheckInterval) {
+                    updateTokenCount(); // Initial update
+                    tokenCheckInterval = setInterval(updateTokenCount, 5000); // Update every 5 seconds
+                }
             } else {
                 statusDot.className = 'status-dot offline';
                 statusText.innerHTML = '<strong>Server Status:</strong> Offline';
@@ -697,6 +790,15 @@
                 serverToggleBtn.className = 'server-toggle-btn';
                 serverToggleBtn.disabled = false;
                 generateBtn.disabled = true;
+
+                // Stop token count updates when server is offline
+                if (tokenCheckInterval) {
+                    clearInterval(tokenCheckInterval);
+                    tokenCheckInterval = null;
+                }
+                tokenCountEl.textContent = 'Server offline';
+                tokenCountEl.className = 'token-count token-loading';
+                tokenBreakdownEl.textContent = '';
             }
 
             // If loading, override the button state

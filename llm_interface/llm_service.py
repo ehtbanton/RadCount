@@ -96,6 +96,71 @@ class LlamaService:
 
         return context
 
+    def get_token_count(self, text: str) -> int:
+        """
+        Get token count for a given text using llama.cpp tokenization API.
+        Returns 0 if server is not running or if there's an error.
+        """
+        try:
+            response = requests.post(
+                f"{self.base_url}/tokenize",
+                json={"content": text},
+                timeout=5
+            )
+            if response.status_code == 200:
+                result = response.json()
+                return len(result.get('tokens', []))
+            return 0
+        except requests.exceptions.RequestException:
+            return 0
+
+    def get_total_context_token_count(self) -> Dict[str, int]:
+        """
+        Calculate total token count for all context files.
+        Returns dict with token counts per category and total.
+        """
+        counts = {
+            'system_tokens': 0,
+            'user_tokens': 0,
+            'total_tokens': 0,
+            'file_count': 0
+        }
+
+        if not self.context_dir.exists():
+            return counts
+
+        # Collect all text content
+        system_text = []
+        user_text = []
+
+        for file_path in self.context_dir.iterdir():
+            if file_path.is_file() and file_path.name.endswith('.txt'):
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        content = f.read().strip()
+
+                    if file_path.name.startswith('sys-'):
+                        system_text.append(content)
+                    else:
+                        user_text.append(content)
+
+                    counts['file_count'] += 1
+                except Exception:
+                    continue
+
+        # Calculate token counts for combined text
+        if system_text:
+            combined_system = '\n\n'.join(system_text)
+            counts['system_tokens'] = self.get_token_count(combined_system)
+
+        if user_text:
+            combined_user = '\n\n'.join(user_text)
+            counts['user_tokens'] = self.get_token_count(combined_user)
+
+        counts['total_tokens'] = counts['system_tokens'] + counts['user_tokens']
+
+        return counts
+
     def load_context_files(self) -> Dict[str, List]:
         """
         Load all context files from Context folder.

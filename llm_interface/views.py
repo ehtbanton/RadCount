@@ -169,6 +169,30 @@ def status(request):
     })
 
 
+@require_http_methods(["GET"])
+def token_count(request):
+    """Get the total token count for all context files."""
+    llm_service = LlamaService()
+
+    if not llm_service.is_server_running():
+        return JsonResponse({
+            'success': False,
+            'error': 'LLM server is not running. Start the server to calculate tokens.'
+        }, status=503)
+
+    try:
+        counts = llm_service.get_total_context_token_count()
+        return JsonResponse({
+            'success': True,
+            'counts': counts
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to calculate token count: {str(e)}'
+        }, status=500)
+
+
 @csrf_exempt
 @require_http_methods(["POST"])
 def start_server(request):
@@ -374,6 +398,58 @@ def upload_context(request):
         return JsonResponse({
             'success': False,
             'error': f'Failed to upload file: {str(e)}'
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def get_context(request):
+    """Get the content of a context file."""
+    try:
+        filename = request.GET.get('filename')
+
+        if not filename:
+            return JsonResponse({
+                'success': False,
+                'error': 'No filename provided'
+            }, status=400)
+
+        # Security check: ensure filename doesn't contain path traversal
+        if '..' in filename or '/' in filename or '\\' in filename:
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid filename'
+            }, status=400)
+
+        # Only allow .txt files for editing
+        if not filename.endswith('.txt'):
+            return JsonResponse({
+                'success': False,
+                'error': 'Only text files can be edited'
+            }, status=400)
+
+        context_dir = PROJECT_ROOT / "Context"
+        file_path = context_dir / filename
+
+        if not file_path.exists():
+            return JsonResponse({
+                'success': False,
+                'error': f'File {filename} not found'
+            }, status=404)
+
+        # Read file content
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        return JsonResponse({
+            'success': True,
+            'filename': filename,
+            'content': content
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to read file: {str(e)}'
         }, status=500)
 
 
