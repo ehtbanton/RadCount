@@ -101,6 +101,22 @@ def home(request):
                    len(context_files['user_files']) +
                    len(context_files['image_files']))
 
+    # Check if we're editing a file
+    edit_filename = request.GET.get('edit')
+    edit_content = None
+    if edit_filename:
+        # Security check
+        if '..' not in edit_filename and '/' not in edit_filename and '\\' not in edit_filename:
+            if edit_filename.endswith('.txt'):
+                context_dir = PROJECT_ROOT / "Context"
+                file_path = context_dir / edit_filename
+                if file_path.exists():
+                    try:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            edit_content = f.read()
+                    except:
+                        pass
+
     context = {
         'server_running': llm_service.is_server_running(),
         'model_info': llm_service.get_model_info(),
@@ -108,6 +124,8 @@ def home(request):
         'current_model': get_current_model(),
         'context_files': context_files,
         'total_context_files': total_files,
+        'edit_filename': edit_filename,
+        'edit_content': edit_content,
     }
 
     return render(request, 'llm_interface/home.html', context)

@@ -15,6 +15,9 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: #000000;
             min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             padding: 20px;
         }
 
@@ -332,9 +335,17 @@
 
         .file-name {
             font-weight: 600;
-            color: #1f2937;
+            color: #3b82f6;
             font-size: 0.9em;
             flex: 1;
+            text-decoration: none;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .file-name:hover {
+            color: #2563eb;
+            text-decoration: underline;
         }
 
         .file-size {
@@ -637,7 +648,7 @@
                             <div class="context-file">
                                 <div class="file-left">
                                     <span class="file-type-badge system">System</span>
-                                    <span class="file-name">{{ file.filename }}</span>
+                                    <a href="?edit={{ file.filename }}" class="file-name">{{ file.filename }}</a>
                                 </div>
                                 <span class="file-size">{{ file.size }} bytes</span>
                                 <button class="delete-btn" onclick="deleteFile('{{ file.filename }}')">Delete</button>
@@ -648,7 +659,7 @@
                             <div class="context-file">
                                 <div class="file-left">
                                     <span class="file-type-badge user">User</span>
-                                    <span class="file-name">{{ file.filename }}</span>
+                                    <a href="?edit={{ file.filename }}" class="file-name">{{ file.filename }}</a>
                                 </div>
                                 <span class="file-size">{{ file.size }} bytes</span>
                                 <button class="delete-btn" onclick="deleteFile('{{ file.filename }}')">Delete</button>
@@ -690,11 +701,11 @@
             <form id="create-context-form">
                 <div class="form-group">
                     <label for="context-filename">File Name</label>
-                    <input type="text" id="context-filename" name="filename" placeholder="e.g., my-prompt.txt or sys-instructions.txt" required />
+                    <input type="text" id="context-filename" name="filename" placeholder="e.g., my-prompt.txt or sys-instructions.txt" value="{{ edit_filename|default:'' }}" required />
                 </div>
                 <div class="form-group">
                     <label for="context-content">Content</label>
-                    <textarea id="context-content" name="content" placeholder="Enter your context content here..." required></textarea>
+                    <textarea id="context-content" name="content" placeholder="Enter your context content here..." required>{{ edit_content|default:'' }}</textarea>
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn-secondary" id="cancel-create">Cancel</button>
@@ -717,6 +728,13 @@
         let isLoading = false;
         let isStopping = false;
         let currentServerState = {{ server_running|lower }};
+
+        // Auto-open modal if editing
+        {% if edit_filename %}
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('create-context-modal').classList.add('active');
+        });
+        {% endif %}
 
         // Token count elements
         const tokenCountEl = document.getElementById('token-count');
