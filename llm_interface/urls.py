@@ -9,4 +9,6 @@ urlpatterns = [
     path('status/', views.status, name='status'),
     path('start/', views.start_server, name='start_server'),
     path('stop/', views.stop_server, name='stop_server'),
+    path('upload/', views.upload_context, name='upload_context'),
+    path('delete/', views.delete_context, name='delete_context'),
 ]

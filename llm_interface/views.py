@@ -96,12 +96,18 @@ def home(request):
     llm_service = LlamaService()
     context_files = llm_service.get_context_files_info()
 
+    # Calculate total file count
+    total_files = (len(context_files['system_files']) +
+                   len(context_files['user_files']) +
+                   len(context_files['image_files']))
+
     context = {
         'server_running': llm_service.is_server_running(),
         'model_info': llm_service.get_model_info(),
         'available_models': get_available_models(),
         'current_model': get_current_model(),
         'context_files': context_files,
+        'total_context_files': total_files,
     }
 
     return render(request, 'llm_interface/home.html', context)
@@ -322,4 +328,100 @@ def stop_server(request):
         return JsonResponse({
             'success': False,
             'error': f'Failed to stop server: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def upload_context(request):
+    """Upload a context file to the Context directory."""
+    try:
+        if 'file' not in request.FILES:
+            return JsonResponse({
+                'success': False,
+                'error': 'No file provided'
+            }, status=400)
+
+        uploaded_file = request.FILES['file']
+        filename = uploaded_file.name
+
+        # Validate file extension
+        allowed_extensions = ['.txt', '.jpg', '.jpeg', '.png']
+        file_ext = Path(filename).suffix.lower()
+        if file_ext not in allowed_extensions:
+            return JsonResponse({
+                'success': False,
+                'error': f'Invalid file type. Allowed types: {", ".join(allowed_extensions)}'
+            }, status=400)
+
+        # Ensure Context directory exists
+        context_dir = PROJECT_ROOT / "Context"
+        context_dir.mkdir(exist_ok=True)
+
+        # Save the file
+        file_path = context_dir / filename
+        with open(file_path, 'wb') as f:
+            for chunk in uploaded_file.chunks():
+                f.write(chunk)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'File {filename} uploaded successfully',
+            'filename': filename
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to upload file: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def delete_context(request):
+    """Delete a context file from the Context directory."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        filename = data.get('filename')
+
+        if not filename:
+            return JsonResponse({
+                'success': False,
+                'error': 'No filename provided'
+            }, status=400)
+
+        # Security check: ensure filename doesn't contain path traversal
+        if '..' in filename or '/' in filename or '\\' in filename:
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid filename'
+            }, status=400)
+
+        context_dir = PROJECT_ROOT / "Context"
+        file_path = context_dir / filename
+
+        if not file_path.exists():
+            return JsonResponse({
+                'success': False,
+                'error': f'File {filename} not found'
+            }, status=404)
+
+        # Delete the file
+        file_path.unlink()
+
+        return JsonResponse({
+            'success': True,
+            'message': f'File {filename} deleted successfully'
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON in request body'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to delete file: {str(e)}'
         }, status=500)
