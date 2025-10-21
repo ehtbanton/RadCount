@@ -91,6 +91,24 @@ def clear_current_model():
         model_file.unlink()
 
 
+def get_large_files():
+    """Get list of large data files from large_data directory."""
+    large_files = []
+    large_data_dir = PROJECT_ROOT / "large_data"
+
+    if not large_data_dir.exists():
+        return large_files
+
+    for file_path in large_data_dir.iterdir():
+        if file_path.is_file():
+            large_files.append({
+                'filename': file_path.name,
+                'size_mb': file_path.stat().st_size / 1024 / 1024
+            })
+
+    return large_files
+
+
 def home(request):
     """Render the main LLM interface page."""
     llm_service = LlamaService()
@@ -117,6 +135,9 @@ def home(request):
                     except:
                         pass
 
+    # Get large files information
+    large_files = get_large_files()
+
     context = {
         'server_running': llm_service.is_server_running(),
         'model_info': llm_service.get_model_info(),
@@ -124,6 +145,8 @@ def home(request):
         'current_model': get_current_model(),
         'context_files': context_files,
         'total_context_files': total_files,
+        'large_files': large_files,
+        'total_large_files': len(large_files),
         'edit_filename': edit_filename,
         'edit_content': edit_content,
     }
@@ -551,6 +574,100 @@ def delete_context(request):
 
         context_dir = PROJECT_ROOT / "Context"
         file_path = context_dir / filename
+
+        if not file_path.exists():
+            return JsonResponse({
+                'success': False,
+                'error': f'File {filename} not found'
+            }, status=404)
+
+        # Delete the file
+        file_path.unlink()
+
+        return JsonResponse({
+            'success': True,
+            'message': f'File {filename} deleted successfully'
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON in request body'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to delete file: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def upload_large(request):
+    """Upload a large file to the large_data directory."""
+    try:
+        if 'file' not in request.FILES:
+            return JsonResponse({
+                'success': False,
+                'error': 'No file provided'
+            }, status=400)
+
+        uploaded_file = request.FILES['file']
+        filename = uploaded_file.name
+
+        # Security check: ensure filename doesn't contain path traversal
+        if '..' in filename or '/' in filename or '\\' in filename:
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid filename'
+            }, status=400)
+
+        # Ensure large_data directory exists
+        large_data_dir = PROJECT_ROOT / "large_data"
+        large_data_dir.mkdir(exist_ok=True)
+
+        # Save the file
+        file_path = large_data_dir / filename
+        with open(file_path, 'wb') as f:
+            for chunk in uploaded_file.chunks():
+                f.write(chunk)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'File {filename} uploaded successfully',
+            'filename': filename
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to upload file: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def delete_large(request):
+    """Delete a large file from the large_data directory."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        filename = data.get('filename')
+
+        if not filename:
+            return JsonResponse({
+                'success': False,
+                'error': 'No filename provided'
+            }, status=400)
+
+        # Security check: ensure filename doesn't contain path traversal
+        if '..' in filename or '/' in filename or '\\' in filename:
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid filename'
+            }, status=400)
+
+        large_data_dir = PROJECT_ROOT / "large_data"
+        file_path = large_data_dir / filename
 
         if not file_path.exists():
             return JsonResponse({

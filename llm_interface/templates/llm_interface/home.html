@@ -22,7 +22,7 @@
         }
 
         .container {
-            max-width: 900px;
+            max-width: 1600px;
             margin: 0 auto;
             background: white;
             border-radius: 12px;
@@ -48,7 +48,30 @@
         }
 
         .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            min-height: 600px;
+        }
+
+        .panel {
             padding: 30px;
+        }
+
+        .panel-left {
+            border-right: 2px solid #e5e7eb;
+            background: #fafafa;
+        }
+
+        .panel-right {
+            background: white;
+        }
+
+        .panel-title {
+            font-size: 1.5em;
+            color: #1f2937;
+            margin-bottom: 20px;
+            font-weight: 500;
         }
 
         .status-bar {
@@ -589,7 +612,52 @@
         </div>
 
         <div class="content">
-            <div class="status-bar">
+            <!-- Left Panel: Large Data Management -->
+            <div class="panel panel-left">
+                <h2 class="panel-title">Large Data Files</h2>
+
+                <div class="context-section" style="background: white; border-left-color: #8b5cf6;">
+                    <h2>
+                        Upload & Manage
+                        <span class="context-badge" id="large-file-count" style="background: #8b5cf6;">
+                            {{ total_large_files }} file(s)
+                        </span>
+                    </h2>
+
+                    <div class="upload-section">
+                        <input type="file" id="large-file-upload" />
+                        <label for="large-file-upload" class="upload-label" style="background: #8b5cf6;">
+                            Upload Large File
+                        </label>
+                        <div class="upload-status" id="large-upload-status"></div>
+                    </div>
+
+                    {% if large_files %}
+                        <div class="context-files-grid">
+                            {% for file in large_files %}
+                                <div class="context-file">
+                                    <div class="file-left">
+                                        <span class="file-type-badge" style="background: #ddd6fe; color: #5b21b6;">Large</span>
+                                        <span class="file-name">{{ file.filename }}</span>
+                                    </div>
+                                    <span class="file-size">{{ file.size_mb|floatformat:2 }} MB</span>
+                                    <button class="delete-btn" onclick="deleteLargeFile('{{ file.filename }}')">Delete</button>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="no-context">
+                            No large data files found. Upload files using the button above.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Right Panel: LLM Manager -->
+            <div class="panel panel-right">
+                <h2 class="panel-title">LLM Manager</h2>
+
+                <div class="status-bar">
                 <div class="status-indicator">
                     <span class="status-dot {% if server_running %}online{% else %}offline{% endif %}" id="status-dot"></span>
                     <span id="status-text"><strong>Server Status:</strong> {% if server_running %}Online{% else %}Offline{% endif %}</span>
@@ -687,6 +755,7 @@
             <div class="response-area">
                 <div class="response-label">Response:</div>
                 <div id="response-box" class="response-box"></div>
+            </div>
             </div>
         </div>
     </div>
@@ -1062,6 +1131,95 @@
 
         // Make deleteFile available globally for onclick handlers
         window.deleteFile = deleteFile;
+
+        // Large file upload handler
+        const largeFileUpload = document.getElementById('large-file-upload');
+        const largeUploadStatus = document.getElementById('large-upload-status');
+        const largeUploadLabel = document.querySelector('label[for="large-file-upload"]');
+
+        largeFileUpload.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Disable upload button
+            largeUploadLabel.style.cursor = 'wait';
+            largeUploadLabel.style.opacity = '0.6';
+            largeUploadLabel.textContent = 'Uploading...';
+
+            largeUploadStatus.textContent = `Uploading ${file.name}...`;
+            largeUploadStatus.style.color = '#6b7280';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const startTime = Date.now();
+
+            try {
+                const response = await fetch('/llm/upload-large/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const uploadTime = ((Date.now() - startTime) / 1000).toFixed(2);
+                const data = await response.json();
+
+                if (data.success) {
+                    largeUploadStatus.textContent = `✓ ${data.message} (${uploadTime}s)`;
+                    largeUploadStatus.style.color = '#10b981';
+
+                    // Reload immediately
+                    location.reload();
+                } else {
+                    largeUploadStatus.textContent = `✗ ${data.error}`;
+                    largeUploadStatus.style.color = '#ef4444';
+                    largeUploadLabel.style.cursor = 'pointer';
+                    largeUploadLabel.style.opacity = '1';
+                    largeUploadLabel.textContent = 'Upload Large File';
+                }
+            } catch (error) {
+                largeUploadStatus.textContent = `✗ Upload failed: ${error.message}`;
+                largeUploadStatus.style.color = '#ef4444';
+                largeUploadLabel.style.cursor = 'pointer';
+                largeUploadLabel.style.opacity = '1';
+                largeUploadLabel.textContent = 'Upload Large File';
+            }
+
+            // Clear the file input
+            largeFileUpload.value = '';
+        });
+
+        // Large file deletion function
+        async function deleteLargeFile(filename) {
+            if (!confirm(`Are you sure you want to delete ${filename}?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/llm/delete-large/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        filename: filename
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Reload the page to show updated files
+                    location.reload();
+                } else {
+                    alert(`Failed to delete file: ${data.error}`);
+                }
+            } catch (error) {
+                alert(`Failed to delete file: ${error.message}`);
+            }
+        }
+
+        // Make deleteLargeFile available globally for onclick handlers
+        window.deleteLargeFile = deleteLargeFile;
 
         // Create context file modal handlers
         const createContextBtn = document.getElementById('create-context-btn');

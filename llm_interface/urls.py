@@ -13,4 +13,6 @@ urlpatterns = [
     path('upload/', views.upload_context, name='upload_context'),
     path('save/', views.save_context, name='save_context'),
     path('delete/', views.delete_context, name='delete_context'),
+    path('upload-large/', views.upload_large, name='upload_large'),
+    path('delete-large/', views.delete_large, name='delete_large'),
 ]
