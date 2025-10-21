@@ -473,6 +473,63 @@ def get_context(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+def save_context(request):
+    """Save or update a context file (always overwrites if exists)."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        filename = data.get('filename', '').strip()
+        content = data.get('content', '')
+
+        if not filename:
+            return JsonResponse({
+                'success': False,
+                'error': 'No filename provided'
+            }, status=400)
+
+        # Validate filename
+        if not filename.endswith('.txt'):
+            return JsonResponse({
+                'success': False,
+                'error': 'Filename must end with .txt'
+            }, status=400)
+
+        # Security check: ensure filename doesn't contain path traversal
+        if '..' in filename or '/' in filename or '\\' in filename:
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid filename'
+            }, status=400)
+
+        # Ensure Context directory exists
+        context_dir = PROJECT_ROOT / "Context"
+        context_dir.mkdir(exist_ok=True)
+
+        file_path = context_dir / filename
+
+        # Save the file (overwrite if exists)
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'File {filename} saved successfully',
+            'filename': filename
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON in request body'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to save file: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
 def delete_context(request):
     """Delete a context file from the Context directory."""
     try:

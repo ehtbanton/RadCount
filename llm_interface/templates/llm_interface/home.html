@@ -118,7 +118,7 @@
             border: none;
             border-radius: 8px;
             font-size: 1em;
-            font-weight: 600;
+            font-weight: 400;
             cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s, background 0.3s;
             background: #10b981;
@@ -148,7 +148,7 @@
             border: none;
             border-radius: 8px;
             font-size: 1.1em;
-            font-weight: 600;
+            font-weight: 400;
             cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s;
         }
@@ -168,7 +168,7 @@
         }
 
         .response-label {
-            font-weight: 600;
+            font-weight: 400;
             color: #374151;
             margin-bottom: 10px;
             font-size: 1.1em;
@@ -241,7 +241,7 @@
             padding: 4px 12px;
             border-radius: 12px;
             font-size: 0.85em;
-            font-weight: 600;
+            font-weight: 400;
         }
 
         .token-info {
@@ -258,11 +258,11 @@
 
         .token-label {
             color: #6b7280;
-            font-weight: 500;
+            font-weight: 400;
         }
 
         .token-count {
-            font-weight: 700;
+            font-weight: 400;
             color: #3b82f6;
             font-size: 1.1em;
         }
@@ -313,7 +313,7 @@
             padding: 3px 10px;
             border-radius: 12px;
             font-size: 0.7em;
-            font-weight: 600;
+            font-weight: 400;
             text-transform: uppercase;
             flex-shrink: 0;
         }
@@ -334,7 +334,7 @@
         }
 
         .file-name {
-            font-weight: 600;
+            font-weight: 400;
             color: #3b82f6;
             font-size: 0.9em;
             flex: 1;
@@ -390,7 +390,7 @@
             color: white;
             border-radius: 6px;
             cursor: pointer;
-            font-weight: 600;
+            font-weight: 400;
             transition: background 0.2s;
         }
 
@@ -421,7 +421,7 @@
             border: none;
             border-radius: 6px;
             cursor: pointer;
-            font-weight: 600;
+            font-weight: 400;
             font-size: 1em;
             transition: background 0.2s;
             margin-left: 10px;
@@ -494,7 +494,7 @@
 
         .form-group label {
             display: block;
-            font-weight: 600;
+            font-weight: 400;
             color: #374151;
             margin-bottom: 8px;
             font-size: 0.95em;
@@ -542,7 +542,7 @@
             color: white;
             border: none;
             border-radius: 6px;
-            font-weight: 600;
+            font-weight: 400;
             cursor: pointer;
             transition: background 0.2s;
         }
@@ -557,7 +557,7 @@
             color: #374151;
             border: none;
             border-radius: 6px;
-            font-weight: 600;
+            font-weight: 400;
             cursor: pointer;
             transition: background 0.2s;
         }
@@ -691,11 +691,11 @@
         </div>
     </div>
 
-    <!-- Create Context File Modal -->
+    <!-- Create/Edit Context File Modal -->
     <div id="create-context-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Create Context File</h3>
+                <h3 id="modal-title">Create Context File</h3>
                 <button class="close-modal" id="close-modal">&times;</button>
             </div>
             <form id="create-context-form">
@@ -709,7 +709,7 @@
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn-secondary" id="cancel-create">Cancel</button>
-                    <button type="submit" class="btn-primary">Import Context</button>
+                    <button type="submit" class="btn-primary" id="submit-context-btn">Save</button>
                 </div>
             </form>
         </div>
@@ -728,10 +728,13 @@
         let isLoading = false;
         let isStopping = false;
         let currentServerState = {{ server_running|lower }};
+        let originalFilename = null; // Track original filename when editing
 
         // Auto-open modal if editing
         {% if edit_filename %}
         window.addEventListener('DOMContentLoaded', () => {
+            originalFilename = '{{ edit_filename }}';
+            document.getElementById('modal-title').textContent = 'Edit Context File';
             document.getElementById('create-context-modal').classList.add('active');
         });
         {% endif %}
@@ -1071,6 +1074,10 @@
 
         // Open modal
         createContextBtn.addEventListener('click', () => {
+            // Reset for creating new file
+            originalFilename = null;
+            document.getElementById('modal-title').textContent = 'Create Context File';
+            createContextForm.reset();
             createContextModal.classList.add('active');
             contextFilenameInput.focus();
         });
@@ -1079,6 +1086,11 @@
         function closeModal() {
             createContextModal.classList.remove('active');
             createContextForm.reset();
+            originalFilename = null;
+            // Reset URL to remove edit parameter
+            if (window.location.search.includes('edit=')) {
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
         }
 
         closeModalBtn.addEventListener('click', closeModal);
@@ -1104,22 +1116,20 @@
                 return;
             }
 
-            // Create a Blob and File object to upload
-            const blob = new Blob([content], { type: 'text/plain' });
-            const file = new File([blob], filename, { type: 'text/plain' });
-
-            // Use FormData to upload
-            const formData = new FormData();
-            formData.append('file', file);
-
             try {
                 const submitBtn = createContextForm.querySelector('button[type="submit"]');
                 submitBtn.disabled = true;
-                submitBtn.textContent = 'Creating...';
+                submitBtn.textContent = 'Saving...';
 
-                const response = await fetch('/llm/upload/', {
+                const response = await fetch('/llm/save/', {
                     method: 'POST',
-                    body: formData
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        filename: filename,
+                        content: content
+                    })
                 });
 
                 const data = await response.json();
@@ -1129,15 +1139,15 @@
                     closeModal();
                     location.reload();
                 } else {
-                    alert(`Failed to create file: ${data.error}`);
+                    alert(`Failed to save file: ${data.error}`);
                     submitBtn.disabled = false;
-                    submitBtn.textContent = 'Import Context';
+                    submitBtn.textContent = 'Save';
                 }
             } catch (error) {
-                alert(`Failed to create file: ${error.message}`);
+                alert(`Failed to save file: ${error.message}`);
                 const submitBtn = createContextForm.querySelector('button[type="submit"]');
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Import Context';
+                submitBtn.textContent = 'Save';
             }
         });
 
