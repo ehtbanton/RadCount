@@ -246,7 +246,7 @@
             padding: 20px;
             background: #f8f9fa;
             border-radius: 8px;
-            border-left: 4px solid #10b981;
+            border-left: 4px solid #f97316;
         }
 
         .context-section h2 {
@@ -259,7 +259,7 @@
         }
 
         .context-badge {
-            background: #10b981;
+            background: #f97316;
             color: white;
             padding: 4px 12px;
             border-radius: 12px;
@@ -409,7 +409,7 @@
         .upload-label {
             display: inline-block;
             padding: 10px 20px;
-            background: #3b82f6;
+            background: #f97316;
             color: white;
             border-radius: 6px;
             cursor: pointer;
@@ -418,7 +418,15 @@
         }
 
         .upload-label:hover {
-            background: #2563eb;
+            background: #ea580c;
+        }
+
+        .upload-label.large-file {
+            background: #8b5cf6;
+        }
+
+        .upload-label.large-file:hover {
+            background: #7c3aed;
         }
 
         .upload-status {
@@ -439,7 +447,7 @@
         .create-btn {
             display: inline-block;
             padding: 10px 20px;
-            background: #3b82f6;
+            background: #f97316;
             color: white;
             border: none;
             border-radius: 6px;
@@ -451,7 +459,7 @@
         }
 
         .create-btn:hover {
-            background: #2563eb;
+            background: #ea580c;
         }
 
         .modal {
@@ -626,8 +634,8 @@
 
                     <div class="upload-section">
                         <input type="file" id="large-file-upload" />
-                        <label for="large-file-upload" class="upload-label" style="background: #8b5cf6;">
-                            Upload Large File
+                        <label for="large-file-upload" class="upload-label large-file">
+                            Import Large File
                         </label>
                         <div class="upload-status" id="large-upload-status"></div>
                     </div>
@@ -647,7 +655,7 @@
                         </div>
                     {% else %}
                         <div class="no-context">
-                            No large data files found. Upload files using the button above.
+                            No large data files found. Import files using the button above.
                         </div>
                     {% endif %}
                 </div>
@@ -702,7 +710,7 @@
                 <div class="upload-section">
                     <input type="file" id="file-upload" accept=".txt,.jpg,.jpeg,.png" />
                     <label for="file-upload" class="upload-label">
-                        Upload Context File
+                        Import Context File
                     </label>
                     <button class="create-btn" id="create-context-btn">
                         Create Context File
@@ -747,7 +755,7 @@
                     </div>
                 {% else %}
                     <div class="no-context">
-                        No context files found. Upload files using the button above.
+                        No context files found. Import files using the button above.
                     </div>
                 {% endif %}
             </div>
@@ -1057,9 +1065,9 @@
 
             // Disable upload button
             uploadLabel.classList.add('uploading');
-            uploadLabel.textContent = 'Uploading...';
+            uploadLabel.textContent = 'Importing...';
 
-            uploadStatus.textContent = `Uploading ${file.name}...`;
+            uploadStatus.textContent = `Importing ${file.name}...`;
             uploadStatus.style.color = '#6b7280';
 
             const formData = new FormData();
@@ -1086,13 +1094,13 @@
                     uploadStatus.textContent = `✗ ${data.error}`;
                     uploadStatus.style.color = '#ef4444';
                     uploadLabel.classList.remove('uploading');
-                    uploadLabel.textContent = 'Upload Context File';
+                    uploadLabel.textContent = 'Import Context File';
                 }
             } catch (error) {
-                uploadStatus.textContent = `✗ Upload failed: ${error.message}`;
+                uploadStatus.textContent = `✗ Import failed: ${error.message}`;
                 uploadStatus.style.color = '#ef4444';
                 uploadLabel.classList.remove('uploading');
-                uploadLabel.textContent = 'Upload Context File';
+                uploadLabel.textContent = 'Import Context File';
             }
 
             // Clear the file input
@@ -1144,9 +1152,9 @@
             // Disable upload button
             largeUploadLabel.style.cursor = 'wait';
             largeUploadLabel.style.opacity = '0.6';
-            largeUploadLabel.textContent = 'Uploading...';
+            largeUploadLabel.textContent = 'Importing...';
 
-            largeUploadStatus.textContent = `Uploading ${file.name}...`;
+            largeUploadStatus.textContent = `Importing ${file.name}...`;
             largeUploadStatus.style.color = '#6b7280';
 
             const formData = new FormData();
@@ -1174,14 +1182,14 @@
                     largeUploadStatus.style.color = '#ef4444';
                     largeUploadLabel.style.cursor = 'pointer';
                     largeUploadLabel.style.opacity = '1';
-                    largeUploadLabel.textContent = 'Upload Large File';
+                    largeUploadLabel.textContent = 'Import Large File';
                 }
             } catch (error) {
-                largeUploadStatus.textContent = `✗ Upload failed: ${error.message}`;
+                largeUploadStatus.textContent = `✗ Import failed: ${error.message}`;
                 largeUploadStatus.style.color = '#ef4444';
                 largeUploadLabel.style.cursor = 'pointer';
                 largeUploadLabel.style.opacity = '1';
-                largeUploadLabel.textContent = 'Upload Large File';
+                largeUploadLabel.textContent = 'Import Large File';
             }
 
             // Clear the file input
