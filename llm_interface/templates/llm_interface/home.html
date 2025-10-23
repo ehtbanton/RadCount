@@ -673,13 +673,6 @@
                                     value="1"
                                     style="padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 0.9em; width: 100px;"
                                 />
-                                <button
-                                    id="load-entry-btn"
-                                    style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9em;"
-                                    onclick="loadCsvEntry()"
-                                >
-                                    Load Entry
-                                </button>
                                 <span style="color: #6b7280; font-size: 0.85em;">of {{ csv_metadata.row_count }}</span>
                             </div>
                             <div style="font-size: 0.85em; color: #6b7280; margin-bottom: 10px;">Entry Data (JSON):</div>
@@ -1263,9 +1256,14 @@
 
         // CSV Entry Loader
         async function loadCsvEntry() {
-            const entryNumber = document.getElementById('entry-number').value;
+            const entryNumberInput = document.getElementById('entry-number');
             const displayArea = document.getElementById('csv-entry-display');
-            const loadBtn = document.getElementById('load-entry-btn');
+
+            if (!entryNumberInput || !displayArea) {
+                return;
+            }
+
+            const entryNumber = entryNumberInput.value;
 
             if (!entryNumber) {
                 displayArea.textContent = 'Please enter an entry number';
@@ -1273,9 +1271,6 @@
                 return;
             }
 
-            // Disable button during loading
-            loadBtn.disabled = true;
-            loadBtn.textContent = 'Loading...';
             displayArea.textContent = 'Loading entry...';
             displayArea.style.color = '#6b7280';
 
@@ -1294,23 +1289,22 @@
             } catch (error) {
                 displayArea.textContent = `Failed to load entry: ${error.message}`;
                 displayArea.style.color = '#ef4444';
-            } finally {
-                loadBtn.disabled = false;
-                loadBtn.textContent = 'Load Entry';
             }
         }
 
         // Make loadCsvEntry available globally
         window.loadCsvEntry = loadCsvEntry;
 
-        // Allow Enter key to load entry
+        // Setup automatic entry loading
         const entryNumberInput = document.getElementById('entry-number');
         if (entryNumberInput) {
-            entryNumberInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    loadCsvEntry();
-                }
+            // Load entry automatically when input changes
+            entryNumberInput.addEventListener('input', () => {
+                loadCsvEntry();
             });
+
+            // Load entry 1 automatically on page load
+            loadCsvEntry();
         }
 
         // Create context file modal handlers
