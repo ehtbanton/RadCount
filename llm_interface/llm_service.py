@@ -3,6 +3,7 @@ LLM Service for interacting with llama.cpp server.
 """
 import os
 import base64
+import json
 import requests
 from pathlib import Path
 from typing import List, Dict, Optional
@@ -86,6 +87,31 @@ class LlamaService:
                     else:
                         context['user_files'].append(file_info)
 
+                # Handle JSON files
+                elif filename.endswith('.json'):
+                    try:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            json_content = json.load(f)
+
+                        # Convert JSON to string for display/processing
+                        content = json.dumps(json_content, indent=2, ensure_ascii=False)
+                        preview = content[:200] + '...' if len(content) > 200 else content
+
+                        file_info = {
+                            'filename': filename,
+                            'size': file_size,
+                            'content': content,
+                            'preview': preview
+                        }
+
+                        if filename.startswith('sys-'):
+                            context['system_files'].append(file_info)
+                        else:
+                            context['user_files'].append(file_info)
+                    except Exception:
+                        # Skip invalid JSON files
+                        pass
+
                 # Handle image files
                 elif filename.endswith(('.jpg', '.jpeg', '.png')):
                     context['image_files'].append({
@@ -134,19 +160,41 @@ class LlamaService:
         user_text = []
 
         for file_path in self.context_dir.iterdir():
-            if file_path.is_file() and file_path.name.endswith('.txt'):
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        content = f.read().strip()
+            if file_path.is_file():
+                filename = file_path.name
 
-                    if file_path.name.startswith('sys-'):
-                        system_text.append(content)
-                    else:
-                        user_text.append(content)
+                # Handle text files
+                if filename.endswith('.txt'):
+                    try:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            content = f.read().strip()
 
-                    counts['file_count'] += 1
-                except Exception:
-                    continue
+                        if filename.startswith('sys-'):
+                            system_text.append(content)
+                        else:
+                            user_text.append(content)
+
+                        counts['file_count'] += 1
+                    except Exception:
+                        continue
+
+                # Handle JSON files
+                elif filename.endswith('.json'):
+                    try:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            json_content = json.load(f)
+
+                        # Convert JSON to formatted string
+                        content = json.dumps(json_content, indent=2, ensure_ascii=False)
+
+                        if filename.startswith('sys-'):
+                            system_text.append(content)
+                        else:
+                            user_text.append(content)
+
+                        counts['file_count'] += 1
+                    except Exception:
+                        continue
 
         # Calculate token counts for combined text
         if system_text:
@@ -188,6 +236,23 @@ class LlamaService:
                         context['system_prompts'].append(content)
                     else:
                         context['user_prompts'].append(content)
+
+                # Handle JSON files
+                elif filename.endswith('.json'):
+                    try:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            json_content = json.load(f)
+
+                        # Convert JSON to formatted string
+                        content = json.dumps(json_content, indent=2, ensure_ascii=False)
+
+                        if filename.startswith('sys-'):
+                            context['system_prompts'].append(content)
+                        else:
+                            context['user_prompts'].append(content)
+                    except Exception:
+                        # Skip invalid JSON files
+                        pass
 
                 # Handle image files
                 elif filename.endswith(('.jpg', '.jpeg', '.png')):

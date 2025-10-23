@@ -663,7 +663,7 @@
                             <div style="font-weight: 400; color: #374151; margin-bottom: 12px; font-size: 1.05em;">
                                 CSV Entry Viewer
                             </div>
-                            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
+                            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-wrap: wrap;">
                                 <label for="entry-number" style="color: #6b7280; font-size: 0.9em;">Entry #:</label>
                                 <input
                                     type="number"
@@ -674,6 +674,15 @@
                                     style="padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 0.9em; width: 100px;"
                                 />
                                 <span style="color: #6b7280; font-size: 0.85em;">of {{ csv_metadata.row_count }}</span>
+                                <button
+                                    id="add-to-context-btn"
+                                    onclick="addEntryToContext()"
+                                    style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s;"
+                                    onmouseover="this.style.background='#059669'"
+                                    onmouseout="this.style.background='#10b981'"
+                                >
+                                    Add to generator context
+                                </button>
                             </div>
                             <div style="font-size: 0.85em; color: #6b7280; margin-bottom: 10px;">Entry Data (JSON):</div>
                             <pre id="csv-entry-display" style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 0.85em; line-height: 1.5; height: 400px; overflow-y: scroll; overflow-x: hidden; color: #1f2937; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;">No entry loaded</pre>
@@ -733,7 +742,7 @@
                 </div>
 
                 <div class="upload-section">
-                    <input type="file" id="file-upload" accept=".txt,.jpg,.jpeg,.png" />
+                    <input type="file" id="file-upload" accept=".txt,.json,.jpg,.jpeg,.png" />
                     <label for="file-upload" class="upload-label">
                         Import Context File
                     </label>
@@ -803,11 +812,11 @@
             <form id="create-context-form">
                 <div class="form-group">
                     <label for="context-filename">File Name</label>
-                    <input type="text" id="context-filename" name="filename" placeholder="e.g., my-prompt.txt or sys-instructions.txt" value="{{ edit_filename|default:'' }}" required />
+                    <input type="text" id="context-filename" name="filename" placeholder="e.g., my-prompt.txt, sys-instructions.txt, or data.json" value="{{ edit_filename|default:'' }}" required />
                 </div>
                 <div class="form-group">
                     <label for="context-content">Content</label>
-                    <textarea id="context-content" name="content" placeholder="Enter your context content here..." required>{{ edit_content|default:'' }}</textarea>
+                    <textarea id="context-content" name="content" placeholder="Enter your context content here (text or JSON)..." required>{{ edit_content|default:'' }}</textarea>
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn-secondary" id="cancel-create">Cancel</button>
@@ -1307,6 +1316,47 @@
             loadCsvEntry();
         }
 
+        // Add CSV Entry to Generator Context
+        async function addEntryToContext() {
+            const entryNumber = document.getElementById('entry-number').value;
+            const addBtn = document.getElementById('add-to-context-btn');
+
+            if (!entryNumber) {
+                return;
+            }
+
+            // Disable button during save
+            addBtn.disabled = true;
+            addBtn.textContent = 'Adding...';
+
+            try {
+                const response = await fetch('/llm/save-csv-entry/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        entry_number: parseInt(entryNumber)
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Reload page to update context files list
+                    location.reload();
+                }
+            } catch (error) {
+                console.error('Failed to add entry to context:', error);
+            } finally {
+                addBtn.disabled = false;
+                addBtn.textContent = 'Add to generator context';
+            }
+        }
+
+        // Make addEntryToContext available globally
+        window.addEntryToContext = addEntryToContext;
+
         // Create context file modal handlers
         const createContextBtn = document.getElementById('create-context-btn');
         const createContextModal = document.getElementById('create-context-modal');
@@ -1355,9 +1405,19 @@
             const content = contextContentInput.value;
 
             // Validate filename
-            if (!filename.endsWith('.txt')) {
-                alert('Filename must end with .txt');
+            if (!filename.endsWith('.txt') && !filename.endsWith('.json')) {
+                alert('Filename must end with .txt or .json');
                 return;
+            }
+
+            // Validate JSON content if filename ends with .json
+            if (filename.endsWith('.json')) {
+                try {
+                    JSON.parse(content);
+                } catch (e) {
+                    alert('Invalid JSON content. Please check your syntax.');
+                    return;
+                }
             }
 
             try {

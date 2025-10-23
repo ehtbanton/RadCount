@@ -159,7 +159,7 @@ def home(request):
     if edit_filename:
         # Security check
         if '..' not in edit_filename and '/' not in edit_filename and '\\' not in edit_filename:
-            if edit_filename.endswith('.txt'):
+            if edit_filename.endswith('.txt') or edit_filename.endswith('.json'):
                 context_dir = PROJECT_ROOT / "Context"
                 file_path = context_dir / edit_filename
                 if file_path.exists():
@@ -447,7 +447,7 @@ def upload_context(request):
         filename = uploaded_file.name
 
         # Validate file extension
-        allowed_extensions = ['.txt', '.jpg', '.jpeg', '.png']
+        allowed_extensions = ['.txt', '.json', '.jpg', '.jpeg', '.png']
         file_ext = Path(filename).suffix.lower()
         if file_ext not in allowed_extensions:
             return JsonResponse({
@@ -464,6 +464,18 @@ def upload_context(request):
         with open(file_path, 'wb') as f:
             for chunk in uploaded_file.chunks():
                 f.write(chunk)
+
+        # Validate JSON files
+        if file_ext == '.json':
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    json.load(f)  # Try to parse JSON
+            except json.JSONDecodeError:
+                file_path.unlink()  # Delete invalid JSON
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Invalid JSON format'
+                }, status=400)
 
         return JsonResponse({
             'success': True,
@@ -497,11 +509,11 @@ def get_context(request):
                 'error': 'Invalid filename'
             }, status=400)
 
-        # Only allow .txt files for editing
-        if not filename.endswith('.txt'):
+        # Only allow .txt and .json files for editing
+        if not (filename.endswith('.txt') or filename.endswith('.json')):
             return JsonResponse({
                 'success': False,
-                'error': 'Only text files can be edited'
+                'error': 'Only text and JSON files can be edited'
             }, status=400)
 
         context_dir = PROJECT_ROOT / "Context"
@@ -546,10 +558,10 @@ def save_context(request):
             }, status=400)
 
         # Validate filename
-        if not filename.endswith('.txt'):
+        if not (filename.endswith('.txt') or filename.endswith('.json')):
             return JsonResponse({
                 'success': False,
-                'error': 'Filename must end with .txt'
+                'error': 'Filename must end with .txt or .json'
             }, status=400)
 
         # Security check: ensure filename doesn't contain path traversal
@@ -558,6 +570,16 @@ def save_context(request):
                 'success': False,
                 'error': 'Invalid filename'
             }, status=400)
+
+        # Validate JSON content if it's a JSON file
+        if filename.endswith('.json'):
+            try:
+                json.loads(content)  # Validate JSON syntax
+            except json.JSONDecodeError:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Invalid JSON content'
+                }, status=400)
 
         # Ensure Context directory exists
         context_dir = PROJECT_ROOT / "Context"
@@ -835,4 +857,98 @@ def get_csv_entry(request):
         return JsonResponse({
             'success': False,
             'error': f'Failed to read CSV entry: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def save_csv_entry_to_context(request):
+    """Save a CSV entry as a JSON file in the Context directory."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        entry_num = data.get('entry_number')
+
+        if not entry_num:
+            return JsonResponse({
+                'success': False,
+                'error': 'No entry number provided'
+            }, status=400)
+
+        try:
+            entry_num = int(entry_num)
+        except ValueError:
+            return JsonResponse({
+                'success': False,
+                'error': 'Entry number must be an integer'
+            }, status=400)
+
+        # Find the CSV file
+        large_data_dir = PROJECT_ROOT / "large_data"
+        if not large_data_dir.exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'No CSV file found'
+            }, status=404)
+
+        csv_files = list(large_data_dir.glob("*.csv"))
+        if not csv_files:
+            return JsonResponse({
+                'success': False,
+                'error': 'No CSV file found'
+            }, status=404)
+
+        csv_file = csv_files[0]
+        csv_filename = csv_file.stem  # Get filename without extension
+
+        # Read the CSV entry
+        with open(csv_file, 'r', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            headers = next(reader)  # Read headers
+
+            # Find the desired row
+            entry_data = None
+            for i, row in enumerate(reader, start=1):
+                if i == entry_num:
+                    # Create a dictionary mapping headers to values
+                    entry_data = {}
+                    for j, header in enumerate(headers):
+                        if j < len(row):
+                            entry_data[header] = row[j]
+                        else:
+                            entry_data[header] = ""
+                    break
+
+            if entry_data is None:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Entry {entry_num} not found in CSV'
+                }, status=404)
+
+        # Create filename in format: db_<entry_num>_<csv_filename>.json
+        json_filename = f"db_{entry_num}_{csv_filename}.json"
+
+        # Ensure Context directory exists
+        context_dir = PROJECT_ROOT / "Context"
+        context_dir.mkdir(exist_ok=True)
+
+        # Save the JSON file
+        json_file_path = context_dir / json_filename
+        with open(json_file_path, 'w', encoding='utf-8') as f:
+            json.dump(entry_data, f, indent=2, ensure_ascii=False)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Entry {entry_num} saved as {json_filename}',
+            'filename': json_filename
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON in request body'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to save entry: {str(e)}'
         }, status=500)
