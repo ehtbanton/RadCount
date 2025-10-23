@@ -663,6 +663,22 @@
                             <div style="font-weight: 400; color: #374151; margin-bottom: 12px; font-size: 1.05em;">
                                 CSV Entry Viewer
                             </div>
+
+                            <!-- Extraction Functions Panel -->
+                            <div style="background: white; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                    <span style="font-size: 0.9em; color: #6b7280; font-weight: 400;">Extraction Functions:</span>
+                                    <button
+                                        onclick="openExtractionModal('new')"
+                                        style="padding: 4px 10px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;"
+                                    >
+                                        + Add Function
+                                    </button>
+                                </div>
+                                <div id="extraction-functions-container" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                    <!-- Function buttons will be populated by JavaScript -->
+                                </div>
+                            </div>
                             <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-wrap: wrap;">
                                 <label for="entry-number" style="color: #6b7280; font-size: 0.9em;">Entry #:</label>
                                 <input
@@ -821,6 +837,40 @@
                 <div class="modal-actions">
                     <button type="button" class="btn-secondary" id="cancel-create">Cancel</button>
                     <button type="submit" class="btn-primary" id="submit-context-btn">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Extraction Function Editor Modal -->
+    <div id="extraction-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="extraction-modal-title">Edit Extraction Function</h3>
+                <button class="close-modal" id="close-extraction-modal">&times;</button>
+            </div>
+            <form id="extraction-form">
+                <input type="hidden" id="extraction-function-id" />
+                <div class="form-group">
+                    <label for="extraction-name">Function Name</label>
+                    <input type="text" id="extraction-name" placeholder="e.g., Lung Entries Filter" required />
+                </div>
+                <div class="form-group">
+                    <label for="extraction-description">Description (optional)</label>
+                    <input type="text" id="extraction-description" placeholder="Brief description of what this function does" />
+                </div>
+                <div class="form-group">
+                    <label for="extraction-code">Python Code</label>
+                    <textarea id="extraction-code" placeholder="# Your extraction code here&#10;# Available: all_entries (list of dicts)&#10;# Must set: result variable&#10;&#10;result = []&#10;for entry in all_entries:&#10;    # Your filtering logic here&#10;    result.append(entry)" style="font-family: 'Courier New', monospace; min-height: 300px;" required></textarea>
+                    <div style="font-size: 0.85em; color: #6b7280; margin-top: 5px;">
+                        Available variables: <code>all_entries</code> (list of dicts), <code>json</code>, <code>len</code>, <code>str</code>, etc.<br>
+                        Your code must set a <code>result</code> variable with the extraction output.
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" id="delete-extraction-btn" style="margin-right: auto;">Delete</button>
+                    <button type="button" class="btn-secondary" id="cancel-extraction">Cancel</button>
+                    <button type="submit" class="btn-primary" id="submit-extraction-btn">Save</button>
                 </div>
             </form>
         </div>
@@ -1539,6 +1589,229 @@
                 isLoading = false;
             }
         });
+
+        // ========== Extraction Functions Management ==========
+
+        let extractionFunctions = {};
+
+        // Load extraction functions
+        async function loadExtractionFunctions() {
+            try {
+                const response = await fetch('/llm/extraction-functions/');
+                const data = await response.json();
+
+                if (data.success) {
+                    extractionFunctions = data.functions;
+                    renderExtractionButtons();
+                }
+            } catch (error) {
+                console.error('Failed to load extraction functions:', error);
+            }
+        }
+
+        // Render extraction function buttons
+        function renderExtractionButtons() {
+            const container = document.getElementById('extraction-functions-container');
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            // Sort by function ID (number)
+            const sortedIds = Object.keys(extractionFunctions).sort((a, b) => parseInt(a) - parseInt(b));
+
+            sortedIds.forEach(id => {
+                const func = extractionFunctions[id];
+                const button = document.createElement('button');
+                button.textContent = id;
+                button.title = func.name + (func.description ? ': ' + func.description : '');
+                button.style.cssText = `
+                    width: 32px;
+                    height: 32px;
+                    background: #3b82f6;
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-weight: 500;
+                    font-size: 0.9em;
+                    transition: background 0.2s;
+                `;
+
+                button.addEventListener('mouseover', () => {
+                    button.style.background = '#2563eb';
+                });
+
+                button.addEventListener('mouseout', () => {
+                    button.style.background = '#3b82f6';
+                });
+
+                // Right-click to edit, left-click to execute
+                button.addEventListener('click', () => executeExtractionFunction(id));
+                button.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    openExtractionModal(id);
+                });
+
+                container.appendChild(button);
+            });
+        }
+
+        // Execute extraction function
+        async function executeExtractionFunction(functionId) {
+            try {
+                const response = await fetch('/llm/execute-extraction/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        function_id: functionId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Reload page to show new file in context
+                    location.reload();
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                alert(`Failed to execute extraction: ${error.message}`);
+            }
+        }
+
+        // Open extraction modal
+        function openExtractionModal(functionId) {
+            const modal = document.getElementById('extraction-modal');
+            const form = document.getElementById('extraction-form');
+            const title = document.getElementById('extraction-modal-title');
+            const deleteBtn = document.getElementById('delete-extraction-btn');
+
+            // Reset form
+            form.reset();
+
+            if (functionId === 'new') {
+                // Find next available ID
+                const existingIds = Object.keys(extractionFunctions).map(id => parseInt(id));
+                const nextId = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
+
+                title.textContent = 'Create Extraction Function';
+                document.getElementById('extraction-function-id').value = nextId;
+                deleteBtn.style.display = 'none';
+            } else {
+                // Edit existing function
+                const func = extractionFunctions[functionId];
+                title.textContent = `Edit Function ${functionId}`;
+                document.getElementById('extraction-function-id').value = functionId;
+                document.getElementById('extraction-name').value = func.name || '';
+                document.getElementById('extraction-description').value = func.description || '';
+                document.getElementById('extraction-code').value = func.code || '';
+                deleteBtn.style.display = 'inline-block';
+            }
+
+            modal.classList.add('active');
+        }
+
+        // Close extraction modal
+        function closeExtractionModal() {
+            document.getElementById('extraction-modal').classList.remove('active');
+        }
+
+        document.getElementById('close-extraction-modal').addEventListener('click', closeExtractionModal);
+        document.getElementById('cancel-extraction').addEventListener('click', closeExtractionModal);
+
+        // Click outside modal to close
+        document.getElementById('extraction-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'extraction-modal') {
+                closeExtractionModal();
+            }
+        });
+
+        // Handle extraction form submission
+        document.getElementById('extraction-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const functionId = document.getElementById('extraction-function-id').value;
+            const name = document.getElementById('extraction-name').value;
+            const description = document.getElementById('extraction-description').value;
+            const code = document.getElementById('extraction-code').value;
+
+            try {
+                const submitBtn = document.getElementById('submit-extraction-btn');
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Saving...';
+
+                const response = await fetch('/llm/save-extraction-function/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        function_id: functionId,
+                        name: name,
+                        description: description,
+                        code: code
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    closeExtractionModal();
+                    await loadExtractionFunctions();
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Save';
+            } catch (error) {
+                alert(`Failed to save function: ${error.message}`);
+                const submitBtn = document.getElementById('submit-extraction-btn');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Save';
+            }
+        });
+
+        // Handle extraction function deletion
+        document.getElementById('delete-extraction-btn').addEventListener('click', async () => {
+            const functionId = document.getElementById('extraction-function-id').value;
+
+            if (!confirm(`Delete function ${functionId}?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/llm/delete-extraction-function/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        function_id: functionId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    closeExtractionModal();
+                    await loadExtractionFunctions();
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                alert(`Failed to delete function: ${error.message}`);
+            }
+        });
+
+        // Make openExtractionModal globally available
+        window.openExtractionModal = openExtractionModal;
+
+        // Load extraction functions on page load
+        loadExtractionFunctions();
     </script>
 </body>
 </html>

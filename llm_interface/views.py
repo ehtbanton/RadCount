@@ -8,6 +8,7 @@ import subprocess
 import sys
 import platform
 import csv
+from datetime import datetime
 
 from .llm_service import LlamaService
 
@@ -951,4 +952,277 @@ def save_csv_entry_to_context(request):
         return JsonResponse({
             'success': False,
             'error': f'Failed to save entry: {str(e)}'
+        }, status=500)
+
+
+def get_extraction_functions_file():
+    """Get the path to the extraction functions JSON file."""
+    return PROJECT_ROOT / "extraction_functions.json"
+
+
+def load_extraction_functions():
+    """Load extraction functions from JSON file."""
+    functions_file = get_extraction_functions_file()
+
+    if not functions_file.exists():
+        # Create default function 1 - filter entries containing "lung"
+        default_functions = {
+            "1": {
+                "name": "Lung Entries Filter",
+                "description": "Extracts all entries containing the word 'lung'",
+                "code": """# Filter entries containing 'lung'
+result = []
+for entry in all_entries:
+    entry_str = json.dumps(entry).lower()
+    if 'lung' in entry_str:
+        result.append(entry)"""
+            }
+        }
+
+        with open(functions_file, 'w', encoding='utf-8') as f:
+            json.dump(default_functions, f, indent=2, ensure_ascii=False)
+
+        return default_functions
+
+    try:
+        with open(functions_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except:
+        return {}
+
+
+def save_extraction_functions(functions):
+    """Save extraction functions to JSON file."""
+    functions_file = get_extraction_functions_file()
+    with open(functions_file, 'w', encoding='utf-8') as f:
+        json.dump(functions, f, indent=2, ensure_ascii=False)
+
+
+@require_http_methods(["GET"])
+def get_extraction_functions(request):
+    """Get all extraction functions."""
+    try:
+        functions = load_extraction_functions()
+        return JsonResponse({
+            'success': True,
+            'functions': functions
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to load extraction functions: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def save_extraction_function(request):
+    """Save or update an extraction function."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        function_id = data.get('function_id')
+        name = data.get('name', '').strip()
+        description = data.get('description', '').strip()
+        code = data.get('code', '').strip()
+
+        if not function_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'No function ID provided'
+            }, status=400)
+
+        if not name or not code:
+            return JsonResponse({
+                'success': False,
+                'error': 'Name and code are required'
+            }, status=400)
+
+        functions = load_extraction_functions()
+        functions[str(function_id)] = {
+            'name': name,
+            'description': description,
+            'code': code
+        }
+
+        save_extraction_functions(functions)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Function {function_id} saved successfully'
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON in request body'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to save function: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def delete_extraction_function(request):
+    """Delete an extraction function."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        function_id = data.get('function_id')
+
+        if not function_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'No function ID provided'
+            }, status=400)
+
+        functions = load_extraction_functions()
+
+        if str(function_id) not in functions:
+            return JsonResponse({
+                'success': False,
+                'error': f'Function {function_id} not found'
+            }, status=404)
+
+        del functions[str(function_id)]
+        save_extraction_functions(functions)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Function {function_id} deleted successfully'
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON in request body'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to delete function: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def execute_extraction_function(request):
+    """Execute an extraction function on the CSV data."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        function_id = data.get('function_id')
+
+        if not function_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'No function ID provided'
+            }, status=400)
+
+        # Load the extraction function
+        functions = load_extraction_functions()
+
+        if str(function_id) not in functions:
+            return JsonResponse({
+                'success': False,
+                'error': f'Function {function_id} not found'
+            }, status=404)
+
+        function_data = functions[str(function_id)]
+
+        # Find the CSV file
+        large_data_dir = PROJECT_ROOT / "large_data"
+        if not large_data_dir.exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'No CSV file found'
+            }, status=404)
+
+        csv_files = list(large_data_dir.glob("*.csv"))
+        if not csv_files:
+            return JsonResponse({
+                'success': False,
+                'error': 'No CSV file found'
+            }, status=404)
+
+        csv_file = csv_files[0]
+        csv_filename = csv_file.stem
+
+        # Read all CSV entries
+        all_entries = []
+        with open(csv_file, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                all_entries.append(dict(row))
+
+        # Execute the extraction function
+        try:
+            # Create a safe execution environment
+            exec_globals = {
+                'all_entries': all_entries,
+                'json': json,
+                'len': len,
+                'str': str,
+                'int': int,
+                'float': float,
+                'list': list,
+                'dict': dict,
+                'range': range,
+                'enumerate': enumerate,
+                'zip': zip,
+                'filter': filter,
+                'map': map,
+                'sum': sum,
+                'min': min,
+                'max': max,
+                'any': any,
+                'all': all,
+                'sorted': sorted,
+            }
+            exec_locals = {}
+
+            exec(function_data['code'], exec_globals, exec_locals)
+
+            if 'result' not in exec_locals:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Extraction function must set a "result" variable'
+                }, status=400)
+
+            result = exec_locals['result']
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Error executing function: {str(e)}'
+            }, status=500)
+
+        # Create filename: fn<number>_<date>_<csv_name>.json
+        current_date = datetime.now().strftime('%Y%m%d')
+        json_filename = f"fn{function_id}_{current_date}_{csv_filename}.json"
+
+        # Save to Context folder
+        context_dir = PROJECT_ROOT / "Context"
+        context_dir.mkdir(exist_ok=True)
+
+        json_file_path = context_dir / json_filename
+        with open(json_file_path, 'w', encoding='utf-8') as f:
+            json.dump(result, f, indent=2, ensure_ascii=False)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Extraction complete: {json_filename}',
+            'filename': json_filename,
+            'result_count': len(result) if isinstance(result, list) else 1
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON in request body'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to execute extraction: {str(e)}'
         }, status=500)
