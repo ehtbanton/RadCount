@@ -7,6 +7,7 @@ import json
 import subprocess
 import sys
 import platform
+import csv
 
 from .llm_service import LlamaService
 
@@ -109,6 +110,39 @@ def get_large_files():
     return large_files
 
 
+def get_csv_metadata():
+    """Get metadata about the CSV file (if it exists)."""
+    large_data_dir = PROJECT_ROOT / "large_data"
+
+    if not large_data_dir.exists():
+        return None
+
+    # Look for a CSV file
+    csv_files = list(large_data_dir.glob("*.csv"))
+
+    if not csv_files:
+        return None
+
+    csv_file = csv_files[0]
+
+    try:
+        with open(csv_file, 'r', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            headers = next(reader)  # Read first row as headers
+
+            # Count rows (excluding header)
+            row_count = sum(1 for _ in reader)
+
+        return {
+            'filename': csv_file.name,
+            'headers': headers,
+            'row_count': row_count,
+            'size_mb': csv_file.stat().st_size / 1024 / 1024
+        }
+    except Exception as e:
+        return None
+
+
 def home(request):
     """Render the main LLM interface page."""
     llm_service = LlamaService()
@@ -137,6 +171,7 @@ def home(request):
 
     # Get large files information
     large_files = get_large_files()
+    csv_metadata = get_csv_metadata()
 
     context = {
         'server_running': llm_service.is_server_running(),
@@ -147,6 +182,7 @@ def home(request):
         'total_context_files': total_files,
         'large_files': large_files,
         'total_large_files': len(large_files),
+        'csv_metadata': csv_metadata,
         'edit_filename': edit_filename,
         'edit_content': edit_content,
     }
@@ -604,7 +640,7 @@ def delete_context(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def upload_large(request):
-    """Upload a large file to the large_data directory."""
+    """Upload a CSV file to the large_data directory. Only one CSV file is allowed at a time."""
     try:
         if 'file' not in request.FILES:
             return JsonResponse({
@@ -622,9 +658,20 @@ def upload_large(request):
                 'error': 'Invalid filename'
             }, status=400)
 
+        # Validate that it's a CSV file
+        if not filename.lower().endswith('.csv'):
+            return JsonResponse({
+                'success': False,
+                'error': 'Only CSV files are allowed'
+            }, status=400)
+
         # Ensure large_data directory exists
         large_data_dir = PROJECT_ROOT / "large_data"
         large_data_dir.mkdir(exist_ok=True)
+
+        # Delete any existing CSV files (only one CSV file allowed)
+        for existing_csv in large_data_dir.glob("*.csv"):
+            existing_csv.unlink()
 
         # Save the file
         file_path = large_data_dir / filename
@@ -632,9 +679,27 @@ def upload_large(request):
             for chunk in uploaded_file.chunks():
                 f.write(chunk)
 
+        # Validate CSV format
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                headers = next(reader)  # Try to read headers
+                if not headers:
+                    file_path.unlink()  # Delete invalid file
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'CSV file is empty or invalid'
+                    }, status=400)
+        except Exception as e:
+            file_path.unlink()  # Delete invalid file
+            return JsonResponse({
+                'success': False,
+                'error': f'Invalid CSV format: {str(e)}'
+            }, status=400)
+
         return JsonResponse({
             'success': True,
-            'message': f'File {filename} uploaded successfully',
+            'message': f'CSV file {filename} uploaded successfully',
             'filename': filename
         })
 
@@ -692,4 +757,82 @@ def delete_large(request):
         return JsonResponse({
             'success': False,
             'error': f'Failed to delete file: {str(e)}'
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def get_csv_entry(request):
+    """Get a specific entry from the CSV file by row number (1-indexed, excluding header)."""
+    try:
+        entry_num = request.GET.get('entry')
+
+        if not entry_num:
+            return JsonResponse({
+                'success': False,
+                'error': 'No entry number provided'
+            }, status=400)
+
+        try:
+            entry_num = int(entry_num)
+        except ValueError:
+            return JsonResponse({
+                'success': False,
+                'error': 'Entry number must be an integer'
+            }, status=400)
+
+        if entry_num < 1:
+            return JsonResponse({
+                'success': False,
+                'error': 'Entry number must be at least 1'
+            }, status=400)
+
+        # Find the CSV file
+        large_data_dir = PROJECT_ROOT / "large_data"
+        if not large_data_dir.exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'No CSV file found'
+            }, status=404)
+
+        csv_files = list(large_data_dir.glob("*.csv"))
+        if not csv_files:
+            return JsonResponse({
+                'success': False,
+                'error': 'No CSV file found'
+            }, status=404)
+
+        csv_file = csv_files[0]
+
+        # Read the CSV file
+        with open(csv_file, 'r', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            headers = next(reader)  # Read headers
+
+            # Skip to the desired row
+            for i, row in enumerate(reader, start=1):
+                if i == entry_num:
+                    # Create a dictionary mapping headers to values
+                    entry_data = {}
+                    for j, header in enumerate(headers):
+                        if j < len(row):
+                            entry_data[header] = row[j]
+                        else:
+                            entry_data[header] = ""
+
+                    return JsonResponse({
+                        'success': True,
+                        'entry_number': entry_num,
+                        'data': entry_data
+                    })
+
+            # If we got here, the entry number is out of range
+            return JsonResponse({
+                'success': False,
+                'error': f'Entry {entry_num} not found. File has {i} entries.'
+            }, status=404)
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to read CSV entry: {str(e)}'
         }, status=500)

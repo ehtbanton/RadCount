@@ -15,4 +15,5 @@ urlpatterns = [
     path('delete/', views.delete_context, name='delete_context'),
     path('upload-large/', views.upload_large, name='upload_large'),
     path('delete-large/', views.delete_large, name='delete_large'),
+    path('csv-entry/', views.get_csv_entry, name='get_csv_entry'),
 ]
