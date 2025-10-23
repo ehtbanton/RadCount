@@ -15,52 +15,41 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: #ffffff;
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
+            margin: 0;
+            padding: 0;
         }
 
         .container {
-            max-width: 1600px;
-            margin: 0 auto;
+            width: 100vw;
+            height: 100vh;
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             overflow: hidden;
-        }
-
-        .header {
-            background: #3b82f6;
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-
-        .header p {
-            opacity: 0.9;
-            font-size: 1.1em;
+            display: flex;
+            flex-direction: column;
         }
 
         .content {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr 0.5fr 1fr;
             gap: 0;
-            min-height: 600px;
+            flex: 1;
+            overflow: hidden;
         }
 
         .panel {
             padding: 30px;
+            overflow-y: auto;
         }
 
         .panel-left {
             border-right: 2px solid #e5e7eb;
             background: #fafafa;
+        }
+
+        .panel-middle {
+            border-right: 2px solid #e5e7eb;
+            background: #ffffff;
+            padding: 30px 20px;
         }
 
         .panel-right {
@@ -614,11 +603,6 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>RadCount</h1>
-            <p>Local LLM Vision Interface</p>
-        </div>
-
         <div class="content">
             <!-- Left Panel: Large Data Management -->
             <div class="panel panel-left">
@@ -664,21 +648,6 @@
                                 CSV Entry Viewer
                             </div>
 
-                            <!-- Extraction Functions Panel -->
-                            <div style="background: white; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                    <span style="font-size: 0.9em; color: #6b7280; font-weight: 400;">Extraction Functions:</span>
-                                    <button
-                                        onclick="openExtractionModal('new')"
-                                        style="padding: 4px 10px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;"
-                                    >
-                                        + Add Function
-                                    </button>
-                                </div>
-                                <div id="extraction-functions-container" style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                    <!-- Function buttons will be populated by JavaScript -->
-                                </div>
-                            </div>
                             <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-wrap: wrap;">
                                 <label for="entry-number" style="color: #6b7280; font-size: 0.9em;">Entry #:</label>
                                 <input
@@ -706,6 +675,47 @@
                     {% else %}
                         <div class="no-context">
                             No CSV file found. Import a CSV file using the button above.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Middle Panel: Extraction Functions -->
+            <div class="panel panel-middle">
+                <h2 class="panel-title">Extraction Functions</h2>
+
+                <div class="context-section" style="background: white; border-left-color: #10b981;">
+                    <h2 style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="display: flex; align-items: center; gap: 10px;">
+                            Functions
+                            <span class="context-badge" id="function-count" style="background: #10b981;">
+                                0
+                            </span>
+                        </span>
+                        <button
+                            onclick="openExtractionModal('new')"
+                            class="create-btn"
+                            style="margin: 0; padding: 8px 16px; font-size: 0.9em; background: #10b981;"
+                            onmouseover="this.style.background='#059669'"
+                            onmouseout="this.style.background='#10b981'"
+                        >
+                            + Add
+                        </button>
+                    </h2>
+
+                    {% if csv_metadata %}
+                        <!-- Extraction Functions Panel -->
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; margin-top: 15px;">
+                            <div style="font-weight: 400; color: #374151; margin-bottom: 12px; font-size: 0.95em;">
+                                Click a function to extract data from the CSV file. Right-click to edit.
+                            </div>
+                            <div id="extraction-functions-container" style="display: flex; gap: 8px; flex-wrap: wrap; min-height: 60px;">
+                                <!-- Function buttons will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="no-context" style="margin-top: 15px;">
+                            No CSV file loaded. Import a CSV file first.
                         </div>
                     {% endif %}
                 </div>
@@ -1618,6 +1628,12 @@
 
             // Sort by function ID (number)
             const sortedIds = Object.keys(extractionFunctions).sort((a, b) => parseInt(a) - parseInt(b));
+
+            // Update function count badge
+            const countBadge = document.getElementById('function-count');
+            if (countBadge) {
+                countBadge.textContent = sortedIds.length;
+            }
 
             sortedIds.forEach(id => {
                 const func = extractionFunctions[id];
