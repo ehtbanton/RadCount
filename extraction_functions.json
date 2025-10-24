@@ -1,0 +1,7 @@
+{
+  "1": {
+    "name": "Example filter for the first entry",
+    "description": "Extracts all entries containing the word '0001830E92997C3D58F686DEC0375CFA'",
+    "code": "# Filter entries containing '0001830E92997C3D58F686DEC0375CFA'\nresult = []\nfor entry in all_entries:\n    entry_str = json.dumps(entry).lower()\n    if '0001830E92997C3D58F686DEC0375CFA' in entry_str:\n        result.append(entry)"
+  }
+}

@@ -713,6 +713,22 @@
                                 <!-- Function buttons will be populated by JavaScript -->
                             </div>
                         </div>
+
+                        <!-- Debug Terminal -->
+                        <div style="background: #1f2937; padding: 15px; border-radius: 6px; border: 1px solid #374151; margin-top: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <span style="font-weight: 400; color: #9ca3af; font-size: 0.9em; font-family: 'Courier New', monospace;">Debug Output</span>
+                                <button
+                                    onclick="clearDebugTerminal()"
+                                    style="padding: 4px 10px; background: #374151; color: #9ca3af; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75em; font-family: 'Courier New', monospace;"
+                                    onmouseover="this.style.background='#4b5563'"
+                                    onmouseout="this.style.background='#374151'"
+                                >
+                                    Clear
+                                </button>
+                            </div>
+                            <pre id="debug-terminal" style="font-family: 'Courier New', monospace; font-size: 0.85em; color: #10b981; background: #111827; padding: 12px; border-radius: 4px; min-height: 200px; max-height: 400px; overflow-y: auto; margin: 0; white-space: pre-wrap; word-wrap: break-word;"></pre>
+                        </div>
                     {% else %}
                         <div class="no-context" style="margin-top: 15px;">
                             No CSV file loaded. Import a CSV file first.
@@ -872,6 +888,9 @@
                 <div class="form-group">
                     <label for="extraction-code">Python Code</label>
                     <textarea id="extraction-code" placeholder="# Your extraction code here&#10;# Available: all_entries (list of dicts)&#10;# Must set: result variable&#10;&#10;result = []&#10;for entry in all_entries:&#10;    # Your filtering logic here&#10;    result.append(entry)" style="font-family: 'Courier New', monospace; min-height: 300px;" required></textarea>
+                    <div style="margin-top: 8px; padding: 10px; background: #f3f4f6; border-radius: 4px; border-left: 3px solid #6b7280;">
+                        <code style="font-family: 'Courier New', monospace; color: #374151;">return result</code>
+                    </div>
                     <div style="font-size: 0.85em; color: #6b7280; margin-top: 5px;">
                         Available variables: <code>all_entries</code> (list of dicts), <code>json</code>, <code>len</code>, <code>str</code>, etc.<br>
                         Your code must set a <code>result</code> variable with the extraction output.
@@ -1672,6 +1691,25 @@
             });
         }
 
+        // Debug terminal functions
+        function setDebugTerminal(output) {
+            const terminal = document.getElementById('debug-terminal');
+            if (!terminal) return;
+
+            terminal.textContent = output;
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function clearDebugTerminal() {
+            const terminal = document.getElementById('debug-terminal');
+            if (terminal) {
+                terminal.textContent = '';
+            }
+        }
+
+        // Make clearDebugTerminal globally available
+        window.clearDebugTerminal = clearDebugTerminal;
+
         // Execute extraction function
         async function executeExtractionFunction(functionId) {
             try {
@@ -1687,14 +1725,17 @@
 
                 const data = await response.json();
 
+                // Display console output (print statements)
+                if (data.console_output !== undefined) {
+                    setDebugTerminal(data.console_output);
+                }
+
                 if (data.success) {
                     // Reload page to show new file in context
-                    location.reload();
-                } else {
-                    alert(`Error: ${data.error}`);
+                    setTimeout(() => location.reload(), 1000);
                 }
             } catch (error) {
-                alert(`Failed to execute extraction: ${error.message}`);
+                setDebugTerminal(`Error: ${error.message}`);
             }
         }
 
@@ -1794,6 +1835,8 @@
         // Handle extraction function deletion
         document.getElementById('delete-extraction-btn').addEventListener('click', async () => {
             const functionId = document.getElementById('extraction-function-id').value;
+            const funcData = extractionFunctions[functionId];
+            const funcName = funcData ? funcData.name : `Function ${functionId}`;
 
             if (!confirm(`Delete function ${functionId}?`)) {
                 return;

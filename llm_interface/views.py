@@ -1157,44 +1157,64 @@ def execute_extraction_function(request):
 
         # Execute the extraction function
         try:
-            # Create a safe execution environment
-            exec_globals = {
-                'all_entries': all_entries,
-                'json': json,
-                'len': len,
-                'str': str,
-                'int': int,
-                'float': float,
-                'list': list,
-                'dict': dict,
-                'range': range,
-                'enumerate': enumerate,
-                'zip': zip,
-                'filter': filter,
-                'map': map,
-                'sum': sum,
-                'min': min,
-                'max': max,
-                'any': any,
-                'all': all,
-                'sorted': sorted,
-            }
-            exec_locals = {}
+            # Capture print output
+            import io
+            import sys
 
-            exec(function_data['code'], exec_globals, exec_locals)
+            print_output = io.StringIO()
+            old_stdout = sys.stdout
+            sys.stdout = print_output
 
-            if 'result' not in exec_locals:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Extraction function must set a "result" variable'
-                }, status=400)
+            try:
+                # Create a safe execution environment
+                exec_globals = {
+                    'all_entries': all_entries,
+                    'json': json,
+                    'len': len,
+                    'str': str,
+                    'int': int,
+                    'float': float,
+                    'list': list,
+                    'dict': dict,
+                    'range': range,
+                    'enumerate': enumerate,
+                    'zip': zip,
+                    'filter': filter,
+                    'map': map,
+                    'sum': sum,
+                    'min': min,
+                    'max': max,
+                    'any': any,
+                    'all': all,
+                    'sorted': sorted,
+                }
+                exec_locals = {}
 
-            result = exec_locals['result']
+                exec(function_data['code'], exec_globals, exec_locals)
+
+                if 'result' not in exec_locals:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Extraction function must set a "result" variable',
+                        'console_output': print_output.getvalue()
+                    }, status=400)
+
+                result = exec_locals['result']
+
+            finally:
+                # Restore stdout
+                sys.stdout = old_stdout
+
+            # Get the captured output
+            console_output = print_output.getvalue()
 
         except Exception as e:
+            # Restore stdout in case of exception
+            sys.stdout = old_stdout
             return JsonResponse({
                 'success': False,
-                'error': f'Error executing function: {str(e)}'
+                'error': f'Error executing function: {str(e)}',
+                'console_output': print_output.getvalue() if 'print_output' in locals() else ''
             }, status=500)
 
         # Create filename: fn<number>_<date>_<csv_name>.json
@@ -1213,7 +1233,8 @@ def execute_extraction_function(request):
             'success': True,
             'message': f'Extraction complete: {json_filename}',
             'filename': json_filename,
-            'result_count': len(result) if isinstance(result, list) else 1
+            'result_count': len(result) if isinstance(result, list) else 1,
+            'console_output': console_output
         })
 
     except json.JSONDecodeError:
