@@ -669,8 +669,31 @@
                                     Add to generator context
                                 </button>
                             </div>
-                            <div style="font-size: 0.85em; color: #6b7280; margin-bottom: 10px;">Entry Data (JSON):</div>
+
+                            <!-- View Toggle Buttons -->
+                            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                                <button
+                                    id="json-view-btn"
+                                    onclick="switchEntryView('json')"
+                                    style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s;"
+                                >
+                                    JSON View
+                                </button>
+                                <button
+                                    id="text-view-btn"
+                                    onclick="switchEntryView('text')"
+                                    style="padding: 6px 12px; background: #e5e7eb; color: #6b7280; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s;"
+                                >
+                                    Report View
+                                </button>
+                            </div>
+
+                            <div id="json-view-label" style="font-size: 0.85em; color: #6b7280; margin-bottom: 10px;">Entry Data (JSON):</div>
+                            <div id="text-view-label" style="font-size: 0.85em; color: #6b7280; margin-bottom: 10px; display: none;">Entry Data (Report):</div>
+
                             <pre id="csv-entry-display" style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 0.85em; line-height: 1.5; height: 400px; overflow-y: scroll; overflow-x: hidden; color: #1f2937; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;">No entry loaded</pre>
+
+                            <div id="csv-entry-text-display" style="display: none; background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 1.02em; line-height: 1.6; height: 400px; overflow-y: scroll; overflow-x: hidden; color: #1f2937; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;">No entry loaded</div>
                         </div>
                     {% else %}
                         <div class="no-context">
@@ -1343,45 +1366,120 @@
         window.deleteLargeFile = deleteLargeFile;
 
         // CSV Entry Loader
+        // Global variable to store current entry data for extraction functions
+        let currentEntryData = null;
+
         async function loadCsvEntry() {
             const entryNumberInput = document.getElementById('entry-number');
-            const displayArea = document.getElementById('csv-entry-display');
+            const jsonDisplayArea = document.getElementById('csv-entry-display');
+            const textDisplayArea = document.getElementById('csv-entry-text-display');
 
-            if (!entryNumberInput || !displayArea) {
+            if (!entryNumberInput || !jsonDisplayArea || !textDisplayArea) {
                 return;
             }
 
             const entryNumber = entryNumberInput.value;
 
             if (!entryNumber) {
-                displayArea.textContent = 'Please enter an entry number';
-                displayArea.style.color = '#ef4444';
+                jsonDisplayArea.textContent = 'Please enter an entry number';
+                jsonDisplayArea.style.color = '#ef4444';
+                textDisplayArea.textContent = 'Please enter an entry number';
+                textDisplayArea.style.color = '#ef4444';
                 return;
             }
 
-            displayArea.textContent = 'Loading entry...';
-            displayArea.style.color = '#6b7280';
+            jsonDisplayArea.textContent = 'Loading entry...';
+            jsonDisplayArea.style.color = '#6b7280';
+            textDisplayArea.textContent = 'Loading entry...';
+            textDisplayArea.style.color = '#6b7280';
 
             try {
                 const response = await fetch(`/llm/csv-entry/?entry=${entryNumber}`);
                 const data = await response.json();
 
                 if (data.success) {
-                    // Format the JSON data nicely
-                    displayArea.textContent = JSON.stringify(data.data, null, 2);
-                    displayArea.style.color = '#1f2937';
+                    // Store the entry data globally
+                    currentEntryData = data.data;
+
+                    // Format the JSON data nicely for JSON view
+                    jsonDisplayArea.textContent = JSON.stringify(data.data, null, 2);
+                    jsonDisplayArea.style.color = '#1f2937';
+
+                    // Extract the last field for text view
+                    const keys = Object.keys(data.data);
+                    if (keys.length > 0) {
+                        const lastKey = keys[keys.length - 1];
+                        let textContent = data.data[lastKey];
+
+                        // Format the text: replace \n with actual line breaks
+                        if (typeof textContent === 'string') {
+                            // Replace literal \n characters with actual newlines
+                            textContent = textContent.replace(/\\n/g, '\n');
+                            // Also handle actual newline characters
+                            textContent = textContent.replace(/\n\n+/g, '\n\n'); // Normalize multiple newlines
+                        }
+
+                        textDisplayArea.textContent = textContent || 'No content';
+                        textDisplayArea.style.color = '#1f2937';
+                    } else {
+                        textDisplayArea.textContent = 'No fields found';
+                        textDisplayArea.style.color = '#6b7280';
+                    }
                 } else {
-                    displayArea.textContent = `Error: ${data.error}`;
-                    displayArea.style.color = '#ef4444';
+                    jsonDisplayArea.textContent = `Error: ${data.error}`;
+                    jsonDisplayArea.style.color = '#ef4444';
+                    textDisplayArea.textContent = `Error: ${data.error}`;
+                    textDisplayArea.style.color = '#ef4444';
                 }
             } catch (error) {
-                displayArea.textContent = `Failed to load entry: ${error.message}`;
-                displayArea.style.color = '#ef4444';
+                jsonDisplayArea.textContent = `Failed to load entry: ${error.message}`;
+                jsonDisplayArea.style.color = '#ef4444';
+                textDisplayArea.textContent = `Failed to load entry: ${error.message}`;
+                textDisplayArea.style.color = '#ef4444';
             }
         }
 
         // Make loadCsvEntry available globally
         window.loadCsvEntry = loadCsvEntry;
+
+        // Switch between JSON and Text views
+        function switchEntryView(viewType) {
+            const jsonDisplay = document.getElementById('csv-entry-display');
+            const textDisplay = document.getElementById('csv-entry-text-display');
+            const jsonLabel = document.getElementById('json-view-label');
+            const textLabel = document.getElementById('text-view-label');
+            const jsonBtn = document.getElementById('json-view-btn');
+            const textBtn = document.getElementById('text-view-btn');
+
+            if (viewType === 'json') {
+                // Show JSON view
+                jsonDisplay.style.display = 'block';
+                textDisplay.style.display = 'none';
+                jsonLabel.style.display = 'block';
+                textLabel.style.display = 'none';
+
+                // Update button styles
+                jsonBtn.style.background = '#3b82f6';
+                jsonBtn.style.color = 'white';
+                textBtn.style.background = '#e5e7eb';
+                textBtn.style.color = '#6b7280';
+            } else {
+                // Show Text view
+                jsonDisplay.style.display = 'none';
+                textDisplay.style.display = 'block';
+                jsonLabel.style.display = 'none';
+                textLabel.style.display = 'block';
+
+                // Update button styles
+                jsonBtn.style.background = '#e5e7eb';
+                jsonBtn.style.color = '#6b7280';
+                textBtn.style.background = '#3b82f6';
+                textBtn.style.color = 'white';
+            }
+        }
+
+        // Make switchEntryView available globally
+        window.switchEntryView = switchEntryView;
 
         // Setup automatic entry loading
         const entryNumberInput = document.getElementById('entry-number');
