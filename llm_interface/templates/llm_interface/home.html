@@ -72,12 +72,15 @@
             border-radius: 8px;
             margin-bottom: 25px;
             border-left: 4px solid #333333;
+            flex-wrap: wrap;
+            gap: 15px;
         }
 
         .status-indicator {
             display: flex;
             align-items: center;
             gap: 10px;
+            flex-shrink: 0;
         }
 
         .status-dot {
@@ -105,6 +108,9 @@
             display: flex;
             align-items: center;
             gap: 15px;
+            flex-wrap: wrap;
+            flex: 1;
+            min-width: 0;
         }
 
         .model-dropdown {
@@ -114,7 +120,25 @@
             font-size: 0.95em;
             background: white;
             cursor: pointer;
-            min-width: 200px;
+            min-width: 150px;
+            max-width: 250px;
+            flex: 1;
+        }
+
+        .context-size-input {
+            padding: 8px 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 0.95em;
+            background: white;
+            width: 100px;
+            min-width: 80px;
+            flex-shrink: 0;
+        }
+
+        .model-info label {
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .control-panel {
@@ -780,6 +804,8 @@
                             <option value="">No models found</option>
                         {% endif %}
                     </select>
+                    <label for="context-size"><strong>Context Size:</strong></label>
+                    <input type="number" id="context-size" class="context-size-input" value="{% if current_context_size %}{{ current_context_size }}{% else %}4096{% endif %}" min="512" max="32768" step="512">
                 </div>
             </div>
 
@@ -932,6 +958,7 @@
         const serverToggleBtn = document.getElementById('server-toggle-btn');
         const generateBtn = document.getElementById('generate-btn');
         const modelSelect = document.getElementById('model-select');
+        const contextSizeInput = document.getElementById('context-size');
         const responseBox = document.getElementById('response-box');
         const statusDot = document.getElementById('status-dot');
         const statusText = document.getElementById('status-text');
@@ -996,7 +1023,7 @@
             }
         }
 
-        function updateServerStatus(isRunning, currentModel = null) {
+        function updateServerStatus(isRunning, currentModel = null, currentContextSize = null) {
             currentServerState = isRunning;
 
             if (isRunning) {
@@ -1010,6 +1037,11 @@
                 // Update dropdown if we have current model info
                 if (currentModel) {
                     modelSelect.value = currentModel;
+                }
+
+                // Update context size if we have current context size info
+                if (currentContextSize) {
+                    contextSizeInput.value = currentContextSize;
                 }
 
                 // Start token count updates when server is online
@@ -1053,7 +1085,7 @@
                     method: 'GET',
                 });
                 const data = await response.json();
-                updateServerStatus(data.server_running, data.current_model);
+                updateServerStatus(data.server_running, data.current_model, data.current_context_size);
             } catch (error) {
                 // If fetch fails, assume server is offline
                 updateServerStatus(false);
@@ -1114,7 +1146,8 @@
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({
-                            model: selectedModel
+                            model: selectedModel,
+                            context_size: parseInt(contextSizeInput.value) || 4096
                         })
                     });
 
@@ -1132,7 +1165,7 @@
                                 if (statusData.server_running) {
                                     clearInterval(checkReady);
                                     isLoading = false;
-                                    updateServerStatus(true, statusData.current_model);
+                                    updateServerStatus(true, statusData.current_model, statusData.current_context_size);
                                 }
                             } catch (e) {
                                 // Ignore errors during startup
@@ -1676,7 +1709,8 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        model: selectedModel
+                        model: selectedModel,
+                        context_size: parseInt(contextSizeInput.value) || 4096
                     })
                 });
 
@@ -1694,7 +1728,7 @@
                             if (statusData.server_running) {
                                 clearInterval(checkReady);
                                 isLoading = false;
-                                updateServerStatus(true, statusData.current_model);
+                                updateServerStatus(true, statusData.current_model, statusData.current_context_size);
                             }
                         } catch (e) {
                             // Ignore errors during startup

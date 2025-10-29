@@ -2,6 +2,6 @@
   "1": {
     "name": "Example filter for the first entry",
     "description": "Extracts all entries containing a given string",
-    "code": "string_to_find = '0001830E92997C3D58F686DEC0375CFA'\nresult = []\nfor entry in all_entries:\n    entry_str = json.dumps(entry).lower()\n    if string_to_find in entry_str:\n        result.append(entry)"
+    "code": "string_to_find = 'stool'.lower()\nresult = []\nfor entry in all_entries:\n    entry_str = json.dumps(entry).lower()\n    if string_to_find in entry_str:\n        result.append(entry)"
   }
 }

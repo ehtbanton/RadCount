@@ -93,6 +93,32 @@ def clear_current_model():
         model_file.unlink()
 
 
+def get_current_context_size():
+    """Get the currently configured context size."""
+    context_size_file = PROJECT_ROOT / "llama_server.context_size"
+    if context_size_file.exists():
+        try:
+            with open(context_size_file, 'r') as f:
+                return int(f.read().strip())
+        except:
+            pass
+    return 4096  # Default context size
+
+
+def set_current_context_size(context_size):
+    """Store the currently configured context size."""
+    context_size_file = PROJECT_ROOT / "llama_server.context_size"
+    with open(context_size_file, 'w') as f:
+        f.write(str(context_size))
+
+
+def clear_current_context_size():
+    """Clear the currently configured context size."""
+    context_size_file = PROJECT_ROOT / "llama_server.context_size"
+    if context_size_file.exists():
+        context_size_file.unlink()
+
+
 def get_large_files():
     """Get list of large data files from large_data directory."""
     large_files = []
@@ -179,6 +205,7 @@ def home(request):
         'model_info': llm_service.get_model_info(),
         'available_models': get_available_models(),
         'current_model': get_current_model(),
+        'current_context_size': get_current_context_size(),
         'context_files': context_files,
         'total_context_files': total_files,
         'large_files': large_files,
@@ -244,6 +271,7 @@ def status(request):
         'model_info': llm_service.get_model_info(),
         'available_models': get_available_models(),
         'current_model': get_current_model(),
+        'current_context_size': get_current_context_size(),
     })
 
 
@@ -278,6 +306,7 @@ def start_server(request):
     try:
         data = json.loads(request.body) if request.body else {}
         model_filename = data.get('model')
+        context_size = data.get('context_size', 4096)
 
         if not model_filename:
             return JsonResponse({
@@ -344,7 +373,7 @@ def start_server(request):
             "-m", str(model_path),
             "--host", "127.0.0.1",
             "--port", "8080",
-            "-c", "4096",
+            "-c", str(context_size),
             "--n-gpu-layers", gpu_layers,
         ]
 
@@ -366,8 +395,9 @@ def start_server(request):
         with open(pid_file, 'w') as f:
             f.write(str(process.pid))
 
-        # Store the current model
+        # Store the current model and context size
         set_current_model(model_filename)
+        set_current_context_size(context_size)
 
         return JsonResponse({
             'success': True,
