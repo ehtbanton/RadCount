@@ -719,6 +719,48 @@
 
                             <div id="csv-entry-text-display" style="display: none; background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 1.02em; line-height: 1.6; height: 400px; overflow-y: scroll; overflow-x: hidden; color: #1f2937; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;">No entry loaded</div>
                         </div>
+
+                        <!-- Entry Properties Section -->
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 6px; border: 1px solid #e5e7eb; margin-top: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <div style="font-weight: 400; color: #374151; font-size: 1.05em;">
+                                    Entry Properties
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <button
+                                        onclick="openPropertyModal()"
+                                        style="padding: 6px 12px; background: #8b5cf6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s;"
+                                        onmouseover="this.style.background='#7c3aed'"
+                                        onmouseout="this.style.background='#8b5cf6'"
+                                    >
+                                        Manage Types
+                                    </button>
+                                    <button
+                                        onclick="exportProperties()"
+                                        style="padding: 6px 12px; background: #059669; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s;"
+                                        onmouseover="this.style.background='#047857'"
+                                        onmouseout="this.style.background='#059669'"
+                                    >
+                                        Export
+                                    </button>
+                                    <button
+                                        onclick="document.getElementById('import-properties-input').click()"
+                                        style="padding: 6px 12px; background: #0284c7; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s;"
+                                        onmouseover="this.style.background='#0369a1'"
+                                        onmouseout="this.style.background='#0284c7'"
+                                    >
+                                        Import
+                                    </button>
+                                    <input type="file" id="import-properties-input" accept=".json" style="display: none;" onchange="importProperties(event)">
+                                </div>
+                            </div>
+
+                            <div id="properties-container" style="display: flex; flex-direction: column; gap: 12px; max-height: 400px; overflow-y: auto;">
+                                <div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">
+                                    No properties defined. Click "Manage Types" to add property types.
+                                </div>
+                            </div>
+                        </div>
                     {% else %}
                         <div class="no-context">
                             No CSV file found. Import a CSV file using the button above.
@@ -951,6 +993,54 @@
                     <button type="submit" class="btn-primary" id="submit-extraction-btn">Save</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Property Types Management Modal -->
+    <div id="property-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Manage Property Types</h3>
+                <button class="close-modal" id="close-property-modal">&times;</button>
+            </div>
+            <div style="padding: 20px;">
+                <!-- Add New Property Type -->
+                <div style="background: #f3f4f6; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 12px 0; font-size: 0.95em; color: #374151;">Add New Property Type</h4>
+                    <div style="display: flex; gap: 10px; align-items: end;">
+                        <div style="flex: 1;">
+                            <label for="property-name-input" style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 5px;">Property Name</label>
+                            <input type="text" id="property-name-input" placeholder="e.g., status, priority" style="width: 100%; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 0.9em;" />
+                        </div>
+                        <div style="flex: 1;">
+                            <label for="property-dimensions-input" style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 5px;">Dimensions (optional)</label>
+                            <input type="text" id="property-dimensions-input" placeholder="e.g., 3 or 3x3" style="width: 100%; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 0.9em;" />
+                        </div>
+                        <button
+                            onclick="addPropertyType()"
+                            style="padding: 8px 16px; background: #8b5cf6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9em; font-weight: 400; white-space: nowrap;"
+                        >
+                            Add Type
+                        </button>
+                    </div>
+                    <div style="font-size: 0.8em; color: #6b7280; margin-top: 8px;">
+                        Leave dimensions empty for scalar values, or enter e.g. "3" for array [x,y,z] or "3x3" for matrix
+                    </div>
+                </div>
+
+                <!-- Property Types List -->
+                <div>
+                    <h4 style="margin: 0 0 12px 0; font-size: 0.95em; color: #374151;">Existing Property Types</h4>
+                    <div id="property-types-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto;">
+                        <div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">
+                            No property types defined yet
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" id="close-property-modal-btn">Close</button>
+            </div>
         </div>
     </div>
 
@@ -1401,6 +1491,7 @@
         // CSV Entry Loader
         // Global variable to store current entry data for extraction functions
         let currentEntryData = null;
+        let currentEntry = null;
 
         async function loadCsvEntry() {
             const entryNumberInput = document.getElementById('entry-number');
@@ -1433,6 +1524,10 @@
                 if (data.success) {
                     // Store the entry data globally
                     currentEntryData = data.data;
+
+                    // Update current entry for properties system
+                    currentEntry = parseInt(entryNumber);
+                    renderProperties();
 
                     // Format the JSON data nicely for JSON view
                     jsonDisplayArea.textContent = JSON.stringify(data.data, null, 2);
@@ -2003,6 +2098,432 @@
 
         // Load extraction functions on page load
         loadExtractionFunctions();
+
+        // ===== Properties Management System (Array-based) =====
+
+        // Global properties data storage
+        let propertiesData = []; // Array of { entry: N, property1: value, property2: value, ... }
+
+        // Infer property types from the data
+        function inferPropertyTypes() {
+            const propertyTypes = [];
+            const propertySet = new Set();
+
+            // Collect all property names (except 'entry')
+            for (const entryData of propertiesData) {
+                for (const key in entryData) {
+                    if (key !== 'entry') {
+                        propertySet.add(key);
+                    }
+                }
+            }
+
+            // For each property, determine its structure from first non-null value
+            for (const propName of propertySet) {
+                let dimensions = null;
+                let readOnly = false;
+
+                // Find first non-null value to infer dimensions
+                for (const entryData of propertiesData) {
+                    if (entryData[propName] != null && Array.isArray(entryData[propName])) {
+                        dimensions = getArrayDimensions(entryData[propName]);
+                        break;
+                    }
+                }
+
+                propertyTypes.push({
+                    name: propName,
+                    dimensions: dimensions,
+                    readOnly: readOnly
+                });
+            }
+
+            return propertyTypes;
+        }
+
+        // Get dimensions of a nested array
+        function getArrayDimensions(arr) {
+            if (!Array.isArray(arr)) return null;
+
+            const dims = [arr.length];
+            if (arr.length > 0 && Array.isArray(arr[0])) {
+                const subDims = getArrayDimensions(arr[0]);
+                if (subDims) {
+                    dims.push(...subDims);
+                }
+            }
+            return dims;
+        }
+
+        // Load properties from server
+        async function loadProperties() {
+            try {
+                const response = await fetch('/llm/properties/', {
+                    method: 'GET',
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    propertiesData = result.data || [];
+                    renderProperties();
+                }
+            } catch (error) {
+                console.error('Failed to load properties:', error);
+            }
+        }
+
+        // Save properties to server
+        async function savePropertiesToServer() {
+            try {
+                const response = await fetch('/llm/save-properties/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(propertiesData)
+                });
+                const result = await response.json();
+                return result.success;
+            } catch (error) {
+                console.error('Failed to save properties:', error);
+                return false;
+            }
+        }
+
+        // Get entry data by entry number
+        function getEntryData(entryNum) {
+            return propertiesData.find(e => e.entry === entryNum);
+        }
+
+        // Ensure entry exists in data
+        function ensureEntryExists(entryNum) {
+            let entryData = getEntryData(entryNum);
+            if (!entryData) {
+                entryData = { entry: entryNum };
+                propertiesData.push(entryData);
+                // Sort by entry number
+                propertiesData.sort((a, b) => a.entry - b.entry);
+            }
+            return entryData;
+        }
+
+        // Open property modal
+        function openPropertyModal() {
+            document.getElementById('property-modal').classList.add('active');
+            renderPropertyTypesList();
+        }
+
+        // Close property modal
+        function closePropertyModal() {
+            document.getElementById('property-modal').classList.remove('active');
+        }
+
+        // Add property type
+        async function addPropertyType() {
+            const nameInput = document.getElementById('property-name-input');
+            const dimensionsInput = document.getElementById('property-dimensions-input');
+
+            const name = nameInput.value.trim();
+            const dimensionsStr = dimensionsInput.value.trim();
+
+            if (!name) {
+                alert('Please enter a property name');
+                return;
+            }
+
+            // Check if property name already exists
+            const propertyTypes = inferPropertyTypes();
+            if (propertyTypes.find(pt => pt.name === name)) {
+                alert('A property with this name already exists');
+                return;
+            }
+
+            // Parse dimensions
+            let dimensions = null;
+            let initialValue = null;
+            if (dimensionsStr) {
+                // Parse "3" or "3x3" or "2x3x4" format
+                const parts = dimensionsStr.split('x').map(p => parseInt(p.trim())).filter(n => !isNaN(n) && n > 0);
+                if (parts.length > 0) {
+                    dimensions = parts;
+                    initialValue = createNestedArray(dimensions);
+                } else {
+                    initialValue = null;
+                }
+            } else {
+                initialValue = null;
+            }
+
+            // Add property to ALL entries (initialized to null or array structure)
+            for (const entryData of propertiesData) {
+                entryData[name] = initialValue;
+            }
+
+            // Save to server
+            const success = await savePropertiesToServer();
+            if (success) {
+                nameInput.value = '';
+                dimensionsInput.value = '';
+                renderPropertyTypesList();
+                renderProperties();
+            } else {
+                alert('Failed to add property type');
+            }
+        }
+
+        // Create nested array based on dimensions
+        function createNestedArray(dimensions, currentDim = 0) {
+            if (currentDim >= dimensions.length) {
+                return null;
+            }
+            const size = dimensions[currentDim];
+            const arr = [];
+            for (let i = 0; i < size; i++) {
+                arr.push(createNestedArray(dimensions, currentDim + 1));
+            }
+            return arr;
+        }
+
+        // Remove property type
+        async function removePropertyType(propertyName) {
+            if (!confirm('Are you sure you want to remove this property type? All data for this property will be lost.')) {
+                return;
+            }
+
+            // Remove property from ALL entries
+            for (const entryData of propertiesData) {
+                delete entryData[propertyName];
+            }
+
+            // Save to server
+            const success = await savePropertiesToServer();
+            if (success) {
+                renderPropertyTypesList();
+                renderProperties();
+            } else {
+                alert('Failed to remove property type');
+            }
+        }
+
+        // Toggle read-only status (stored in a separate metadata structure in memory)
+        const readOnlyProperties = new Set();
+
+        function togglePropertyReadOnly(propertyName) {
+            if (readOnlyProperties.has(propertyName)) {
+                readOnlyProperties.delete(propertyName);
+            } else {
+                readOnlyProperties.add(propertyName);
+            }
+            renderPropertyTypesList();
+            renderProperties();
+        }
+
+        function isPropertyReadOnly(propertyName) {
+            return readOnlyProperties.has(propertyName);
+        }
+
+        // Render property types list in modal
+        function renderPropertyTypesList() {
+            const listContainer = document.getElementById('property-types-list');
+            const propertyTypes = inferPropertyTypes();
+
+            if (propertyTypes.length === 0) {
+                listContainer.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">No property types defined yet</div>';
+                return;
+            }
+
+            listContainer.innerHTML = propertyTypes.map(pt => {
+                const dimensionsStr = pt.dimensions ? ' [' + pt.dimensions.join('x') + ']' : ' (scalar)';
+                const readOnly = isPropertyReadOnly(pt.name);
+                const readOnlyBadge = readOnly
+                    ? '<span style="background: #ef4444; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75em; margin-left: 8px;">Read-only</span>'
+                    : '';
+
+                return '<div style="background: white; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;"><div style="display: flex; align-items: center;"><span style="font-weight: 500; color: #374151;">' + pt.name + '</span><span style="color: #6b7280; font-size: 0.85em; margin-left: 8px;">' + dimensionsStr + '</span>' + readOnlyBadge + '</div><div style="display: flex; gap: 6px;"><button onclick="togglePropertyReadOnly(\'' + pt.name + '\')" style="padding: 4px 10px; background: ' + (readOnly ? '#10b981' : '#ef4444') + '; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;" title="' + (readOnly ? 'Make Editable' : 'Make Read-only') + '">' + (readOnly ? 'Unlock' : 'Lock') + '</button><button onclick="removePropertyType(\'' + pt.name + '\')" style="padding: 4px 10px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;">Remove</button></div></div>';
+            }).join('');
+        }
+
+        // Render properties for current entry
+        function renderProperties() {
+            const container = document.getElementById('properties-container');
+            const propertyTypes = inferPropertyTypes();
+
+            if (propertyTypes.length === 0) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">No properties defined. Click "Manage Types" to add property types.</div>';
+                return;
+            }
+
+            if (!currentEntry) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">Select an entry to view/edit properties</div>';
+                return;
+            }
+
+            // Ensure entry exists
+            const entryData = ensureEntryExists(currentEntry);
+
+            // Initialize missing properties for this entry
+            for (const pt of propertyTypes) {
+                if (!(pt.name in entryData)) {
+                    if (pt.dimensions) {
+                        entryData[pt.name] = createNestedArray(pt.dimensions);
+                    } else {
+                        entryData[pt.name] = null;
+                    }
+                }
+            }
+
+            container.innerHTML = propertyTypes.map(pt => {
+                const value = entryData[pt.name];
+                const readOnly = isPropertyReadOnly(pt.name);
+                const readOnlyLabel = readOnly ? '<span style="color: #ef4444; font-size: 0.75em;">(read-only)</span>' : '';
+
+                return '<div style="background: white; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb;"><div style="font-weight: 500; color: #374151; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;"><span>' + pt.name + '</span>' + readOnlyLabel + '</div><div id="property-editor-' + pt.name.replace(/[^a-zA-Z0-9]/g, '_') + '">' + renderPropertyEditor(pt.name, value, [], readOnly) + '</div></div>';
+            }).join('');
+        }
+
+        // Recursive property editor
+        function renderPropertyEditor(propertyName, value, path, readOnly) {
+            const pathStr = path.join('_');
+            const safePropertyName = propertyName.replace(/[^a-zA-Z0-9]/g, '_');
+            const inputId = 'prop_' + safePropertyName + '_' + pathStr;
+
+            if (Array.isArray(value)) {
+                // Multi-dimensional array
+                const marginLeft = path.length > 0 ? '12px' : '0';
+                let html = '<div style="display: flex; flex-direction: column; gap: 6px; margin-left: ' + marginLeft + ';">';
+                for (let index = 0; index < value.length; index++) {
+                    const showLabel = path.length === 0 || path.length === 1;
+                    html += '<div>';
+                    if (showLabel) {
+                        html += '<span style="font-size: 0.8em; color: #6b7280;">Index ' + index + ':</span>';
+                    }
+                    html += renderPropertyEditor(propertyName, value[index], path.concat([index]), readOnly);
+                    html += '</div>';
+                }
+                html += '</div>';
+                return html;
+            } else {
+                // Scalar value
+                const readonlyAttr = readOnly ? 'readonly' : '';
+                const readonlyStyle = readOnly ? 'background: #f3f4f6; cursor: not-allowed;' : '';
+                const pathArray = '[' + path.map(p => "'" + p + "'").join(',') + ']';
+                const displayValue = value !== null ? value : '';
+                return '<input type="number" id="' + inputId + '" value="' + displayValue + '" ' + readonlyAttr + ' onchange="updatePropertyValue(\'' + propertyName + '\', ' + pathArray + ', this.value)" style="width: 100%; padding: 6px 10px; border: 2px solid #e5e7eb; border-radius: 4px; font-size: 0.9em; ' + readonlyStyle + '" />';
+            }
+        }
+
+        // Update property value
+        async function updatePropertyValue(propertyName, path, value) {
+            if (isPropertyReadOnly(propertyName)) return;
+            if (!currentEntry) return;
+
+            const entryData = ensureEntryExists(currentEntry);
+            const numValue = value !== '' ? parseFloat(value) : null;
+
+            // Navigate to the nested value and update it
+            if (path.length === 0) {
+                entryData[propertyName] = numValue;
+            } else {
+                let target = entryData[propertyName];
+                for (let i = 0; i < path.length - 1; i++) {
+                    target = target[path[i]];
+                }
+                target[path[path.length - 1]] = numValue;
+            }
+
+            // Save to server
+            await savePropertiesToServer();
+        }
+
+        // Export properties to JSON file
+        async function exportProperties() {
+            if (propertiesData.length === 0) {
+                alert('No properties to export');
+                return;
+            }
+
+            const blob = new Blob([JSON.stringify(propertiesData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'properties_export_' + new Date().toISOString().split('T')[0] + '.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Import properties from JSON file
+        async function importProperties(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            try {
+                const text = await file.text();
+                const importData = JSON.parse(text);
+
+                if (!Array.isArray(importData)) {
+                    alert('Invalid properties file format (must be an array)');
+                    return;
+                }
+
+                if (!confirm('This will merge imported properties with existing ones. Continue?')) {
+                    return;
+                }
+
+                // Merge imported data
+                for (const importedEntry of importData) {
+                    if (!importedEntry.entry) continue;
+
+                    const existingEntry = getEntryData(importedEntry.entry);
+                    if (existingEntry) {
+                        // Merge properties
+                        Object.assign(existingEntry, importedEntry);
+                    } else {
+                        // Add new entry
+                        propertiesData.push(importedEntry);
+                    }
+                }
+
+                // Sort by entry number
+                propertiesData.sort((a, b) => a.entry - b.entry);
+
+                // Save to server
+                const success = await savePropertiesToServer();
+                if (success) {
+                    alert('Properties imported successfully');
+                    renderPropertyTypesList();
+                    renderProperties();
+                } else {
+                    alert('Failed to save imported properties');
+                }
+            } catch (error) {
+                alert('Failed to import properties: ' + error.message);
+            }
+
+            // Reset file input
+            event.target.value = '';
+        }
+
+        // Modal event listeners
+        document.getElementById('close-property-modal').addEventListener('click', closePropertyModal);
+        document.getElementById('close-property-modal-btn').addEventListener('click', closePropertyModal);
+        document.getElementById('property-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'property-modal') {
+                closePropertyModal();
+            }
+        });
+
+        // Make functions globally available
+        window.openPropertyModal = openPropertyModal;
+        window.closePropertyModal = closePropertyModal;
+        window.addPropertyType = addPropertyType;
+        window.removePropertyType = removePropertyType;
+        window.togglePropertyReadOnly = togglePropertyReadOnly;
+        window.updatePropertyValue = updatePropertyValue;
+        window.exportProperties = exportProperties;
+        window.importProperties = importProperties;
+
+        // Load properties on page load
+        loadProperties();
     </script>
 </body>
 </html>

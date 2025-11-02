@@ -1277,3 +1277,105 @@ def execute_extraction_function(request):
             'success': False,
             'error': f'Failed to execute extraction: {str(e)}'
         }, status=500)
+
+
+# Properties Management Endpoints
+
+@require_http_methods(["GET"])
+def get_properties(request):
+    """Get all properties data as array of entry objects."""
+    try:
+        properties_file = PROJECT_ROOT / "properties.json"
+
+        # Get CSV metadata to know how many entries we should have
+        csv_metadata = get_csv_metadata()
+        row_count = csv_metadata['row_count'] if csv_metadata else 0
+
+        if not properties_file.exists():
+            # Initialize properties file with entries for all CSV rows
+            data = [{"entry": i} for i in range(1, row_count + 1)]
+
+            # Save the initialized data
+            with open(properties_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+
+            return JsonResponse({
+                'success': True,
+                'data': data
+            })
+
+        with open(properties_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        # Sync entries with CSV row count
+        existing_entries = {entry.get('entry') for entry in data if 'entry' in entry}
+
+        # Add missing entries
+        for i in range(1, row_count + 1):
+            if i not in existing_entries:
+                # Get all property names from first entry to maintain consistency
+                if data:
+                    new_entry = {"entry": i}
+                    for key in data[0].keys():
+                        if key != 'entry':
+                            new_entry[key] = None
+                    data.append(new_entry)
+                else:
+                    data.append({"entry": i})
+
+        # Remove entries beyond CSV row count
+        data = [entry for entry in data if entry.get('entry', 0) <= row_count]
+
+        # Sort by entry number
+        data.sort(key=lambda x: x.get('entry', 0))
+
+        # Save synced data
+        with open(properties_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+
+        return JsonResponse({
+            'success': True,
+            'data': data
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to load properties: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def save_properties(request):
+    """Save all properties data as array of entry objects."""
+    try:
+        data = json.loads(request.body) if request.body else []
+
+        # Validate that data is an array
+        if not isinstance(data, list):
+            return JsonResponse({
+                'success': False,
+                'error': 'Properties data must be an array'
+            }, status=400)
+
+        properties_file = PROJECT_ROOT / "properties.json"
+
+        with open(properties_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Properties saved successfully'
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON in request body'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to save properties: {str(e)}'
+        }, status=500)
