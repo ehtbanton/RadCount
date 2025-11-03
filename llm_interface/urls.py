@@ -6,6 +6,7 @@ app_name = 'llm_interface'
 urlpatterns = [
     path('', views.home, name='home'),
     path('generate/', views.generate, name='generate'),
+    path('generate-with-prompt/', views.generate_with_prompt, name='generate_with_prompt'),
     path('status/', views.status, name='status'),
     path('token-count/', views.token_count, name='token_count'),
     path('start/', views.start_server, name='start_server'),

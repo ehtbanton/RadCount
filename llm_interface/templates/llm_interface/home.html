@@ -728,6 +728,15 @@
                                 </div>
                                 <div style="display: flex; gap: 8px;">
                                     <button
+                                        id="extract-properties-btn"
+                                        onclick="extractPropertiesFromLLM()"
+                                        style="padding: 6px 12px; background: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s;"
+                                        onmouseover="this.style.background='#d97706'"
+                                        onmouseout="this.style.background='#f59e0b'"
+                                    >
+                                        Extract Properties
+                                    </button>
+                                    <button
                                         onclick="openPropertyModal()"
                                         style="padding: 6px 12px; background: #8b5cf6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s;"
                                         onmouseover="this.style.background='#7c3aed'"
@@ -2521,6 +2530,142 @@
         window.updatePropertyValue = updatePropertyValue;
         window.exportProperties = exportProperties;
         window.importProperties = importProperties;
+
+// Extract properties from LLM for current entry
+        async function extractPropertiesFromLLM() {
+            if (!currentEntry) {
+                alert('No entry selected');
+                return;
+            }
+
+            if (!currentEntryData) {
+                alert('No entry data loaded');
+                return;
+            }
+
+            const propertyTypes = inferPropertyTypes();
+
+            // Filter to only scalar properties (no arrays)
+            const scalarProperties = propertyTypes.filter(pt => !pt.dimensions);
+
+            if (scalarProperties.length === 0) {
+                alert('No scalar properties defined. Only scalar properties can be extracted.');
+                return;
+            }
+
+            // Check if LLM server is running
+            try {
+                const statusResponse = await fetch('/llm/status/');
+                const statusData = await statusResponse.json();
+
+                if (!statusData.server_running) {
+                    alert('LLM server is not running. Please start the server first.');
+                    return;
+                }
+            } catch (error) {
+                alert('Failed to check server status');
+                return;
+            }
+
+            const extractBtn = document.getElementById('extract-properties-btn');
+            const originalText = extractBtn.textContent;
+
+            extractBtn.disabled = true;
+            extractBtn.textContent = 'Extracting...';
+            extractBtn.style.background = '#9ca3af';
+
+            let successCount = 0;
+            let failCount = 0;
+
+            // Get the report text (last field of entry data)
+            const entryKeys = Object.keys(currentEntryData);
+            const lastKey = entryKeys[entryKeys.length - 1];
+            const reportText = currentEntryData[lastKey];
+
+            if (!reportText || typeof reportText !== 'string') {
+                alert('No report text found in current entry');
+                extractBtn.disabled = false;
+                extractBtn.textContent = originalText;
+                extractBtn.style.background = '#f59e0b';
+                return;
+            }
+
+            // Process each property sequentially
+            for (const propertyType of scalarProperties) {
+                extractBtn.textContent = `Extracting ${propertyType.name}...`;
+
+                try {
+                    // Build the prompt
+                    const userPrompt = `What is the ${propertyType.name} in this report? Answer with a single number only.`;
+
+                    // Make request to LLM
+                    const response = await fetch('/llm/generate-with-prompt/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            report_text: reportText,
+                            user_prompt: userPrompt,
+                            temperature: 0.3,
+                            max_tokens: 20
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        // Parse the number from the response
+                        const responseText = result.response.trim();
+
+                        // Try to extract a number
+                        const numberMatch = responseText.match(/-?\d+\.?\d*/);
+
+                        if (numberMatch) {
+                            const extractedValue = parseFloat(numberMatch[0]);
+
+                            // Update the property value
+                            const entryData = ensureEntryExists(currentEntry);
+                            entryData[propertyType.name] = extractedValue;
+
+                            successCount++;
+                        } else {
+                            console.warn(`Could not extract number from response for ${propertyType.name}: ${responseText}`);
+                            failCount++;
+                        }
+                    } else {
+                        console.error(`Failed to extract ${propertyType.name}: ${result.error}`);
+                        failCount++;
+                    }
+                } catch (error) {
+                    console.error(`Error extracting ${propertyType.name}:`, error);
+                    failCount++;
+                }
+
+                // Small delay between requests
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            // Save all changes to server
+            extractBtn.textContent = 'Saving...';
+            const saved = await savePropertiesToServer();
+
+            // Refresh the display
+            renderProperties();
+
+            // Show results
+            if (saved) {
+                alert(`Extraction complete!\nSuccessful: ${successCount}\nFailed: ${failCount}`);
+            } else {
+                alert(`Extraction completed but failed to save to server.\nSuccessful: ${successCount}\nFailed: ${failCount}`);
+            }
+
+            // Reset button
+            extractBtn.disabled = false;
+            extractBtn.textContent = originalText;
+            extractBtn.style.background = '#f59e0b';
+        }
+
+        // Make function globally available
+        window.extractPropertiesFromLLM = extractPropertiesFromLLM;
 
         // Load properties on page load
         loadProperties();

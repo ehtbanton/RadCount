@@ -9,6 +9,7 @@ import sys
 import platform
 import csv
 from datetime import datetime
+import requests
 
 from .llm_service import LlamaService
 
@@ -1277,6 +1278,64 @@ def execute_extraction_function(request):
             'success': False,
             'error': f'Failed to execute extraction: {str(e)}'
         }, status=500)
+
+
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def generate_with_prompt(request):
+    """Generate a response with a custom user prompt and report text."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        user_prompt = data.get('user_prompt', '')
+        report_text = data.get('report_text', '')
+        temperature = float(data.get('temperature', 0.7))
+        max_tokens = int(data.get('max_tokens', 50))
+
+        if not user_prompt:
+            return JsonResponse({'success': False, 'error': 'user_prompt is required'}, status=400)
+
+        if not report_text:
+            return JsonResponse({'success': False, 'error': 'report_text is required'}, status=400)
+
+        llm_service = LlamaService()
+
+        if not llm_service.is_server_running():
+            return JsonResponse({'success': False, 'error': 'LLM server is not running'}, status=503)
+
+        # Build messages with report text and prompt
+        messages = []
+
+        user_text = "Report: " + report_text + "\n\n" + user_prompt
+
+        messages.append({
+            'role': 'user',
+            'content': user_text
+        })
+
+        # Call LLM
+        response = requests.post(
+            f"{llm_service.base_url}/v1/chat/completions",
+            headers={'Content-Type': 'application/json'},
+            json={
+                'messages': messages,
+                'temperature': temperature,
+                'max_tokens': max_tokens
+            },
+            timeout=60
+        )
+
+        if response.status_code != 200:
+            return JsonResponse({'success': False, 'error': f'LLM request failed: {response.text}'}, status=500)
+
+        result = response.json()
+        generated_text = result['choices'][0]['message']['content']
+
+        return JsonResponse({'success': True, 'response': generated_text})
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Failed to generate response: {str(e)}'}, status=500)
 
 
 # Properties Management Endpoints
