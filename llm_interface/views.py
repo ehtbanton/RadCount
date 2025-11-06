@@ -19,6 +19,125 @@ MODELS_DIR = PROJECT_ROOT / "models"
 LLAMA_CPP_DIR = PROJECT_ROOT / "llama_cpp"
 
 
+# RadGraph System Prompt for Entity-Relation Extraction
+RADGRAPH_SYSTEM_PROMPT = """You are a clinical information extraction system specialized in radiology reports. Extract entities and relations from the provided radiology report using the RadGraph schema.
+
+ENTITY TYPES (4 types):
+
+1. **Anatomy**: Anatomical body parts that appear in the radiology report.
+   - Examples: "lung", "heart", "right lower lobe", "pleura", "aorta", "mediastinum"
+   - Include specific anatomical locations and modifiers
+
+2. **Observation:Definitely Present**: Visual features, pathophysiologic processes, or diagnostic disease classifications that are CONFIRMED to be present.
+   - Examples: "opacity", "effusion", "consolidation", "enlarged", "fracture", "pneumonia"
+   - Use this for findings that are stated as definite or present without uncertainty
+
+3. **Observation:Uncertain**: Visual features or findings that are POSSIBLY present or SUSPECTED.
+   - Examples: "possible infiltrate", "suspected pneumonia", "questionable nodule"
+   - Use this for findings with uncertainty markers like "possible", "suspected", "questionable", "concerning for", "suggestive"
+
+4. **Observation:Definitely Absent**: Findings that are EXPLICITLY RULED OUT or stated as NOT present.
+   - Examples: "no effusion", "no acute findings", "pneumothorax is absent"
+   - Use this for explicit negations, not just absence of mention
+
+RELATION TYPES (3 types):
+
+1. **suggestive_of**: One observation implies or suggests another observation.
+   - Format: (Observation → Observation)
+   - Example: "infiltrate suggestive_of pneumonia"
+   - Use when one finding raises suspicion for a diagnosis
+
+2. **located_at**: An observation is related to or located at an anatomical structure.
+   - Format: (Observation → Anatomy)
+   - Example: "opacity located_at right lower lobe"
+   - Use to link findings to anatomical locations
+
+3. **modify**: One entity modifies, quantifies, or describes another entity.
+   - Format: (Observation → Observation) OR (Anatomy → Anatomy)
+   - Examples:
+     - "increased modify opacity" (one observation modifying another)
+     - "right modify lobe" (one anatomy modifying another)
+   - Use for descriptors, qualifiers, size terms, temporal changes
+
+EXTRACTION INSTRUCTIONS:
+
+1. Read the radiology report carefully
+2. Identify ALL entities that fit the four entity types above
+3. For each entity, determine its type based on the definitions
+4. Identify relationships between entities using the three relation types
+5. Extract as many valid entity-relation triplets as possible
+6. Be thorough - extract ALL clinically relevant information
+
+OUTPUT FORMAT:
+
+Return a JSON array of triplets. Each triplet must have this exact structure:
+{
+  "entity1_text": "the first entity text",
+  "entity1_type": "one of: Anatomy, Observation:Definitely Present, Observation:Uncertain, Observation:Definitely Absent",
+  "relation_type": "one of: suggestive_of, located_at, modify",
+  "entity2_text": "the second entity text",
+  "entity2_type": "one of: Anatomy, Observation:Definitely Present, Observation:Uncertain, Observation:Definitely Absent"
+}
+
+EXAMPLE:
+
+Report: "Increased right lower lobe opacity, concerning for infection. No pleural effusion."
+
+Output:
+[
+  {
+    "entity1_text": "increased",
+    "entity1_type": "Observation:Definitely Present",
+    "relation_type": "modify",
+    "entity2_text": "opacity",
+    "entity2_type": "Observation:Definitely Present"
+  },
+  {
+    "entity1_text": "right",
+    "entity1_type": "Anatomy",
+    "relation_type": "modify",
+    "entity2_text": "lobe",
+    "entity2_type": "Anatomy"
+  },
+  {
+    "entity1_text": "lower",
+    "entity1_type": "Anatomy",
+    "relation_type": "modify",
+    "entity2_text": "lobe",
+    "entity2_type": "Anatomy"
+  },
+  {
+    "entity1_text": "opacity",
+    "entity1_type": "Observation:Definitely Present",
+    "relation_type": "located_at",
+    "entity2_text": "lobe",
+    "entity2_type": "Anatomy"
+  },
+  {
+    "entity1_text": "opacity",
+    "entity1_type": "Observation:Definitely Present",
+    "relation_type": "suggestive_of",
+    "entity2_text": "infection",
+    "entity2_type": "Observation:Uncertain"
+  },
+  {
+    "entity1_text": "effusion",
+    "entity1_type": "Observation:Definitely Absent",
+    "relation_type": "located_at",
+    "entity2_text": "pleura",
+    "entity2_type": "Anatomy"
+  }
+]
+
+IMPORTANT:
+- Return ONLY the JSON array, no additional text
+- Ensure all JSON is valid and properly formatted
+- Extract ALL relevant entities and relations
+- Be consistent with entity type assignments
+- Every relation must connect two valid entities
+"""
+
+
 def detect_gpu():
     """Detect available GPU hardware."""
     # Check for NVIDIA GPU
@@ -1338,24 +1457,24 @@ def generate_with_prompt(request):
         return JsonResponse({'success': False, 'error': f'Failed to generate response: {str(e)}'}, status=500)
 
 
-# Properties Management Endpoints
+# Entity-Relation Management Endpoints
 
 @require_http_methods(["GET"])
-def get_properties(request):
-    """Get all properties data as array of entry objects."""
+def get_entities(request):
+    """Get all entity-relation data as array of entry objects with triplets."""
     try:
-        properties_file = PROJECT_ROOT / "properties.json"
+        entities_file = PROJECT_ROOT / "entities.json"
 
         # Get CSV metadata to know how many entries we should have
         csv_metadata = get_csv_metadata()
         row_count = csv_metadata['row_count'] if csv_metadata else 0
 
-        if not properties_file.exists():
-            # Initialize properties file with entries for all CSV rows
-            data = [{"entry": i} for i in range(1, row_count + 1)]
+        if not entities_file.exists():
+            # Initialize entities file with entries for all CSV rows
+            data = [{"entry": i, "triplets": []} for i in range(1, row_count + 1)]
 
             # Save the initialized data
-            with open(properties_file, 'w', encoding='utf-8') as f:
+            with open(entities_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
 
             return JsonResponse({
@@ -1363,7 +1482,7 @@ def get_properties(request):
                 'data': data
             })
 
-        with open(properties_file, 'r', encoding='utf-8') as f:
+        with open(entities_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
 
         # Sync entries with CSV row count
@@ -1372,15 +1491,7 @@ def get_properties(request):
         # Add missing entries
         for i in range(1, row_count + 1):
             if i not in existing_entries:
-                # Get all property names from first entry to maintain consistency
-                if data:
-                    new_entry = {"entry": i}
-                    for key in data[0].keys():
-                        if key != 'entry':
-                            new_entry[key] = None
-                    data.append(new_entry)
-                else:
-                    data.append({"entry": i})
+                data.append({"entry": i, "triplets": []})
 
         # Remove entries beyond CSV row count
         data = [entry for entry in data if entry.get('entry', 0) <= row_count]
@@ -1388,8 +1499,13 @@ def get_properties(request):
         # Sort by entry number
         data.sort(key=lambda x: x.get('entry', 0))
 
+        # Ensure all entries have triplets array
+        for entry in data:
+            if 'triplets' not in entry:
+                entry['triplets'] = []
+
         # Save synced data
-        with open(properties_file, 'w', encoding='utf-8') as f:
+        with open(entities_file, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
 
         return JsonResponse({
@@ -1400,14 +1516,14 @@ def get_properties(request):
     except Exception as e:
         return JsonResponse({
             'success': False,
-            'error': f'Failed to load properties: {str(e)}'
+            'error': f'Failed to load entities: {str(e)}'
         }, status=500)
 
 
 @csrf_exempt
 @require_http_methods(["POST"])
-def save_properties(request):
-    """Save all properties data as array of entry objects."""
+def save_entities(request):
+    """Save all entity-relation data as array of entry objects with triplets."""
     try:
         data = json.loads(request.body) if request.body else []
 
@@ -1415,17 +1531,17 @@ def save_properties(request):
         if not isinstance(data, list):
             return JsonResponse({
                 'success': False,
-                'error': 'Properties data must be an array'
+                'error': 'Entities data must be an array'
             }, status=400)
 
-        properties_file = PROJECT_ROOT / "properties.json"
+        entities_file = PROJECT_ROOT / "entities.json"
 
-        with open(properties_file, 'w', encoding='utf-8') as f:
+        with open(entities_file, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
 
         return JsonResponse({
             'success': True,
-            'message': 'Properties saved successfully'
+            'message': 'Entities saved successfully'
         })
 
     except json.JSONDecodeError:
@@ -1436,5 +1552,122 @@ def save_properties(request):
     except Exception as e:
         return JsonResponse({
             'success': False,
-            'error': f'Failed to save properties: {str(e)}'
+            'error': f'Failed to save entities: {str(e)}'
         }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def extract_entities_relations(request):
+    """Extract entities and relations from a report using RadGraph schema."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        report_text = data.get('report_text', '')
+        entry_number = data.get('entry_number', None)
+
+        if not report_text:
+            return JsonResponse({'success': False, 'error': 'report_text is required'}, status=400)
+
+        llm_service = LlamaService()
+
+        if not llm_service.is_server_running():
+            return JsonResponse({'success': False, 'error': 'LLM server is not running'}, status=503)
+
+        # Build messages with RadGraph system prompt
+        messages = [
+            {
+                'role': 'system',
+                'content': RADGRAPH_SYSTEM_PROMPT
+            },
+            {
+                'role': 'user',
+                'content': f"Extract all entities and relations from this radiology report:\n\n{report_text}"
+            }
+        ]
+
+        # Call LLM with settings optimized for deterministic extraction
+        response = requests.post(
+            f"{llm_service.base_url}/v1/chat/completions",
+            headers={'Content-Type': 'application/json'},
+            json={
+                'messages': messages,
+                'temperature': 0.1,  # Low temperature for consistency
+                'max_tokens': 2000   # Allow longer responses for complex reports
+            },
+            timeout=120  # Longer timeout for complex extraction
+        )
+
+        if response.status_code != 200:
+            return JsonResponse({'success': False, 'error': f'LLM request failed: {response.text}'}, status=500)
+
+        result = response.json()
+        generated_text = result['choices'][0]['message']['content']
+
+        # Parse JSON response
+        try:
+            # Try to extract JSON array from response
+            # Sometimes LLM might add extra text, so we look for the array
+            import re
+            json_match = re.search(r'\[.*\]', generated_text, re.DOTALL)
+            if json_match:
+                triplets = json.loads(json_match.group())
+            else:
+                triplets = json.loads(generated_text)
+
+            # Validate triplet structure
+            if not isinstance(triplets, list):
+                return JsonResponse({
+                    'success': False,
+                    'error': 'LLM response is not a valid array of triplets',
+                    'raw_response': generated_text
+                }, status=500)
+
+            # Validate each triplet has required fields
+            required_fields = ['entity1_text', 'entity1_type', 'relation_type', 'entity2_text', 'entity2_type']
+            for i, triplet in enumerate(triplets):
+                if not isinstance(triplet, dict):
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Triplet {i} is not a valid object',
+                        'raw_response': generated_text
+                    }, status=500)
+                for field in required_fields:
+                    if field not in triplet:
+                        return JsonResponse({
+                            'success': False,
+                            'error': f'Triplet {i} missing required field: {field}',
+                            'raw_response': generated_text
+                        }, status=500)
+
+            # If entry_number provided, save the triplets to that entry
+            if entry_number is not None:
+                entities_file = PROJECT_ROOT / "entities.json"
+                if entities_file.exists():
+                    with open(entities_file, 'r', encoding='utf-8') as f:
+                        entities_data = json.load(f)
+
+                    # Find and update the entry
+                    for entry in entities_data:
+                        if entry.get('entry') == entry_number:
+                            entry['triplets'] = triplets
+                            break
+
+                    # Save updated data
+                    with open(entities_file, 'w', encoding='utf-8') as f:
+                        json.dump(entities_data, f, indent=2, ensure_ascii=False)
+
+            return JsonResponse({
+                'success': True,
+                'triplets': triplets,
+                'count': len(triplets)
+            })
+
+        except json.JSONDecodeError as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Failed to parse LLM response as JSON: {str(e)}',
+                'raw_response': generated_text
+            }, status=500)
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Failed to extract entities: {str(e)}'}, status=500)

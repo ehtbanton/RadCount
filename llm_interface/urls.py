@@ -21,7 +21,8 @@ urlpatterns = [
     path('extraction-functions/', views.get_extraction_functions, name='get_extraction_functions'),
     path('save-extraction-function/', views.save_extraction_function, name='save_extraction_function'),
     path('delete-extraction-function/', views.delete_extraction_function, name='delete_extraction_function'),
-    path('properties/', views.get_properties, name='get_properties'),
-    path('save-properties/', views.save_properties, name='save_properties'),
+    path('entities/', views.get_entities, name='get_entities'),
+    path('save-entities/', views.save_entities, name='save_entities'),
+    path('extract-entities-relations/', views.extract_entities_relations, name='extract_entities_relations'),
     path('execute-extraction/', views.execute_extraction_function, name='execute_extraction_function'),
 ]

@@ -720,32 +720,32 @@
                             <div id="csv-entry-text-display" style="display: none; background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 1.02em; line-height: 1.6; height: 400px; overflow-y: scroll; overflow-x: hidden; color: #1f2937; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;">No entry loaded</div>
                         </div>
 
-                        <!-- Entry Properties Section -->
+                        <!-- Entry Entities & Relations Section -->
                         <div style="background: #f8f9fa; padding: 20px; border-radius: 6px; border: 1px solid #e5e7eb; margin-top: 15px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                                 <div style="font-weight: 400; color: #374151; font-size: 1.05em;">
-                                    Entry Properties
+                                    Entry Entities & Relations
                                 </div>
                                 <div style="display: flex; gap: 8px;">
                                     <button
-                                        id="extract-properties-btn"
-                                        onclick="extractPropertiesFromLLM()"
+                                        id="extract-entities-btn"
+                                        onclick="extractEntitiesFromLLM()"
                                         style="padding: 6px 12px; background: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s;"
                                         onmouseover="this.style.background='#d97706'"
                                         onmouseout="this.style.background='#f59e0b'"
                                     >
-                                        Extract Properties
+                                        Extract Entities & Relations
                                     </button>
                                     <button
-                                        onclick="openPropertyModal()"
+                                        onclick="openSchemaModal()"
                                         style="padding: 6px 12px; background: #8b5cf6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s;"
                                         onmouseover="this.style.background='#7c3aed'"
                                         onmouseout="this.style.background='#8b5cf6'"
                                     >
-                                        Manage Types
+                                        View Schema
                                     </button>
                                     <button
-                                        onclick="exportProperties()"
+                                        onclick="exportEntities()"
                                         style="padding: 6px 12px; background: #059669; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s;"
                                         onmouseover="this.style.background='#047857'"
                                         onmouseout="this.style.background='#059669'"
@@ -753,20 +753,20 @@
                                         Export
                                     </button>
                                     <button
-                                        onclick="document.getElementById('import-properties-input').click()"
+                                        onclick="document.getElementById('import-entities-input').click()"
                                         style="padding: 6px 12px; background: #0284c7; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s;"
                                         onmouseover="this.style.background='#0369a1'"
                                         onmouseout="this.style.background='#0284c7'"
                                     >
                                         Import
                                     </button>
-                                    <input type="file" id="import-properties-input" accept=".json" style="display: none;" onchange="importProperties(event)">
+                                    <input type="file" id="import-entities-input" accept=".json" style="display: none;" onchange="importEntities(event)">
                                 </div>
                             </div>
 
-                            <div id="properties-container" style="display: flex; flex-direction: column; gap: 12px; max-height: 400px; overflow-y: auto;">
+                            <div id="entities-container" style="display: flex; flex-direction: column; gap: 12px; max-height: 400px; overflow-y: auto;">
                                 <div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">
-                                    No properties defined. Click "Manage Types" to add property types.
+                                    No entities extracted yet. Click "Extract Entities & Relations" to analyze the current report.
                                 </div>
                             </div>
                         </div>
@@ -1536,7 +1536,7 @@
 
                     // Update current entry for properties system
                     currentEntry = parseInt(entryNumber);
-                    renderProperties();
+                    renderEntities();
 
                     // Format the JSON data nicely for JSON view
                     jsonDisplayArea.textContent = JSON.stringify(data.data, null, 2);
@@ -2108,96 +2108,264 @@
         // Load extraction functions on page load
         loadExtractionFunctions();
 
-        // ===== Properties Management System (Array-based) =====
+        // ===== Entity-Relation Management System (RadGraph) =====
 
-        // Global properties data storage
-        let propertiesData = []; // Array of { entry: N, property1: value, property2: value, ... }
+        // Global entities data storage
+        let entitiesData = []; // Array of { entry: N, triplets: [{entity1_text, entity1_type, relation_type, entity2_text, entity2_type}, ...] }
 
-        // Infer property types from the data
+        // Legacy compatibility - stub variables and functions for old property code
+        let propertiesData = []; // Empty array for legacy code compatibility
+
         function inferPropertyTypes() {
-            const propertyTypes = [];
-            const propertySet = new Set();
-
-            // Collect all property names (except 'entry')
-            for (const entryData of propertiesData) {
-                for (const key in entryData) {
-                    if (key !== 'entry') {
-                        propertySet.add(key);
-                    }
-                }
-            }
-
-            // For each property, determine its structure from first non-null value
-            for (const propName of propertySet) {
-                let dimensions = null;
-                let readOnly = false;
-
-                // Find first non-null value to infer dimensions
-                for (const entryData of propertiesData) {
-                    if (entryData[propName] != null && Array.isArray(entryData[propName])) {
-                        dimensions = getArrayDimensions(entryData[propName]);
-                        break;
-                    }
-                }
-
-                propertyTypes.push({
-                    name: propName,
-                    dimensions: dimensions,
-                    readOnly: readOnly
-                });
-            }
-
-            return propertyTypes;
+            return []; // Return empty array - no properties in new entity system
         }
 
-        // Get dimensions of a nested array
-        function getArrayDimensions(arr) {
-            if (!Array.isArray(arr)) return null;
-
-            const dims = [arr.length];
-            if (arr.length > 0 && Array.isArray(arr[0])) {
-                const subDims = getArrayDimensions(arr[0]);
-                if (subDims) {
-                    dims.push(...subDims);
-                }
-            }
-            return dims;
+        async function savePropertiesToServer() {
+            return true; // Always return success for legacy code
         }
 
-        // Load properties from server
-        async function loadProperties() {
+        // RadGraph schema constants
+        const ENTITY_TYPES = [
+            'Anatomy',
+            'Observation:Definitely Present',
+            'Observation:Uncertain',
+            'Observation:Definitely Absent'
+        ];
+
+        const RELATION_TYPES = [
+            'suggestive_of',
+            'located_at',
+            'modify'
+        ];
+
+        // Color mapping for entity types
+        const ENTITY_TYPE_COLORS = {
+            'Anatomy': '#3b82f6',  // Blue
+            'Observation:Definitely Present': '#10b981',  // Green
+            'Observation:Uncertain': '#f59e0b',  // Orange
+            'Observation:Definitely Absent': '#ef4444'  // Red
+        };
+
+        // Load entities from server
+        async function loadEntities() {
             try {
-                const response = await fetch('/llm/properties/', {
+                const response = await fetch('/llm/entities/', {
                     method: 'GET',
                 });
                 const result = await response.json();
 
                 if (result.success) {
-                    propertiesData = result.data || [];
-                    renderProperties();
+                    entitiesData = result.data || [];
+                    renderEntities();
                 }
             } catch (error) {
-                console.error('Failed to load properties:', error);
+                console.error('Failed to load entities:', error);
             }
         }
 
-        // Save properties to server
-        async function savePropertiesToServer() {
+        // Save entities to server
+        async function saveEntitiesToServer() {
             try {
-                const response = await fetch('/llm/save-properties/', {
+                const response = await fetch('/llm/save-entities/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(propertiesData)
+                    body: JSON.stringify(entitiesData)
                 });
                 const result = await response.json();
                 return result.success;
             } catch (error) {
-                console.error('Failed to save properties:', error);
+                console.error('Failed to save entities:', error);
                 return false;
             }
         }
 
-        // Get entry data by entry number
+        // Get entity entry data by entry number
+        function getEntityEntryData(entryNum) {
+            return entitiesData.find(e => e.entry === entryNum);
+        }
+
+        // Ensure entity entry exists
+        function ensureEntityEntryExists(entryNum) {
+            let entryData = getEntityEntryData(entryNum);
+            if (!entryData) {
+                entryData = { entry: entryNum, triplets: [] };
+                entitiesData.push(entryData);
+                entitiesData.sort((a, b) => a.entry - b.entry);
+            }
+            if (!entryData.triplets) {
+                entryData.triplets = [];
+            }
+            return entryData;
+        }
+
+        // Render entities and relations for current entry
+        function renderEntities() {
+            const container = document.getElementById('entities-container');
+
+            if (!currentEntry) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">Select an entry to view entities & relations</div>';
+                return;
+            }
+
+            const entryData = ensureEntityEntryExists(currentEntry);
+            const triplets = entryData.triplets || [];
+
+            if (triplets.length === 0) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">No entities extracted yet. Click "Extract Entities & Relations" to analyze this report.</div>';
+                return;
+            }
+
+            // Render triplets in a nice table format
+            let html = '<div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb;">';
+            html += '<div style="font-weight: 500; color: #374151; margin-bottom: 12px;">Extracted Triplets (' + triplets.length + ')</div>';
+            html += '<div style="display: flex; flex-direction: column; gap: 8px;">';
+
+            triplets.forEach((triplet, index) => {
+                const entity1Color = ENTITY_TYPE_COLORS[triplet.entity1_type] || '#6b7280';
+                const entity2Color = ENTITY_TYPE_COLORS[triplet.entity2_type] || '#6b7280';
+
+                html += '<div style="display: flex; align-items: center; gap: 8px; padding: 10px; background: #f9fafb; border-radius: 4px; font-size: 0.9em;">';
+                html += '<span style="flex: 2; display: flex; flex-direction: column; gap: 2px;">';
+                html += '<span style="font-weight: 500; color: #1f2937;">' + escapeHtml(triplet.entity1_text) + '</span>';
+                html += '<span style="font-size: 0.75em; color: ' + entity1Color + ';">' + triplet.entity1_type + '</span>';
+                html += '</span>';
+                html += '<span style="flex: 1; text-align: center; background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: 500;">' + triplet.relation_type + '</span>';
+                html += '<span style="flex: 2; display: flex; flex-direction: column; gap: 2px;">';
+                html += '<span style="font-weight: 500; color: #1f2937;">' + escapeHtml(triplet.entity2_text) + '</span>';
+                html += '<span style="font-size: 0.75em; color: ' + entity2Color + ';">' + triplet.entity2_type + '</span>';
+                html += '</span>';
+                html += '</div>';
+            });
+
+            html += '</div></div>';
+            container.innerHTML = html;
+        }
+
+        // HTML escape helper
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Extract entities and relations from current report
+        async function extractEntitiesFromLLM() {
+            if (!currentEntry) {
+                alert('Please select a CSV entry first');
+                return;
+            }
+
+            // Check if LLM server is running
+            try {
+                const statusResponse = await fetch('/llm/status/');
+                const statusResult = await statusResponse.json();
+                if (!statusResult.server_running) {
+                    alert('LLM server is not running. Please start it first.');
+                    return;
+                }
+            } catch (error) {
+                alert('Failed to check LLM server status');
+                return;
+            }
+
+            // Get report text from current entry (last field)
+            const lastKey = Object.keys(currentEntryData)[Object.keys(currentEntryData).length - 1];
+            const reportText = currentEntryData[lastKey];
+
+            if (!reportText) {
+                alert('No report text found in current entry');
+                return;
+            }
+
+            // Show loading state
+            const button = document.getElementById('extract-entities-btn');
+            const originalText = button.textContent;
+            button.textContent = 'Extracting...';
+            button.disabled = true;
+
+            try {
+                const response = await fetch('/llm/extract-entities-relations/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        report_text: reportText,
+                        entry_number: currentEntry
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Update local data
+                    const entryData = ensureEntityEntryExists(currentEntry);
+                    entryData.triplets = result.triplets;
+
+                    // Re-render
+                    renderEntities();
+
+                    alert('Successfully extracted ' + result.count + ' entity-relation triplets');
+                } else {
+                    alert('Extraction failed: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Extraction error:', error);
+                alert('Failed to extract entities: ' + error.message);
+            } finally {
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        }
+
+        // Export entities to JSON file
+        function exportEntities() {
+            if (entitiesData.length === 0) {
+                alert('No entities to export');
+                return;
+            }
+
+            const dataStr = JSON.stringify(entitiesData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'entities.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Import entities from JSON file
+        async function importEntities(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            try {
+                const text = await file.text();
+                const imported = JSON.parse(text);
+
+                if (!Array.isArray(imported)) {
+                    alert('Invalid entities file: must be an array');
+                    return;
+                }
+
+                if (confirm('This will replace all current entities. Continue?')) {
+                    entitiesData = imported;
+                    await saveEntitiesToServer();
+                    renderEntities();
+                    alert('Entities imported successfully');
+                }
+            } catch (error) {
+                alert('Failed to import entities: ' + error.message);
+            }
+
+            event.target.value = '';
+        }
+
+        // Open RadGraph schema modal
+        function openSchemaModal() {
+            alert('RadGraph Schema\n\nENTITY TYPES:\n- Anatomy: Anatomical body parts\n- Observation:Definitely Present: Confirmed findings\n- Observation:Uncertain: Possible/suspected findings\n- Observation:Definitely Absent: Explicitly ruled out findings\n\nRELATION TYPES:\n- suggestive_of: One observation suggests another\n- located_at: Observation is at anatomical location\n- modify: One entity modifies another');
+        }
+
+        // Get entry data by entry number (legacy compatibility)
         function getEntryData(entryNum) {
             return propertiesData.find(e => e.entry === entryNum);
         }
@@ -2272,7 +2440,7 @@
                 nameInput.value = '';
                 dimensionsInput.value = '';
                 renderPropertyTypesList();
-                renderProperties();
+                renderEntities();
             } else {
                 alert('Failed to add property type');
             }
@@ -2306,7 +2474,7 @@
             const success = await savePropertiesToServer();
             if (success) {
                 renderPropertyTypesList();
-                renderProperties();
+                renderEntities();
             } else {
                 alert('Failed to remove property type');
             }
@@ -2322,7 +2490,7 @@
                 readOnlyProperties.add(propertyName);
             }
             renderPropertyTypesList();
-            renderProperties();
+            renderEntities();
         }
 
         function isPropertyReadOnly(propertyName) {
@@ -2350,43 +2518,7 @@
             }).join('');
         }
 
-        // Render properties for current entry
-        function renderProperties() {
-            const container = document.getElementById('properties-container');
-            const propertyTypes = inferPropertyTypes();
-
-            if (propertyTypes.length === 0) {
-                container.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">No properties defined. Click "Manage Types" to add property types.</div>';
-                return;
-            }
-
-            if (!currentEntry) {
-                container.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">Select an entry to view/edit properties</div>';
-                return;
-            }
-
-            // Ensure entry exists
-            const entryData = ensureEntryExists(currentEntry);
-
-            // Initialize missing properties for this entry
-            for (const pt of propertyTypes) {
-                if (!(pt.name in entryData)) {
-                    if (pt.dimensions) {
-                        entryData[pt.name] = createNestedArray(pt.dimensions);
-                    } else {
-                        entryData[pt.name] = null;
-                    }
-                }
-            }
-
-            container.innerHTML = propertyTypes.map(pt => {
-                const value = entryData[pt.name];
-                const readOnly = isPropertyReadOnly(pt.name);
-                const readOnlyLabel = readOnly ? '<span style="color: #ef4444; font-size: 0.75em;">(read-only)</span>' : '';
-
-                return '<div style="background: white; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb;"><div style="font-weight: 500; color: #374151; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;"><span>' + pt.name + '</span>' + readOnlyLabel + '</div><div id="property-editor-' + pt.name.replace(/[^a-zA-Z0-9]/g, '_') + '">' + renderPropertyEditor(pt.name, value, [], readOnly) + '</div></div>';
-            }).join('');
-        }
+        // Old renderProperties function removed - using new renderEntities from entity system
 
         // Recursive property editor
         function renderPropertyEditor(propertyName, value, path, readOnly) {
@@ -2500,7 +2632,7 @@
                 if (success) {
                     alert('Properties imported successfully');
                     renderPropertyTypesList();
-                    renderProperties();
+                    renderEntities();
                 } else {
                     alert('Failed to save imported properties');
                 }
@@ -2649,7 +2781,7 @@
             const saved = await savePropertiesToServer();
 
             // Refresh the display
-            renderProperties();
+            renderEntities();
 
             // Show results
             if (saved) {
@@ -2664,11 +2796,11 @@
             extractBtn.style.background = '#f59e0b';
         }
 
-        // Make function globally available
-        window.extractPropertiesFromLLM = extractPropertiesFromLLM;
+        // Make function globally available for entities
+        window.extractEntitiesFromLLM = extractEntitiesFromLLM;
 
-        // Load properties on page load
-        loadProperties();
+        // Load entities on page load
+        loadEntities();
     </script>
 </body>
 </html>
