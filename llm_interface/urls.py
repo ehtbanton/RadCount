@@ -29,5 +29,9 @@ urlpatterns = [
     path('set-active-schema/', views.set_active_schema, name='set_active_schema'),
     path('save-schema/', views.save_schema, name='save_schema'),
     path('delete-schema/', views.delete_schema, name='delete_schema'),
+    path('extraction-prompts/', views.get_extraction_prompts_view, name='get_extraction_prompts'),
+    path('set-active-prompt/', views.set_active_prompt, name='set_active_prompt'),
+    path('save-prompt/', views.save_prompt, name='save_prompt'),
+    path('delete-prompt/', views.delete_prompt, name='delete_prompt'),
     path('execute-extraction/', views.execute_extraction_function, name='execute_extraction_function'),
 ]

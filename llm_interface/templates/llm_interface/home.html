@@ -722,30 +722,22 @@
 
                         <!-- Entry Entities & Relations Section -->
                         <div style="background: #f8f9fa; padding: 20px; border-radius: 6px; border: 1px solid #e5e7eb; margin-top: 15px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px;">
+                                <!-- Schema Row -->
                                 <div style="display: flex; align-items: center; gap: 12px;">
-                                    <div style="font-weight: 400; color: #374151; font-size: 1.05em;">
-                                        Entry Entities & Relations
+                                    <div style="font-weight: 400; color: #374151; font-size: 1.05em; white-space: nowrap; width: 150px;">
+                                        Schema:
                                     </div>
                                     <select
                                         id="schema-selector"
                                         onchange="switchSchema()"
-                                        style="padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9em; background: white; cursor: pointer;"
+                                        style="flex: 1; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9em; background: white; cursor: pointer;"
                                     >
                                         <option value="">Loading schemas...</option>
                                     </select>
                                     <button
-                                        onclick="openSchemaModal()"
-                                        style="padding: 6px 10px; background: #8b5cf6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s;"
-                                        onmouseover="this.style.background='#7c3aed'"
-                                        onmouseout="this.style.background='#8b5cf6'"
-                                        title="View entity and relation types in this schema"
-                                    >
-                                        View
-                                    </button>
-                                    <button
                                         onclick="openSchemaEditorModal()"
-                                        style="padding: 6px 12px; background: #6366f1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s;"
+                                        style="padding: 6px 12px; background: #6366f1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s; white-space: nowrap;"
                                         onmouseover="this.style.background='#4f46e5'"
                                         onmouseout="this.style.background='#6366f1'"
                                         title="Create or edit custom schemas"
@@ -753,15 +745,40 @@
                                         Edit Schema
                                     </button>
                                 </div>
-                                <button
-                                    id="extract-entities-btn"
-                                    onclick="extractEntitiesFromLLM()"
-                                    style="padding: 8px 16px; background: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: background 0.2s;"
-                                    onmouseover="this.style.background='#d97706'"
-                                    onmouseout="this.style.background='#f59e0b'"
-                                >
-                                    Extract Entities & Relations
-                                </button>
+                                <!-- Extraction Prompt Row -->
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div style="font-weight: 400; color: #374151; font-size: 1.05em; white-space: nowrap; width: 150px;">
+                                        Extraction Prompt:
+                                    </div>
+                                    <select
+                                        id="extraction-prompt-selector"
+                                        onchange="switchExtractionPrompt()"
+                                        style="flex: 1; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9em; background: white; cursor: pointer;"
+                                    >
+                                        <option value="">Loading prompts...</option>
+                                    </select>
+                                    <button
+                                        onclick="openExtractionPromptEditorModal()"
+                                        style="padding: 6px 12px; background: #6366f1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s; white-space: nowrap;"
+                                        onmouseover="this.style.background='#4f46e5'"
+                                        onmouseout="this.style.background='#6366f1'"
+                                        title="Create or edit extraction prompts"
+                                    >
+                                        Edit Extraction Prompts
+                                    </button>
+                                </div>
+                                <!-- Extract Button Row -->
+                                <div style="display: flex; justify-content: flex-end;">
+                                    <button
+                                        id="extract-entities-btn"
+                                        onclick="extractEntitiesFromLLM()"
+                                        style="padding: 8px 16px; background: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: background 0.2s;"
+                                        onmouseover="this.style.background='#d97706'"
+                                        onmouseout="this.style.background='#f59e0b'"
+                                    >
+                                        Extract Entities & Relations
+                                    </button>
+                                </div>
                             </div>
 
                             <div id="entities-container" style="display: flex; flex-direction: column; gap: 12px; max-height: 400px; overflow-y: auto;">
@@ -2913,6 +2930,273 @@
             }
         }
 
+        // ===== Extraction Prompt Editor =====
+
+        let allExtractionPrompts = {};
+        let activePromptName = '';
+        let editorPromptKey = '';
+        let editorIsNewPrompt = false;
+
+        // Load extraction prompts from server
+        async function loadExtractionPrompts() {
+            try {
+                const response = await fetch('/llm/extraction-prompts/');
+                const data = await response.json();
+
+                if (data.success) {
+                    allExtractionPrompts = data.prompts;
+                    activePromptName = data.active_prompt;
+
+                    // Update prompt selector in main UI
+                    const promptSelector = document.getElementById('extraction-prompt-selector');
+                    promptSelector.innerHTML = '';
+
+                    for (const [key, prompt] of Object.entries(allExtractionPrompts)) {
+                        const option = document.createElement('option');
+                        option.value = key;
+                        option.textContent = prompt.name;
+                        if (key === activePromptName) {
+                            option.selected = true;
+                        }
+                        promptSelector.appendChild(option);
+                    }
+                } else {
+                    console.error('Failed to load extraction prompts:', data.error);
+                }
+            } catch (error) {
+                console.error('Error loading extraction prompts:', error);
+            }
+        }
+
+        // Switch active extraction prompt
+        async function switchExtractionPrompt() {
+            const selector = document.getElementById('extraction-prompt-selector');
+            const promptName = selector.value;
+
+            if (!promptName) return;
+
+            try {
+                const response = await fetch('/llm/set-active-prompt/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ prompt_name: promptName })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    activePromptName = promptName;
+                    // Switched successfully - no need to show alert
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                alert(`Error switching prompt: ${error.message}`);
+            }
+        }
+
+        // Open extraction prompt editor modal
+        async function openExtractionPromptEditorModal() {
+            const modal = document.getElementById('extraction-prompt-editor-modal');
+            const selector = document.getElementById('editor-prompt-select');
+
+            // Load prompts from server first
+            await loadExtractionPrompts();
+
+            // Populate prompt selector
+            selector.innerHTML = '<option value="">Select a prompt...</option>';
+            for (const [key, prompt] of Object.entries(allExtractionPrompts)) {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = prompt.name;
+                selector.appendChild(option);
+            }
+
+            // Clear the form
+            clearPromptEditorForm();
+
+            modal.classList.add('active');
+        }
+
+        // Close extraction prompt editor modal
+        function closePromptEditor() {
+            document.getElementById('extraction-prompt-editor-modal').classList.remove('active');
+            clearPromptEditorForm();
+        }
+
+        // Clear prompt editor form
+        function clearPromptEditorForm() {
+            document.getElementById('prompt-key-input').value = '';
+            document.getElementById('prompt-name-input').value = '';
+            document.getElementById('prompt-description-input').value = '';
+            document.getElementById('prompt-content-input').value = '';
+            document.getElementById('editor-prompt-select').value = '';
+            editorPromptKey = '';
+            editorIsNewPrompt = false;
+            document.getElementById('delete-prompt-btn').style.display = 'none';
+        }
+
+        // Load selected prompt into editor
+        function loadPromptIntoEditor() {
+            const selector = document.getElementById('editor-prompt-select');
+            const promptKey = selector.value;
+
+            if (!promptKey) {
+                clearPromptEditorForm();
+                return;
+            }
+
+            const prompt = allExtractionPrompts[promptKey];
+            if (!prompt) return;
+
+            editorPromptKey = promptKey;
+            editorIsNewPrompt = false;
+
+            // Load basic info
+            document.getElementById('prompt-key-input').value = promptKey;
+            document.getElementById('prompt-key-input').disabled = true; // Can't change key of existing prompt
+            document.getElementById('prompt-name-input').value = prompt.name;
+            document.getElementById('prompt-description-input').value = prompt.description || '';
+            document.getElementById('prompt-content-input').value = prompt.template;
+
+            // Show delete button (except for built-in prompts)
+            const builtInPrompts = ['default_schema_based'];
+            if (builtInPrompts.includes(promptKey)) {
+                document.getElementById('delete-prompt-btn').style.display = 'none';
+            } else {
+                document.getElementById('delete-prompt-btn').style.display = 'block';
+            }
+        }
+
+        // Create new extraction prompt
+        function createNewPrompt() {
+            clearPromptEditorForm();
+            editorIsNewPrompt = true;
+            document.getElementById('prompt-key-input').disabled = false;
+            document.getElementById('delete-prompt-btn').style.display = 'none';
+        }
+
+        // Save prompt from editor
+        async function savePromptFromEditor() {
+            const promptKey = document.getElementById('prompt-key-input').value.trim();
+            const promptName = document.getElementById('prompt-name-input').value.trim();
+            const promptDescription = document.getElementById('prompt-description-input').value.trim();
+            const promptContent = document.getElementById('prompt-content-input').value.trim();
+
+            // Validation
+            if (!promptKey) {
+                alert('Please enter a prompt key');
+                return;
+            }
+
+            if (!/^[a-z0-9_]+$/.test(promptKey)) {
+                alert('Prompt key must contain only lowercase letters, numbers, and underscores');
+                return;
+            }
+
+            if (!promptName) {
+                alert('Please enter a prompt name');
+                return;
+            }
+
+            if (!promptContent) {
+                alert('Please enter prompt content');
+                return;
+            }
+
+            // If creating new prompt, check if key already exists
+            if (editorIsNewPrompt && allExtractionPrompts[promptKey]) {
+                alert('A prompt with this key already exists. Please choose a different key.');
+                return;
+            }
+
+            const promptData = {
+                name: promptName,
+                description: promptDescription,
+                template: promptContent
+            };
+
+            try {
+                const response = await fetch('/llm/save-prompt/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        prompt_name: promptKey,
+                        prompt_data: promptData
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    alert(`Prompt "${promptName}" saved successfully!`);
+
+                    // Reload prompts
+                    await loadExtractionPrompts();
+
+                    // Close modal
+                    closePromptEditor();
+                } else {
+                    alert(`Error saving prompt: ${data.error}`);
+                }
+            } catch (error) {
+                alert(`Error saving prompt: ${error.message}`);
+            }
+        }
+
+        // Delete current prompt
+        async function deleteCurrentPrompt() {
+            if (!editorPromptKey) {
+                alert('No prompt selected');
+                return;
+            }
+
+            const prompt = allExtractionPrompts[editorPromptKey];
+            if (!prompt) {
+                alert('Prompt not found');
+                return;
+            }
+
+            const builtInPrompts = ['default_schema_based'];
+            if (builtInPrompts.includes(editorPromptKey)) {
+                alert('Cannot delete built-in prompts');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to delete the prompt "${prompt.name}"?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/llm/delete-prompt/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ prompt_name: editorPromptKey })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    alert(`Prompt "${prompt.name}" deleted successfully!`);
+
+                    // Reload prompts
+                    await loadExtractionPrompts();
+
+                    // Close modal
+                    closePromptEditor();
+                } else {
+                    alert(`Error deleting prompt: ${data.error}`);
+                }
+            } catch (error) {
+                alert(`Error deleting prompt: ${error.message}`);
+            }
+        }
+
+        // Initialize extraction prompt editor modal event listeners
+        function initPromptEditorListeners() {
+            const closeBtn = document.getElementById('close-extraction-prompt-editor');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', closePromptEditor);
+            }
+        }
+
         // Export schemas to JSON file
         function exportSchemas() {
             const dataStr = JSON.stringify({ active_schema: activeSchemaName, schemas: allSchemas }, null, 2);
@@ -3449,10 +3733,12 @@
             // Initialize modal event listeners
             initExtractionModalListeners();
             initSchemaEditorListeners();
+            initPromptEditorListeners();
             initPropertyModalListeners();
 
-            // Load schemas and entities
+            // Load schemas, prompts, and entities
             loadSchemas();
+            loadExtractionPrompts();
             loadEntities();
 
             console.log('Initialization complete');
@@ -3539,6 +3825,79 @@
                     </button>
                     <button type="button" onclick="saveSchemaFromEditor()" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer;">
                         Save Schema
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Extraction Prompt Editor Modal -->
+    <div id="extraction-prompt-editor-modal" class="modal">
+        <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3>Extraction Prompt Editor</h3>
+                <button class="close-modal" id="close-extraction-prompt-editor">&times;</button>
+            </div>
+            <div style="padding: 20px;">
+                <!-- Prompt Selection -->
+                <div style="margin-bottom: 20px; padding: 15px; background: #f3f4f6; border-radius: 6px;">
+                    <div style="display: flex; gap: 10px; align-items: end;">
+                        <div style="flex: 1;">
+                            <label for="editor-prompt-select" style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 5px;">Select Prompt to Edit</label>
+                            <select id="editor-prompt-select" onchange="loadPromptIntoEditor()" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
+                                <option value="">Select a prompt...</option>
+                            </select>
+                        </div>
+                        <button onclick="createNewPrompt()" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; white-space: nowrap;">
+                            Create New Prompt
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Prompt Basic Info -->
+                <div style="margin-bottom: 20px;">
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="prompt-key-input" style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 5px;">Prompt Key (lowercase_with_underscores)</label>
+                        <input type="text" id="prompt-key-input" placeholder="e.g., my_custom_prompt" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;" />
+                        <div style="font-size: 0.75em; color: #6b7280; margin-top: 3px;">Unique identifier for the prompt</div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="prompt-name-input" style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 5px;">Display Name</label>
+                        <input type="text" id="prompt-name-input" placeholder="e.g., My Custom Extraction Prompt" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;" />
+                    </div>
+                    <div class="form-group">
+                        <label for="prompt-description-input" style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 5px;">Description</label>
+                        <textarea id="prompt-description-input" placeholder="Brief description of this prompt's purpose" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; min-height: 60px;"></textarea>
+                    </div>
+                </div>
+
+                <!-- Prompt Content -->
+                <div style="margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px;">
+                    <h4 style="margin: 0 0 10px 0; font-size: 1em; color: #374151;">Prompt Template</h4>
+                    <div style="font-size: 0.85em; color: #6b7280; margin-bottom: 10px;">
+                        Use the following placeholders in your prompt:
+                        <ul style="margin: 5px 0; padding-left: 20px;">
+                            <li><code>{schema_name}</code> - Name of the active schema</li>
+                            <li><code>{schema_description}</code> - Description of the active schema</li>
+                            <li><code>{entity_types}</code> - Formatted list of entity types</li>
+                            <li><code>{relation_types}</code> - Formatted list of relation types</li>
+                            <li><code>{entity_count}</code> - Number of entity types</li>
+                            <li><code>{relation_count}</code> - Number of relation types</li>
+                        </ul>
+                    </div>
+                    <textarea id="prompt-content-input" placeholder="Enter your extraction prompt template here..." style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 4px; min-height: 400px; font-family: 'Courier New', monospace; font-size: 0.9em;"></textarea>
+                </div>
+
+                <!-- Modal Actions -->
+                <div class="modal-actions" style="display: flex; gap: 10px; justify-content: flex-end; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                    <button type="button" onclick="deleteCurrentPrompt()" id="delete-prompt-btn" style="margin-right: auto; padding: 8px 16px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Delete Prompt
+                    </button>
+                    <button type="button" onclick="closePromptEditor()" style="padding: 8px 16px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Cancel
+                    </button>
+                    <button type="button" onclick="savePromptFromEditor()" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Save Prompt
                     </button>
                 </div>
             </div>

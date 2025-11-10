@@ -1620,7 +1620,7 @@ def save_entities(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def extract_entities_relations(request):
-    """Extract entities and relations from a report using the active schema."""
+    """Extract entities and relations from a report using the active schema and prompt."""
     try:
         data = json.loads(request.body) if request.body else {}
         report_text = data.get('report_text', '')
@@ -1642,8 +1642,13 @@ def extract_entities_relations(request):
         active_schema_name = schemas_data.get('active_schema', 'radgraph')
         active_schema = schemas_data['schemas'][active_schema_name]
 
-        # Generate system prompt dynamically from schema
-        system_prompt = build_system_prompt_from_schema(active_schema)
+        # Load active extraction prompt
+        prompts_data = load_extraction_prompts()
+        active_prompt_name = prompts_data.get('active_prompt', 'default_schema_based')
+        active_prompt = prompts_data['prompts'][active_prompt_name]
+
+        # Build system prompt from template and schema
+        system_prompt = build_prompt_from_template(active_prompt['template'], active_schema)
 
         # Build messages with dynamic system prompt
         messages = [
@@ -1958,4 +1963,272 @@ def delete_schema(request):
         return JsonResponse({
             'success': False,
             'error': f'Failed to delete schema: {str(e)}'
+        }, status=500)
+
+
+# Extraction Prompt Management Endpoints
+
+def get_extraction_prompts_file():
+    """Get the path to the extraction prompts JSON file."""
+    return PROJECT_ROOT / "extraction_prompts.json"
+
+
+def load_extraction_prompts():
+    """Load extraction prompts from JSON file."""
+    prompts_file = get_extraction_prompts_file()
+
+    if not prompts_file.exists():
+        # Create default prompt based on the existing build_system_prompt_from_schema function
+        default_prompts = {
+            "active_prompt": "default_schema_based",
+            "prompts": {
+                "default_schema_based": {
+                    "name": "Default Schema-Based Prompt",
+                    "description": "The original extraction prompt that dynamically builds from the active schema",
+                    "template": """You are a clinical information extraction system specialized in radiology reports. Extract entities and relations from the provided radiology report using the {schema_name} schema.
+
+SCHEMA: {schema_name}
+{schema_description}
+
+ENTITY TYPES ({entity_count} types):
+
+{entity_types}
+
+RELATION TYPES ({relation_count} types):
+
+{relation_types}
+
+EXTRACTION INSTRUCTIONS:
+
+1. Read the radiology report carefully
+2. Identify ALL entities that fit the entity types defined above
+3. For each entity, determine its type based on the definitions
+4. Identify relationships between entities using the relation types defined above
+5. Extract as many valid entity-relation triplets as possible
+6. Be thorough - extract ALL clinically relevant information
+7. For measurements (sizes, SUVmax values), extract them as separate entities
+8. Preserve anatomical precision (e.g., "segment II", "T8 vertebra", "right upper lobe")
+
+OUTPUT FORMAT:
+
+Return a JSON array of triplets. Each triplet must have this exact structure:
+{{
+  "entity1_text": "the first entity text",
+  "entity1_type": "one of the entity types listed above",
+  "relation_type": "one of the relation types listed above",
+  "entity2_text": "the second entity text",
+  "entity2_type": "one of the entity types listed above"
+}}
+
+IMPORTANT:
+- Return ONLY the JSON array, no additional text
+- Ensure all JSON is valid and properly formatted
+- Extract ALL relevant entities and relations
+- Be consistent with entity type assignments
+- Every relation must connect two valid entities
+- For measurements, extract both the value and link it to the lesion"""
+                }
+            }
+        }
+
+        with open(prompts_file, 'w', encoding='utf-8') as f:
+            json.dump(default_prompts, f, indent=2, ensure_ascii=False)
+
+        return default_prompts
+
+    try:
+        with open(prompts_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except:
+        return {"active_prompt": "default_schema_based", "prompts": {}}
+
+
+def save_extraction_prompts(prompts_data):
+    """Save extraction prompts to JSON file."""
+    prompts_file = get_extraction_prompts_file()
+    with open(prompts_file, 'w', encoding='utf-8') as f:
+        json.dump(prompts_data, f, indent=2, ensure_ascii=False)
+
+
+def build_prompt_from_template(template, schema):
+    """Build a system prompt from a template and schema."""
+    # Format entity types
+    entity_types_text = ""
+    for i, entity_type in enumerate(schema['entity_types'], 1):
+        entity_types_text += f"{i}. **{entity_type['name']}**: {entity_type['description']}\n"
+
+    # Format relation types
+    relation_types_text = ""
+    for i, relation_type in enumerate(schema['relation_types'], 1):
+        relation_types_text += f"{i}. **{relation_type['name']}**: {relation_type['description']}\n"
+        if relation_type.get('valid_pairs'):
+            pairs_str = ", ".join([f"({pair[0]} → {pair[1]})" for pair in relation_type['valid_pairs'][:3]])
+            if len(relation_type['valid_pairs']) > 3:
+                pairs_str += f" (and {len(relation_type['valid_pairs']) - 3} more)"
+            relation_types_text += f"   Valid pairs: {pairs_str}\n"
+
+    # Replace placeholders in template
+    prompt = template.replace('{schema_name}', schema['name'])
+    prompt = prompt.replace('{schema_description}', schema['description'])
+    prompt = prompt.replace('{entity_types}', entity_types_text.strip())
+    prompt = prompt.replace('{relation_types}', relation_types_text.strip())
+    prompt = prompt.replace('{entity_count}', str(len(schema['entity_types'])))
+    prompt = prompt.replace('{relation_count}', str(len(schema['relation_types'])))
+
+    return prompt
+
+
+@require_http_methods(["GET"])
+def get_extraction_prompts_view(request):
+    """Get all available extraction prompts and the active prompt name."""
+    try:
+        prompts_data = load_extraction_prompts()
+
+        return JsonResponse({
+            'success': True,
+            'active_prompt': prompts_data.get('active_prompt', 'default_schema_based'),
+            'prompts': prompts_data.get('prompts', {})
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to load extraction prompts: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def set_active_prompt(request):
+    """Set which extraction prompt to use."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        prompt_name = data.get('prompt_name')
+
+        if not prompt_name:
+            return JsonResponse({
+                'success': False,
+                'error': 'prompt_name is required'
+            }, status=400)
+
+        prompts_data = load_extraction_prompts()
+
+        # Verify prompt exists
+        if prompt_name not in prompts_data['prompts']:
+            return JsonResponse({
+                'success': False,
+                'error': f'Prompt "{prompt_name}" not found'
+            }, status=404)
+
+        # Update active prompt
+        prompts_data['active_prompt'] = prompt_name
+
+        # Save back to file
+        save_extraction_prompts(prompts_data)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Active prompt set to "{prompt_name}"'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to set active prompt: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def save_prompt(request):
+    """Create or update an extraction prompt."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        prompt_name = data.get('prompt_name')
+        prompt_data = data.get('prompt_data')
+
+        if not prompt_name or not prompt_data:
+            return JsonResponse({
+                'success': False,
+                'error': 'prompt_name and prompt_data are required'
+            }, status=400)
+
+        # Validate prompt structure
+        required_fields = ['name', 'template']
+        for field in required_fields:
+            if field not in prompt_data:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Prompt missing required field: {field}'
+                }, status=400)
+
+        prompts_data = load_extraction_prompts()
+
+        # Add or update prompt
+        prompts_data['prompts'][prompt_name] = prompt_data
+
+        # Save back to file
+        save_extraction_prompts(prompts_data)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Prompt "{prompt_name}" saved successfully'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to save prompt: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def delete_prompt(request):
+    """Delete a custom extraction prompt (cannot delete built-in prompts)."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        prompt_name = data.get('prompt_name')
+
+        if not prompt_name:
+            return JsonResponse({
+                'success': False,
+                'error': 'prompt_name is required'
+            }, status=400)
+
+        # Prevent deletion of built-in prompts
+        if prompt_name in ['default_schema_based']:
+            return JsonResponse({
+                'success': False,
+                'error': 'Cannot delete built-in prompts'
+            }, status=403)
+
+        prompts_data = load_extraction_prompts()
+
+        # Check if prompt exists
+        if prompt_name not in prompts_data['prompts']:
+            return JsonResponse({
+                'success': False,
+                'error': f'Prompt "{prompt_name}" not found'
+            }, status=404)
+
+        # Delete prompt
+        del prompts_data['prompts'][prompt_name]
+
+        # If deleted prompt was active, switch to default
+        if prompts_data.get('active_prompt') == prompt_name:
+            prompts_data['active_prompt'] = 'default_schema_based'
+
+        # Save back to file
+        save_extraction_prompts(prompts_data)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Prompt "{prompt_name}" deleted successfully'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to delete prompt: {str(e)}'
         }, status=500)
