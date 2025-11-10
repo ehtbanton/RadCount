@@ -723,45 +723,45 @@
                         <!-- Entry Entities & Relations Section -->
                         <div style="background: #f8f9fa; padding: 20px; border-radius: 6px; border: 1px solid #e5e7eb; margin-top: 15px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                <div style="font-weight: 400; color: #374151; font-size: 1.05em;">
-                                    Entry Entities & Relations
-                                </div>
-                                <div style="display: flex; gap: 8px;">
-                                    <button
-                                        id="extract-entities-btn"
-                                        onclick="extractEntitiesFromLLM()"
-                                        style="padding: 6px 12px; background: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s;"
-                                        onmouseover="this.style.background='#d97706'"
-                                        onmouseout="this.style.background='#f59e0b'"
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div style="font-weight: 400; color: #374151; font-size: 1.05em;">
+                                        Entry Entities & Relations
+                                    </div>
+                                    <select
+                                        id="schema-selector"
+                                        onchange="switchSchema()"
+                                        style="padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9em; background: white; cursor: pointer;"
                                     >
-                                        Extract Entities & Relations
-                                    </button>
+                                        <option value="">Loading schemas...</option>
+                                    </select>
                                     <button
                                         onclick="openSchemaModal()"
-                                        style="padding: 6px 12px; background: #8b5cf6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s;"
+                                        style="padding: 6px 10px; background: #8b5cf6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s;"
                                         onmouseover="this.style.background='#7c3aed'"
                                         onmouseout="this.style.background='#8b5cf6'"
+                                        title="View entity and relation types in this schema"
                                     >
-                                        View Schema
+                                        View
                                     </button>
                                     <button
-                                        onclick="exportEntities()"
-                                        style="padding: 6px 12px; background: #059669; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s;"
-                                        onmouseover="this.style.background='#047857'"
-                                        onmouseout="this.style.background='#059669'"
+                                        onclick="openSchemaEditorModal()"
+                                        style="padding: 6px 12px; background: #6366f1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s;"
+                                        onmouseover="this.style.background='#4f46e5'"
+                                        onmouseout="this.style.background='#6366f1'"
+                                        title="Create or edit custom schemas"
                                     >
-                                        Export
+                                        Edit Schema
                                     </button>
-                                    <button
-                                        onclick="document.getElementById('import-entities-input').click()"
-                                        style="padding: 6px 12px; background: #0284c7; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s;"
-                                        onmouseover="this.style.background='#0369a1'"
-                                        onmouseout="this.style.background='#0284c7'"
-                                    >
-                                        Import
-                                    </button>
-                                    <input type="file" id="import-entities-input" accept=".json" style="display: none;" onchange="importEntities(event)">
                                 </div>
+                                <button
+                                    id="extract-entities-btn"
+                                    onclick="extractEntitiesFromLLM()"
+                                    style="padding: 8px 16px; background: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: background 0.2s;"
+                                    onmouseover="this.style.background='#d97706'"
+                                    onmouseout="this.style.background='#f59e0b'"
+                                >
+                                    Extract Entities & Relations
+                                </button>
                             </div>
 
                             <div id="entities-container" style="display: flex; flex-direction: column; gap: 12px; max-height: 400px; overflow-y: auto;">
@@ -2012,18 +2012,29 @@
             document.getElementById('extraction-modal').classList.remove('active');
         }
 
-        document.getElementById('close-extraction-modal').addEventListener('click', closeExtractionModal);
-        document.getElementById('cancel-extraction').addEventListener('click', closeExtractionModal);
+        // Initialize extraction modal event listeners (called after DOM is ready)
+        function initExtractionModalListeners() {
+            const closeBtn = document.getElementById('close-extraction-modal');
+            const cancelBtn = document.getElementById('cancel-extraction');
+            const modal = document.getElementById('extraction-modal');
+            const form = document.getElementById('extraction-form');
+            const deleteBtn = document.getElementById('delete-extraction-btn');
 
-        // Click outside modal to close
-        document.getElementById('extraction-modal').addEventListener('click', (e) => {
-            if (e.target.id === 'extraction-modal') {
-                closeExtractionModal();
+            if (closeBtn) closeBtn.addEventListener('click', closeExtractionModal);
+            if (cancelBtn) cancelBtn.addEventListener('click', closeExtractionModal);
+
+            // Click outside modal to close
+            if (modal) {
+                modal.addEventListener('click', (e) => {
+                    if (e.target.id === 'extraction-modal') {
+                        closeExtractionModal();
+                    }
+                });
             }
-        });
 
-        // Handle extraction form submission
-        document.getElementById('extraction-form').addEventListener('submit', async (e) => {
+            // Handle extraction form submission
+            if (form) {
+                form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const functionId = document.getElementById('extraction-function-id').value;
@@ -2066,41 +2077,45 @@
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Save';
             }
-        });
-
-        // Handle extraction function deletion
-        document.getElementById('delete-extraction-btn').addEventListener('click', async () => {
-            const functionId = document.getElementById('extraction-function-id').value;
-            const funcData = extractionFunctions[functionId];
-            const funcName = funcData ? funcData.name : `Function ${functionId}`;
-
-            if (!confirm(`Delete function ${functionId}?`)) {
-                return;
-            }
-
-            try {
-                const response = await fetch('/llm/delete-extraction-function/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        function_id: functionId
-                    })
                 });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    closeExtractionModal();
-                    await loadExtractionFunctions();
-                } else {
-                    alert(`Error: ${data.error}`);
-                }
-            } catch (error) {
-                alert(`Failed to delete function: ${error.message}`);
             }
-        });
+
+            // Handle extraction function deletion
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', async () => {
+                    const functionId = document.getElementById('extraction-function-id').value;
+                    const funcData = extractionFunctions[functionId];
+                    const funcName = funcData ? funcData.name : `Function ${functionId}`;
+
+                    if (!confirm(`Delete function ${functionId}?`)) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch('/llm/delete-extraction-function/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                function_id: functionId
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            closeExtractionModal();
+                            await loadExtractionFunctions();
+                        } else {
+                            alert(`Error: ${data.error}`);
+                        }
+                    } catch (error) {
+                        alert(`Failed to delete function: ${error.message}`);
+                    }
+                });
+            }
+        }
 
         // Make openExtractionModal globally available
         window.openExtractionModal = openExtractionModal;
@@ -2124,7 +2139,102 @@
             return true; // Always return success for legacy code
         }
 
-        // RadGraph schema constants
+        // Schema management
+        let allSchemas = {}; // All available schemas
+        let activeSchemaName = ''; // Currently active schema name
+        let activeSchema = null; // Currently active schema object
+
+        // Load all schemas from server
+        async function loadSchemas() {
+            console.log('loadSchemas() called - fetching from /llm/schemas/');
+            try {
+                const response = await fetch('/llm/schemas/');
+                console.log('Fetch response received:', response.status, response.statusText);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Response not OK:', errorText);
+                    throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+                }
+
+                const data = await response.json();
+                console.log('Parsed JSON data:', data);
+
+                if (data.success) {
+                    allSchemas = data.schemas;
+                    activeSchemaName = data.active_schema;
+                    activeSchema = allSchemas[activeSchemaName];
+                    populateSchemaSelector();
+                    console.log(`✓ Loaded ${Object.keys(allSchemas).length} schemas. Active: ${activeSchemaName}`);
+                } else {
+                    console.error('Failed to load schemas:', data.error);
+                    alert(`Failed to load schemas: ${data.error}\n\nPlease check the console and refresh the page.`);
+                }
+            } catch (error) {
+                console.error('Error loading schemas:', error);
+                alert(`Error loading schemas: ${error.message}\n\nThe server may need to be restarted. Check the console for details.`);
+            }
+        }
+
+        // Populate schema selector dropdown
+        function populateSchemaSelector() {
+            const selector = document.getElementById('schema-selector');
+            if (!selector) {
+                console.warn('schema-selector element not found, skipping population');
+                return;
+            }
+            selector.innerHTML = '';
+
+            for (const [key, schema] of Object.entries(allSchemas)) {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = schema.name;
+                if (key === activeSchemaName) {
+                    option.selected = true;
+                }
+                selector.appendChild(option);
+            }
+        }
+
+        // Switch to a different schema
+        async function switchSchema() {
+            const selector = document.getElementById('schema-selector');
+            const newSchemaName = selector.value;
+
+            if (newSchemaName === activeSchemaName) {
+                return; // No change
+            }
+
+            try {
+                const response = await fetch('/llm/set-active-schema/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ schema_name: newSchemaName })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    activeSchemaName = newSchemaName;
+                    activeSchema = allSchemas[newSchemaName];
+                    // Re-render entities with new schema colors
+                    renderEntities();
+                    console.log(`Switched to schema: ${activeSchema.name}`);
+                } else {
+                    alert(`Failed to switch schema: ${data.error}`);
+                    // Revert selector to previous value
+                    selector.value = activeSchemaName;
+                }
+            } catch (error) {
+                alert(`Error switching schema: ${error.message}`);
+                // Revert selector to previous value
+                selector.value = activeSchemaName;
+            }
+        }
+
+        // RadGraph schema constants (kept for backward compatibility)
         const ENTITY_TYPES = [
             'Anatomy',
             'Observation:Definitely Present',
@@ -2138,7 +2248,17 @@
             'modify'
         ];
 
-        // Color mapping for entity types
+        // Get entity type color from active schema
+        function getEntityTypeColor(entityType) {
+            if (!activeSchema || !activeSchema.entity_types) {
+                return '#6b7280'; // Default gray
+            }
+
+            const entityTypeDef = activeSchema.entity_types.find(et => et.name === entityType);
+            return entityTypeDef ? entityTypeDef.color : '#6b7280';
+        }
+
+        // Color mapping for entity types (kept for backward compatibility)
         const ENTITY_TYPE_COLORS = {
             'Anatomy': '#3b82f6',  // Blue
             'Observation:Definitely Present': '#10b981',  // Green
@@ -2221,8 +2341,8 @@
             html += '<div style="display: flex; flex-direction: column; gap: 8px;">';
 
             triplets.forEach((triplet, index) => {
-                const entity1Color = ENTITY_TYPE_COLORS[triplet.entity1_type] || '#6b7280';
-                const entity2Color = ENTITY_TYPE_COLORS[triplet.entity2_type] || '#6b7280';
+                const entity1Color = getEntityTypeColor(triplet.entity1_type);
+                const entity2Color = getEntityTypeColor(triplet.entity2_type);
 
                 html += '<div style="display: flex; align-items: center; gap: 8px; padding: 10px; background: #f9fafb; border-radius: 4px; font-size: 0.9em;">';
                 html += '<span style="flex: 2; display: flex; flex-direction: column; gap: 2px;">';
@@ -2360,9 +2480,524 @@
             event.target.value = '';
         }
 
-        // Open RadGraph schema modal
+        // Open schema information modal
         function openSchemaModal() {
-            alert('RadGraph Schema\n\nENTITY TYPES:\n- Anatomy: Anatomical body parts\n- Observation:Definitely Present: Confirmed findings\n- Observation:Uncertain: Possible/suspected findings\n- Observation:Definitely Absent: Explicitly ruled out findings\n\nRELATION TYPES:\n- suggestive_of: One observation suggests another\n- located_at: Observation is at anatomical location\n- modify: One entity modifies another');
+            if (!activeSchema) {
+                alert('No schema loaded');
+                return;
+            }
+
+            let message = `${activeSchema.name}\n\n${activeSchema.description}\n\n`;
+            message += `ENTITY TYPES (${activeSchema.entity_types.length}):\n`;
+            activeSchema.entity_types.forEach(et => {
+                message += `- ${et.name}: ${et.description}\n`;
+            });
+
+            message += `\nRELATION TYPES (${activeSchema.relation_types.length}):\n`;
+            activeSchema.relation_types.forEach(rt => {
+                message += `- ${rt.name}: ${rt.description}\n`;
+            });
+
+            alert(message);
+        }
+
+        // ===== Schema Editor =====
+
+        let editorEntityTypes = [];
+        let editorRelationTypes = [];
+        let editorSchemaKey = '';
+        let editorIsNewSchema = false;
+
+        // Open schema editor modal
+        async function openSchemaEditorModal() {
+            console.log('openSchemaEditorModal() called');
+            const modal = document.getElementById('schema-editor-modal');
+            const selector = document.getElementById('editor-schema-select');
+
+            // Load schemas from server first
+            console.log('Calling loadSchemas() before populating editor dropdown...');
+            await loadSchemas();
+            console.log('loadSchemas() completed. allSchemas has', Object.keys(allSchemas).length, 'schemas');
+
+            // Populate schema selector
+            selector.innerHTML = '<option value="">Select a schema...</option>';
+            for (const [key, schema] of Object.entries(allSchemas)) {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = schema.name;
+                selector.appendChild(option);
+            }
+            console.log('Populated editor dropdown with', Object.keys(allSchemas).length, 'schema options');
+
+            // Clear the form
+            clearEditorForm();
+
+            modal.classList.add('active');
+            console.log('Modal opened');
+        }
+
+        // Close schema editor modal
+        function closeSchemaEditor() {
+            document.getElementById('schema-editor-modal').classList.remove('active');
+            clearEditorForm();
+        }
+
+        // Clear editor form
+        function clearEditorForm() {
+            document.getElementById('schema-key-input').value = '';
+            document.getElementById('schema-name-input').value = '';
+            document.getElementById('schema-description-input').value = '';
+            document.getElementById('editor-schema-select').value = '';
+            editorEntityTypes = [];
+            editorRelationTypes = [];
+            editorSchemaKey = '';
+            editorIsNewSchema = false;
+            renderEditorEntityTypes();
+            renderEditorRelationTypes();
+            document.getElementById('delete-schema-btn').style.display = 'none';
+        }
+
+        // Load selected schema into editor
+        function loadSchemaIntoEditor() {
+            const selector = document.getElementById('editor-schema-select');
+            const schemaKey = selector.value;
+
+            if (!schemaKey) {
+                clearEditorForm();
+                return;
+            }
+
+            const schema = allSchemas[schemaKey];
+            if (!schema) return;
+
+            editorSchemaKey = schemaKey;
+            editorIsNewSchema = false;
+
+            // Load basic info
+            document.getElementById('schema-key-input').value = schemaKey;
+            document.getElementById('schema-key-input').disabled = true; // Can't change key of existing schema
+            document.getElementById('schema-name-input').value = schema.name;
+            document.getElementById('schema-description-input').value = schema.description;
+
+            // Load entity types
+            editorEntityTypes = JSON.parse(JSON.stringify(schema.entity_types));
+            renderEditorEntityTypes();
+
+            // Load relation types
+            editorRelationTypes = JSON.parse(JSON.stringify(schema.relation_types));
+            renderEditorRelationTypes();
+
+            // Show delete button (except for built-in schemas)
+            const builtInSchemas = ['radgraph', 'pet_ct_oncology'];
+            if (builtInSchemas.includes(schemaKey)) {
+                document.getElementById('delete-schema-btn').style.display = 'none';
+            } else {
+                document.getElementById('delete-schema-btn').style.display = 'block';
+            }
+        }
+
+        // Create new schema
+        function createNewSchema() {
+            clearEditorForm();
+            editorIsNewSchema = true;
+            document.getElementById('schema-key-input').disabled = false;
+            document.getElementById('delete-schema-btn').style.display = 'none';
+
+            // Add default entity type
+            addEntityType();
+        }
+
+        // Add entity type
+        function addEntityType() {
+            editorEntityTypes.push({
+                name: '',
+                description: '',
+                color: '#3b82f6'
+            });
+            renderEditorEntityTypes();
+        }
+
+        // Remove entity type
+        function removeEntityType(index) {
+            editorEntityTypes.splice(index, 1);
+            renderEditorEntityTypes();
+        }
+
+        // Render entity types list
+        function renderEditorEntityTypes() {
+            const container = document.getElementById('entity-types-list');
+
+            if (editorEntityTypes.length === 0) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">No entity types defined. Click "+ Add Entity Type" to add one.</div>';
+                return;
+            }
+
+            container.innerHTML = '';
+            editorEntityTypes.forEach((entityType, index) => {
+                const row = document.createElement('div');
+                row.style.cssText = 'display: flex; gap: 10px; align-items: start; padding: 10px; background: #f9fafb; border-radius: 4px;';
+
+                row.innerHTML = `
+                    <div style="flex: 1;">
+                        <input type="text"
+                            id="entity-name-${index}"
+                            value="${escapeHtml(entityType.name)}"
+                            placeholder="Entity type name (e.g., PrimaryTumor)"
+                            onchange="editorEntityTypes[${index}].name = this.value"
+                            style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px; margin-bottom: 5px;" />
+                        <input type="text"
+                            id="entity-desc-${index}"
+                            value="${escapeHtml(entityType.description)}"
+                            placeholder="Description"
+                            onchange="editorEntityTypes[${index}].description = this.value"
+                            style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9em;" />
+                    </div>
+                    <div style="width: 80px;">
+                        <label style="display: block; font-size: 0.75em; color: #6b7280; margin-bottom: 3px;">Color</label>
+                        <input type="color"
+                            id="entity-color-${index}"
+                            value="${entityType.color}"
+                            onchange="editorEntityTypes[${index}].color = this.value"
+                            style="width: 100%; height: 38px; border: 1px solid #d1d5db; border-radius: 4px;" />
+                    </div>
+                    <button onclick="removeEntityType(${index})"
+                        style="padding: 8px 12px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; margin-top: 18px;">
+                        Remove
+                    </button>
+                `;
+
+                container.appendChild(row);
+            });
+        }
+
+        // Add relation type
+        function addRelationType() {
+            editorRelationTypes.push({
+                name: '',
+                description: '',
+                valid_pairs: []
+            });
+            renderEditorRelationTypes();
+        }
+
+        // Remove relation type
+        function removeRelationType(index) {
+            editorRelationTypes.splice(index, 1);
+            renderEditorRelationTypes();
+        }
+
+        // Render relation types list
+        function renderEditorRelationTypes() {
+            const container = document.getElementById('relation-types-list');
+
+            if (editorRelationTypes.length === 0) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">No relation types defined. Click "+ Add Relation Type" to add one.</div>';
+                return;
+            }
+
+            container.innerHTML = '';
+            editorRelationTypes.forEach((relationType, index) => {
+                const row = document.createElement('div');
+                row.style.cssText = 'display: flex; flex-direction: column; gap: 8px; padding: 10px; background: #f9fafb; border-radius: 4px;';
+
+                const pairsHTML = (relationType.valid_pairs || []).map((pair, pairIndex) =>
+                    `<div style="display: flex; gap: 5px; align-items: center;">
+                        <span style="font-size: 0.85em;">${escapeHtml(pair[0])} → ${escapeHtml(pair[1])}</span>
+                        <button onclick="removeValidPair(${index}, ${pairIndex})"
+                            style="padding: 2px 6px; background: #ef4444; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 0.75em;">
+                            ×
+                        </button>
+                    </div>`
+                ).join('');
+
+                row.innerHTML = `
+                    <div style="display: flex; gap: 10px;">
+                        <div style="flex: 1;">
+                            <input type="text"
+                                id="relation-name-${index}"
+                                value="${escapeHtml(relationType.name)}"
+                                placeholder="Relation name (e.g., located_in)"
+                                onchange="editorRelationTypes[${index}].name = this.value"
+                                style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px; margin-bottom: 5px;" />
+                            <input type="text"
+                                id="relation-desc-${index}"
+                                value="${escapeHtml(relationType.description)}"
+                                placeholder="Description"
+                                onchange="editorRelationTypes[${index}].description = this.value"
+                                style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9em;" />
+                        </div>
+                        <button onclick="removeRelationType(${index})"
+                            style="padding: 8px 12px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; height: fit-content;">
+                            Remove
+                        </button>
+                    </div>
+                    <div style="padding: 8px; background: white; border-radius: 4px; border: 1px solid #e5e7eb;">
+                        <div style="font-size: 0.85em; color: #6b7280; margin-bottom: 5px;">Valid Entity Pairs:</div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px;">
+                            ${pairsHTML || '<span style="font-size: 0.85em; color: #9ca3af;">No valid pairs defined</span>'}
+                        </div>
+                        <button onclick="addValidPair(${index})"
+                            style="padding: 4px 10px; background: #10b981; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 0.8em;">
+                            + Add Valid Pair
+                        </button>
+                    </div>
+                `;
+
+                container.appendChild(row);
+            });
+        }
+
+        // Add valid pair for a relation type
+        function addValidPair(relationIndex) {
+            if (editorEntityTypes.length === 0) {
+                alert('Please add at least one entity type first');
+                return;
+            }
+
+            // Create a simple prompt to select source and target
+            const entityNames = editorEntityTypes.map(et => et.name).filter(n => n);
+            if (entityNames.length === 0) {
+                alert('Please name your entity types first');
+                return;
+            }
+
+            const source = prompt('Enter source entity type:\nAvailable: ' + entityNames.join(', '));
+            if (!source) return;
+
+            const target = prompt('Enter target entity type:\nAvailable: ' + entityNames.join(', '));
+            if (!target) return;
+
+            if (!editorRelationTypes[relationIndex].valid_pairs) {
+                editorRelationTypes[relationIndex].valid_pairs = [];
+            }
+
+            editorRelationTypes[relationIndex].valid_pairs.push([source, target]);
+            renderEditorRelationTypes();
+        }
+
+        // Remove valid pair
+        function removeValidPair(relationIndex, pairIndex) {
+            editorRelationTypes[relationIndex].valid_pairs.splice(pairIndex, 1);
+            renderEditorRelationTypes();
+        }
+
+        // Save schema from editor
+        async function saveSchemaFromEditor() {
+            // Validate inputs
+            const schemaKey = document.getElementById('schema-key-input').value.trim();
+            const schemaName = document.getElementById('schema-name-input').value.trim();
+            const schemaDescription = document.getElementById('schema-description-input').value.trim();
+
+            if (!schemaKey) {
+                alert('Please enter a schema key');
+                return;
+            }
+
+            if (!/^[a-z_]+$/.test(schemaKey)) {
+                alert('Schema key must be lowercase with underscores only (e.g., my_custom_schema)');
+                return;
+            }
+
+            if (!schemaName) {
+                alert('Please enter a schema name');
+                return;
+            }
+
+            if (editorEntityTypes.length === 0) {
+                alert('Please add at least one entity type');
+                return;
+            }
+
+            if (editorRelationTypes.length === 0) {
+                alert('Please add at least one relation type');
+                return;
+            }
+
+            // Validate entity types
+            for (const et of editorEntityTypes) {
+                if (!et.name || !et.description) {
+                    alert('All entity types must have a name and description');
+                    return;
+                }
+            }
+
+            // Validate relation types
+            for (const rt of editorRelationTypes) {
+                if (!rt.name || !rt.description) {
+                    alert('All relation types must have a name and description');
+                    return;
+                }
+            }
+
+            // Build schema object
+            const schemaData = {
+                name: schemaName,
+                description: schemaDescription,
+                entity_types: editorEntityTypes,
+                relation_types: editorRelationTypes
+            };
+
+            try {
+                const response = await fetch('/llm/save-schema/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        schema_name: schemaKey,
+                        schema_data: schemaData
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('Schema saved successfully!');
+                    await loadSchemas(); // Reload schemas
+                    closeSchemaEditor();
+                } else {
+                    alert(`Failed to save schema: ${result.error}`);
+                }
+            } catch (error) {
+                alert(`Error saving schema: ${error.message}`);
+            }
+        }
+
+        // Delete current schema
+        async function deleteCurrentSchema() {
+            const schemaKey = editorSchemaKey;
+
+            if (!schemaKey) {
+                alert('No schema selected to delete');
+                return;
+            }
+
+            const builtInSchemas = ['radgraph', 'pet_ct_oncology'];
+            if (builtInSchemas.includes(schemaKey)) {
+                alert('Cannot delete built-in schemas');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to delete the schema "${allSchemas[schemaKey].name}"?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/llm/delete-schema/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ schema_name: schemaKey })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('Schema deleted successfully!');
+                    await loadSchemas(); // Reload schemas
+                    closeSchemaEditor();
+                } else {
+                    alert(`Failed to delete schema: ${result.error}`);
+                }
+            } catch (error) {
+                alert(`Error deleting schema: ${error.message}`);
+            }
+        }
+
+        // Initialize schema editor modal event listeners (called after DOM is ready)
+        function initSchemaEditorListeners() {
+            const closeBtn = document.getElementById('close-schema-editor');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', closeSchemaEditor);
+            }
+        }
+
+        // Export schemas to JSON file
+        function exportSchemas() {
+            const dataStr = JSON.stringify({ active_schema: activeSchemaName, schemas: allSchemas }, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'schemas.json';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        // Import schemas from JSON file
+        async function importSchemas(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            try {
+                const text = await file.text();
+                const data = JSON.parse(text);
+
+                // Validate structure
+                if (!data.schemas || typeof data.schemas !== 'object') {
+                    alert('Invalid schema file: missing schemas object');
+                    return;
+                }
+
+                if (!data.active_schema || !data.schemas[data.active_schema]) {
+                    alert('Invalid schema file: active_schema not found in schemas');
+                    return;
+                }
+
+                // Validate each schema has required fields
+                for (const [key, schema] of Object.entries(data.schemas)) {
+                    if (!schema.name || !schema.entity_types || !schema.relation_types) {
+                        alert(`Invalid schema "${key}": missing required fields (name, entity_types, relation_types)`);
+                        return;
+                    }
+                }
+
+                // Save each schema to server
+                for (const [key, schema] of Object.entries(data.schemas)) {
+                    const response = await fetch('/llm/save-schema/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            schema_name: key,
+                            schema_data: schema
+                        })
+                    });
+
+                    const result = await response.json();
+                    if (!result.success) {
+                        alert(`Failed to import schema "${key}": ${result.error}`);
+                        return;
+                    }
+                }
+
+                // Set active schema
+                const setActiveResponse = await fetch('/llm/set-active-schema/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ schema_name: data.active_schema })
+                });
+
+                const setActiveResult = await setActiveResponse.json();
+                if (!setActiveResult.success) {
+                    alert(`Schemas imported but failed to set active schema: ${setActiveResult.error}`);
+                }
+
+                // Reload schemas from server
+                await loadSchemas();
+                alert('Schemas imported successfully!');
+            } catch (error) {
+                alert(`Error importing schemas: ${error.message}`);
+            }
+
+            // Clear file input
+            event.target.value = '';
         }
 
         // Get entry data by entry number (legacy compatibility)
@@ -2644,14 +3279,22 @@
             event.target.value = '';
         }
 
-        // Modal event listeners
-        document.getElementById('close-property-modal').addEventListener('click', closePropertyModal);
-        document.getElementById('close-property-modal-btn').addEventListener('click', closePropertyModal);
-        document.getElementById('property-modal').addEventListener('click', (e) => {
-            if (e.target.id === 'property-modal') {
-                closePropertyModal();
+        // Initialize property modal event listeners (called after DOM is ready)
+        function initPropertyModalListeners() {
+            const closeBtn = document.getElementById('close-property-modal');
+            const closeModalBtn = document.getElementById('close-property-modal-btn');
+            const modal = document.getElementById('property-modal');
+
+            if (closeBtn) closeBtn.addEventListener('click', closePropertyModal);
+            if (closeModalBtn) closeModalBtn.addEventListener('click', closePropertyModal);
+            if (modal) {
+                modal.addEventListener('click', (e) => {
+                    if (e.target.id === 'property-modal') {
+                        closePropertyModal();
+                    }
+                });
             }
-        });
+        }
 
         // Make functions globally available
         window.openPropertyModal = openPropertyModal;
@@ -2799,8 +3442,107 @@
         // Make function globally available for entities
         window.extractEntitiesFromLLM = extractEntitiesFromLLM;
 
-        // Load entities on page load
-        loadEntities();
+        // Initialize everything after DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, initializing event listeners and loading data...');
+
+            // Initialize modal event listeners
+            initExtractionModalListeners();
+            initSchemaEditorListeners();
+            initPropertyModalListeners();
+
+            // Load schemas and entities
+            loadSchemas();
+            loadEntities();
+
+            console.log('Initialization complete');
+        });
     </script>
+
+    <!-- Schema Editor Modal -->
+    <div id="schema-editor-modal" class="modal">
+        <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3>Schema Editor</h3>
+                <button class="close-modal" id="close-schema-editor">&times;</button>
+            </div>
+            <div style="padding: 20px;">
+                <!-- Schema Selection -->
+                <div style="margin-bottom: 20px; padding: 15px; background: #f3f4f6; border-radius: 6px;">
+                    <div style="display: flex; gap: 10px; align-items: end;">
+                        <div style="flex: 1;">
+                            <label for="editor-schema-select" style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 5px;">Select Schema to Edit</label>
+                            <select id="editor-schema-select" onchange="loadSchemaIntoEditor()" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
+                                <option value="">Select a schema...</option>
+                            </select>
+                        </div>
+                        <button onclick="createNewSchema()" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; white-space: nowrap;">
+                            Create New Schema
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Schema Basic Info -->
+                <div style="margin-bottom: 20px;">
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="schema-key-input" style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 5px;">Schema Key (lowercase_with_underscores)</label>
+                        <input type="text" id="schema-key-input" placeholder="e.g., my_custom_schema" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;" />
+                        <div style="font-size: 0.75em; color: #6b7280; margin-top: 3px;">Unique identifier for the schema</div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="schema-name-input" style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 5px;">Display Name</label>
+                        <input type="text" id="schema-name-input" placeholder="e.g., My Custom Schema" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;" />
+                    </div>
+                    <div class="form-group">
+                        <label for="schema-description-input" style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 5px;">Description</label>
+                        <textarea id="schema-description-input" placeholder="Brief description of this schema's purpose" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; min-height: 60px;"></textarea>
+                    </div>
+                </div>
+
+                <!-- Entity Types Section -->
+                <div style="margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h4 style="margin: 0; font-size: 1em; color: #374151;">Entity Types</h4>
+                        <button onclick="addEntityType()" style="padding: 4px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">
+                            + Add Entity Type
+                        </button>
+                    </div>
+                    <div id="entity-types-list" style="display: flex; flex-direction: column; gap: 10px;">
+                        <div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">
+                            No entity types defined. Click "+ Add Entity Type" to add one.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Relation Types Section -->
+                <div style="margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h4 style="margin: 0; font-size: 1em; color: #374151;">Relation Types</h4>
+                        <button onclick="addRelationType()" style="padding: 4px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">
+                            + Add Relation Type
+                        </button>
+                    </div>
+                    <div id="relation-types-list" style="display: flex; flex-direction: column; gap: 10px;">
+                        <div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">
+                            No relation types defined. Click "+ Add Relation Type" to add one.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Actions -->
+                <div class="modal-actions" style="display: flex; gap: 10px; justify-content: flex-end; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                    <button type="button" onclick="deleteCurrentSchema()" id="delete-schema-btn" style="margin-right: auto; padding: 8px 16px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Delete Schema
+                    </button>
+                    <button type="button" onclick="closeSchemaEditor()" style="padding: 8px 16px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Cancel
+                    </button>
+                    <button type="button" onclick="saveSchemaFromEditor()" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Save Schema
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

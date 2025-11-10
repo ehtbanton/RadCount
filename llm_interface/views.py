@@ -19,8 +19,69 @@ MODELS_DIR = PROJECT_ROOT / "models"
 LLAMA_CPP_DIR = PROJECT_ROOT / "llama_cpp"
 
 
-# RadGraph System Prompt for Entity-Relation Extraction
-RADGRAPH_SYSTEM_PROMPT = """You are a clinical information extraction system specialized in radiology reports. Extract entities and relations from the provided radiology report using the RadGraph schema.
+# Helper function to build system prompt from schema
+def build_system_prompt_from_schema(schema):
+    """Generate extraction prompt dynamically from schema configuration."""
+    prompt = f"""You are a clinical information extraction system specialized in radiology reports. Extract entities and relations from the provided radiology report using the {schema['name']} schema.
+
+SCHEMA: {schema['name']}
+{schema['description']}
+
+ENTITY TYPES ({len(schema['entity_types'])} types):
+
+"""
+
+    for i, entity_type in enumerate(schema['entity_types'], 1):
+        prompt += f"{i}. **{entity_type['name']}**: {entity_type['description']}\n"
+
+    prompt += f"\nRELATION TYPES ({len(schema['relation_types'])} types):\n\n"
+
+    for i, relation_type in enumerate(schema['relation_types'], 1):
+        prompt += f"{i}. **{relation_type['name']}**: {relation_type['description']}\n"
+        if relation_type.get('valid_pairs'):
+            pairs_str = ", ".join([f"({pair[0]} → {pair[1]})" for pair in relation_type['valid_pairs'][:3]])
+            if len(relation_type['valid_pairs']) > 3:
+                pairs_str += f" (and {len(relation_type['valid_pairs']) - 3} more)"
+            prompt += f"   Valid pairs: {pairs_str}\n"
+
+    prompt += """
+
+EXTRACTION INSTRUCTIONS:
+
+1. Read the radiology report carefully
+2. Identify ALL entities that fit the entity types defined above
+3. For each entity, determine its type based on the definitions
+4. Identify relationships between entities using the relation types defined above
+5. Extract as many valid entity-relation triplets as possible
+6. Be thorough - extract ALL clinically relevant information
+7. For measurements (sizes, SUVmax values), extract them as separate entities
+8. Preserve anatomical precision (e.g., "segment II", "T8 vertebra", "right upper lobe")
+
+OUTPUT FORMAT:
+
+Return a JSON array of triplets. Each triplet must have this exact structure:
+{
+  "entity1_text": "the first entity text",
+  "entity1_type": "one of the entity types listed above",
+  "relation_type": "one of the relation types listed above",
+  "entity2_text": "the second entity text",
+  "entity2_type": "one of the entity types listed above"
+}
+
+IMPORTANT:
+- Return ONLY the JSON array, no additional text
+- Ensure all JSON is valid and properly formatted
+- Extract ALL relevant entities and relations
+- Be consistent with entity type assignments
+- Every relation must connect two valid entities
+- For measurements, extract both the value and link it to the lesion
+"""
+
+    return prompt
+
+
+# Legacy: RadGraph System Prompt for Entity-Relation Extraction (kept for reference)
+RADGRAPH_SYSTEM_PROMPT_LEGACY = """You are a clinical information extraction system specialized in radiology reports. Extract entities and relations from the provided radiology report using the RadGraph schema.
 
 ENTITY TYPES (4 types):
 
@@ -1559,7 +1620,7 @@ def save_entities(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def extract_entities_relations(request):
-    """Extract entities and relations from a report using RadGraph schema."""
+    """Extract entities and relations from a report using the active schema."""
     try:
         data = json.loads(request.body) if request.body else {}
         report_text = data.get('report_text', '')
@@ -1573,11 +1634,22 @@ def extract_entities_relations(request):
         if not llm_service.is_server_running():
             return JsonResponse({'success': False, 'error': 'LLM server is not running'}, status=503)
 
-        # Build messages with RadGraph system prompt
+        # Load active schema from schemas.json
+        schemas_file = PROJECT_ROOT / "schemas.json"
+        with open(schemas_file, 'r', encoding='utf-8') as f:
+            schemas_data = json.load(f)
+
+        active_schema_name = schemas_data.get('active_schema', 'radgraph')
+        active_schema = schemas_data['schemas'][active_schema_name]
+
+        # Generate system prompt dynamically from schema
+        system_prompt = build_system_prompt_from_schema(active_schema)
+
+        # Build messages with dynamic system prompt
         messages = [
             {
                 'role': 'system',
-                'content': RADGRAPH_SYSTEM_PROMPT
+                'content': system_prompt
             },
             {
                 'role': 'user',
@@ -1671,3 +1743,219 @@ def extract_entities_relations(request):
 
     except Exception as e:
         return JsonResponse({'success': False, 'error': f'Failed to extract entities: {str(e)}'}, status=500)
+
+
+# Schema Management Endpoints
+
+@require_http_methods(["GET"])
+def get_schemas(request):
+    """Get all available schemas and the active schema name."""
+    try:
+        schemas_file = PROJECT_ROOT / "schemas.json"
+
+        if not schemas_file.exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'schemas.json not found'
+            }, status=404)
+
+        with open(schemas_file, 'r', encoding='utf-8') as f:
+            schemas_data = json.load(f)
+
+        return JsonResponse({
+            'success': True,
+            'active_schema': schemas_data.get('active_schema', 'radgraph'),
+            'schemas': schemas_data.get('schemas', {})
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to load schemas: {str(e)}'
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def get_active_schema(request):
+    """Get the currently active schema configuration."""
+    try:
+        schemas_file = PROJECT_ROOT / "schemas.json"
+
+        if not schemas_file.exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'schemas.json not found'
+            }, status=404)
+
+        with open(schemas_file, 'r', encoding='utf-8') as f:
+            schemas_data = json.load(f)
+
+        active_name = schemas_data.get('active_schema', 'radgraph')
+        active_schema = schemas_data['schemas'].get(active_name)
+
+        if not active_schema:
+            return JsonResponse({
+                'success': False,
+                'error': f'Active schema "{active_name}" not found'
+            }, status=404)
+
+        return JsonResponse({
+            'success': True,
+            'schema_name': active_name,
+            'schema': active_schema
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to load active schema: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def set_active_schema(request):
+    """Set which schema to use for extraction."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        schema_name = data.get('schema_name')
+
+        if not schema_name:
+            return JsonResponse({
+                'success': False,
+                'error': 'schema_name is required'
+            }, status=400)
+
+        schemas_file = PROJECT_ROOT / "schemas.json"
+
+        with open(schemas_file, 'r', encoding='utf-8') as f:
+            schemas_data = json.load(f)
+
+        # Verify schema exists
+        if schema_name not in schemas_data['schemas']:
+            return JsonResponse({
+                'success': False,
+                'error': f'Schema "{schema_name}" not found'
+            }, status=404)
+
+        # Update active schema
+        schemas_data['active_schema'] = schema_name
+
+        # Save back to file
+        with open(schemas_file, 'w', encoding='utf-8') as f:
+            json.dump(schemas_data, f, indent=2, ensure_ascii=False)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Active schema set to "{schema_name}"'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to set active schema: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def save_schema(request):
+    """Create or update a schema definition."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        schema_name = data.get('schema_name')
+        schema_data = data.get('schema_data')
+
+        if not schema_name or not schema_data:
+            return JsonResponse({
+                'success': False,
+                'error': 'schema_name and schema_data are required'
+            }, status=400)
+
+        # Validate schema structure
+        required_fields = ['name', 'description', 'entity_types', 'relation_types']
+        for field in required_fields:
+            if field not in schema_data:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Schema missing required field: {field}'
+                }, status=400)
+
+        schemas_file = PROJECT_ROOT / "schemas.json"
+
+        with open(schemas_file, 'r', encoding='utf-8') as f:
+            schemas_data = json.load(f)
+
+        # Add or update schema
+        schemas_data['schemas'][schema_name] = schema_data
+
+        # Save back to file
+        with open(schemas_file, 'w', encoding='utf-8') as f:
+            json.dump(schemas_data, f, indent=2, ensure_ascii=False)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Schema "{schema_name}" saved successfully'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to save schema: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def delete_schema(request):
+    """Delete a custom schema (cannot delete built-in schemas)."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        schema_name = data.get('schema_name')
+
+        if not schema_name:
+            return JsonResponse({
+                'success': False,
+                'error': 'schema_name is required'
+            }, status=400)
+
+        # Prevent deletion of built-in schemas
+        if schema_name in ['radgraph', 'pet_ct_oncology']:
+            return JsonResponse({
+                'success': False,
+                'error': 'Cannot delete built-in schemas'
+            }, status=403)
+
+        schemas_file = PROJECT_ROOT / "schemas.json"
+
+        with open(schemas_file, 'r', encoding='utf-8') as f:
+            schemas_data = json.load(f)
+
+        # Check if schema exists
+        if schema_name not in schemas_data['schemas']:
+            return JsonResponse({
+                'success': False,
+                'error': f'Schema "{schema_name}" not found'
+            }, status=404)
+
+        # Delete schema
+        del schemas_data['schemas'][schema_name]
+
+        # If deleted schema was active, switch to radgraph
+        if schemas_data.get('active_schema') == schema_name:
+            schemas_data['active_schema'] = 'radgraph'
+
+        # Save back to file
+        with open(schemas_file, 'w', encoding='utf-8') as f:
+            json.dump(schemas_data, f, indent=2, ensure_ascii=False)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Schema "{schema_name}" deleted successfully'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to delete schema: {str(e)}'
+        }, status=500)

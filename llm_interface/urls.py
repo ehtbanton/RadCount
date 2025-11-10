@@ -24,5 +24,10 @@ urlpatterns = [
     path('entities/', views.get_entities, name='get_entities'),
     path('save-entities/', views.save_entities, name='save_entities'),
     path('extract-entities-relations/', views.extract_entities_relations, name='extract_entities_relations'),
+    path('schemas/', views.get_schemas, name='get_schemas'),
+    path('active-schema/', views.get_active_schema, name='get_active_schema'),
+    path('set-active-schema/', views.set_active_schema, name='set_active_schema'),
+    path('save-schema/', views.save_schema, name='save_schema'),
+    path('delete-schema/', views.delete_schema, name='delete_schema'),
     path('execute-extraction/', views.execute_extraction_function, name='execute_extraction_function'),
 ]

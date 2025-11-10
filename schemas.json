@@ -1,0 +1,631 @@
+{
+  "active_schema": "pet_ct_oncology",
+  "schemas": {
+    "radgraph": {
+      "name": "RadGraph (Generic)",
+      "description": "Original RadGraph schema for general radiology reports",
+      "entity_types": [
+        {
+          "name": "Anatomy",
+          "description": "Anatomical body parts (e.g., lung, heart, liver)",
+          "color": "#3b82f6"
+        },
+        {
+          "name": "Observation:Definitely Present",
+          "description": "Confirmed findings (e.g., effusion, opacity, mass)",
+          "color": "#10b981"
+        },
+        {
+          "name": "Observation:Uncertain",
+          "description": "Possible or suspected findings (e.g., possible infiltrate)",
+          "color": "#f59e0b"
+        },
+        {
+          "name": "Observation:Definitely Absent",
+          "description": "Explicitly ruled out findings (e.g., no pneumothorax)",
+          "color": "#ef4444"
+        }
+      ],
+      "relation_types": [
+        {
+          "name": "suggestive_of",
+          "description": "One observation implies or suggests another observation",
+          "valid_pairs": [
+            [
+              "Observation:Definitely Present",
+              "Observation:Definitely Present"
+            ],
+            [
+              "Observation:Definitely Present",
+              "Observation:Uncertain"
+            ],
+            [
+              "Observation:Uncertain",
+              "Observation:Definitely Present"
+            ]
+          ]
+        },
+        {
+          "name": "located_at",
+          "description": "Observation is related to or located at an anatomical structure",
+          "valid_pairs": [
+            [
+              "Observation:Definitely Present",
+              "Anatomy"
+            ],
+            [
+              "Observation:Uncertain",
+              "Anatomy"
+            ],
+            [
+              "Observation:Definitely Absent",
+              "Anatomy"
+            ]
+          ]
+        },
+        {
+          "name": "modify",
+          "description": "One entity modifies, quantifies, or describes another entity",
+          "valid_pairs": [
+            [
+              "Observation:Definitely Present",
+              "Observation:Definitely Present"
+            ],
+            [
+              "Observation:Uncertain",
+              "Observation:Uncertain"
+            ],
+            [
+              "Anatomy",
+              "Anatomy"
+            ]
+          ]
+        }
+      ]
+    },
+    "pet_ct_oncology": {
+      "name": "PET-CT Oncology",
+      "description": "Specialized schema for FDG PET-CT cancer imaging reports with quantitative measurements",
+      "entity_types": [
+        {
+          "name": "PrimaryTumor",
+          "description": "Original cancer site or primary malignancy",
+          "color": "#ef4444"
+        },
+        {
+          "name": "Metastasis",
+          "description": "Secondary cancer deposits (e.g., liver mets, bone mets)",
+          "color": "#f97316"
+        },
+        {
+          "name": "LymphNode",
+          "description": "Involved lymph nodes or lymphadenopathy",
+          "color": "#a855f7"
+        },
+        {
+          "name": "Nodule",
+          "description": "Small rounded lesions (typically <3cm)",
+          "color": "#ec4899"
+        },
+        {
+          "name": "Mass",
+          "description": "Larger lesions or undefined masses",
+          "color": "#dc2626"
+        },
+        {
+          "name": "AnatomySite",
+          "description": "Organs and body parts (e.g., liver, lung, T8 vertebra, segment II)",
+          "color": "#3b82f6"
+        },
+        {
+          "name": "AnatomicalQualifier",
+          "description": "Position or location modifiers (e.g., distal, right upper lobe, segment II)",
+          "color": "#60a5fa"
+        },
+        {
+          "name": "LinearMeasurement",
+          "description": "Size measurements in mm or cm (e.g., 9 cm, 22mm, 2.3cm x 1.8cm)",
+          "color": "#14b8a6"
+        },
+        {
+          "name": "SUVmax",
+          "description": "Standardized Uptake Value maximum - quantitative PET measurement",
+          "color": "#10b981"
+        },
+        {
+          "name": "FDGAvidity",
+          "description": "Qualitative FDG uptake level (e.g., markedly avid, mildly avid, FDG negative)",
+          "color": "#f59e0b"
+        },
+        {
+          "name": "TemporalChange",
+          "description": "Change from prior study (e.g., increased, new, resolved, stable, decreased)",
+          "color": "#6366f1"
+        },
+        {
+          "name": "CertaintyLevel",
+          "description": "Diagnostic confidence (e.g., definite, likely, suspicious for, possible, concerning for)",
+          "color": "#6b7280"
+        },
+        {
+          "name": "BenignFinding",
+          "description": "Non-malignant findings (e.g., inflammation, atelectasis, degenerative changes)",
+          "color": "#84cc16"
+        },
+        {
+          "name": "PhysiologicalUptake",
+          "description": "Normal FDG uptake (e.g., brain uptake, myocardial uptake, bowel activity)",
+          "color": "#22c55e"
+        },
+        {
+          "name": "ClinicalContext",
+          "description": "Patient factors and technical details (e.g., blood glucose, post-surgical, diabetic)",
+          "color": "#8b5cf6"
+        }
+      ],
+      "relation_types": [
+        {
+          "name": "located_in",
+          "description": "Lesion is located within an anatomical site",
+          "valid_pairs": [
+            [
+              "PrimaryTumor",
+              "AnatomySite"
+            ],
+            [
+              "Metastasis",
+              "AnatomySite"
+            ],
+            [
+              "LymphNode",
+              "AnatomySite"
+            ],
+            [
+              "Nodule",
+              "AnatomySite"
+            ],
+            [
+              "Mass",
+              "AnatomySite"
+            ],
+            [
+              "BenignFinding",
+              "AnatomySite"
+            ]
+          ]
+        },
+        {
+          "name": "involves",
+          "description": "Disease process involves or affects an anatomical structure",
+          "valid_pairs": [
+            [
+              "PrimaryTumor",
+              "AnatomySite"
+            ],
+            [
+              "Metastasis",
+              "AnatomySite"
+            ],
+            [
+              "LymphNode",
+              "AnatomySite"
+            ]
+          ]
+        },
+        {
+          "name": "extends_to",
+          "description": "Lesion extends or spreads to another anatomical site",
+          "valid_pairs": [
+            [
+              "PrimaryTumor",
+              "AnatomySite"
+            ],
+            [
+              "Metastasis",
+              "AnatomySite"
+            ],
+            [
+              "Mass",
+              "AnatomySite"
+            ]
+          ]
+        },
+        {
+          "name": "adjacent_to",
+          "description": "Structure is near or adjacent to an anatomical landmark",
+          "valid_pairs": [
+            [
+              "PrimaryTumor",
+              "AnatomySite"
+            ],
+            [
+              "Metastasis",
+              "AnatomySite"
+            ],
+            [
+              "LymphNode",
+              "AnatomySite"
+            ],
+            [
+              "Nodule",
+              "AnatomySite"
+            ],
+            [
+              "Mass",
+              "AnatomySite"
+            ]
+          ]
+        },
+        {
+          "name": "modifies",
+          "description": "Anatomical qualifier modifies or specifies location",
+          "valid_pairs": [
+            [
+              "AnatomicalQualifier",
+              "AnatomySite"
+            ],
+            [
+              "AnatomicalQualifier",
+              "PrimaryTumor"
+            ],
+            [
+              "AnatomicalQualifier",
+              "Metastasis"
+            ],
+            [
+              "AnatomicalQualifier",
+              "LymphNode"
+            ]
+          ]
+        },
+        {
+          "name": "has_size",
+          "description": "Lesion has a specific linear measurement",
+          "valid_pairs": [
+            [
+              "PrimaryTumor",
+              "LinearMeasurement"
+            ],
+            [
+              "Metastasis",
+              "LinearMeasurement"
+            ],
+            [
+              "LymphNode",
+              "LinearMeasurement"
+            ],
+            [
+              "Nodule",
+              "LinearMeasurement"
+            ],
+            [
+              "Mass",
+              "LinearMeasurement"
+            ]
+          ]
+        },
+        {
+          "name": "has_suv",
+          "description": "Lesion has a specific SUVmax value (quantitative PET measurement)",
+          "valid_pairs": [
+            [
+              "PrimaryTumor",
+              "SUVmax"
+            ],
+            [
+              "Metastasis",
+              "SUVmax"
+            ],
+            [
+              "LymphNode",
+              "SUVmax"
+            ],
+            [
+              "Nodule",
+              "SUVmax"
+            ],
+            [
+              "Mass",
+              "SUVmax"
+            ],
+            [
+              "BenignFinding",
+              "SUVmax"
+            ]
+          ]
+        },
+        {
+          "name": "has_avidity",
+          "description": "Lesion demonstrates a qualitative level of FDG uptake",
+          "valid_pairs": [
+            [
+              "PrimaryTumor",
+              "FDGAvidity"
+            ],
+            [
+              "Metastasis",
+              "FDGAvidity"
+            ],
+            [
+              "LymphNode",
+              "FDGAvidity"
+            ],
+            [
+              "Nodule",
+              "FDGAvidity"
+            ],
+            [
+              "Mass",
+              "FDGAvidity"
+            ],
+            [
+              "BenignFinding",
+              "FDGAvidity"
+            ],
+            [
+              "AnatomySite",
+              "FDGAvidity"
+            ]
+          ]
+        },
+        {
+          "name": "suggestive_of",
+          "description": "Finding suggests or raises suspicion for a diagnosis",
+          "valid_pairs": [
+            [
+              "Nodule",
+              "Metastasis"
+            ],
+            [
+              "Mass",
+              "PrimaryTumor"
+            ],
+            [
+              "LymphNode",
+              "Metastasis"
+            ],
+            [
+              "FDGAvidity",
+              "PrimaryTumor"
+            ],
+            [
+              "FDGAvidity",
+              "Metastasis"
+            ]
+          ]
+        },
+        {
+          "name": "concerning_for",
+          "description": "Finding is concerning for or worrisome for a diagnosis",
+          "valid_pairs": [
+            [
+              "Nodule",
+              "Metastasis"
+            ],
+            [
+              "Mass",
+              "PrimaryTumor"
+            ],
+            [
+              "LymphNode",
+              "Metastasis"
+            ],
+            [
+              "FDGAvidity",
+              "Metastasis"
+            ]
+          ]
+        },
+        {
+          "name": "excludes",
+          "description": "Finding rules out or excludes a diagnosis",
+          "valid_pairs": [
+            [
+              "BenignFinding",
+              "Metastasis"
+            ],
+            [
+              "PhysiologicalUptake",
+              "Metastasis"
+            ]
+          ]
+        },
+        {
+          "name": "shows_change",
+          "description": "Finding demonstrates temporal change from prior study",
+          "valid_pairs": [
+            [
+              "PrimaryTumor",
+              "TemporalChange"
+            ],
+            [
+              "Metastasis",
+              "TemporalChange"
+            ],
+            [
+              "LymphNode",
+              "TemporalChange"
+            ],
+            [
+              "Nodule",
+              "TemporalChange"
+            ],
+            [
+              "Mass",
+              "TemporalChange"
+            ]
+          ]
+        },
+        {
+          "name": "metastasis_from",
+          "description": "Metastatic deposit originates from primary tumor",
+          "valid_pairs": [
+            [
+              "Metastasis",
+              "PrimaryTumor"
+            ]
+          ]
+        },
+        {
+          "name": "drains_to",
+          "description": "Anatomical site drains lymphatically to lymph node region",
+          "valid_pairs": [
+            [
+              "AnatomySite",
+              "LymphNode"
+            ]
+          ]
+        },
+        {
+          "name": "has_certainty",
+          "description": "Finding has a specific diagnostic certainty level",
+          "valid_pairs": [
+            [
+              "PrimaryTumor",
+              "CertaintyLevel"
+            ],
+            [
+              "Metastasis",
+              "CertaintyLevel"
+            ],
+            [
+              "LymphNode",
+              "CertaintyLevel"
+            ],
+            [
+              "Nodule",
+              "CertaintyLevel"
+            ]
+          ]
+        }
+      ]
+    },
+    "anton": {
+      "name": "anton",
+      "description": "scheme",
+      "entity_types": [
+        {
+          "name": "max SUV",
+          "description": "The highest SUV locally",
+          "color": "#f43bf7"
+        },
+        {
+          "name": "1",
+          "description": "value",
+          "color": "#3b82f6"
+        },
+        {
+          "name": "2",
+          "description": "value",
+          "color": "#3b82f6"
+        },
+        {
+          "name": "3",
+          "description": "value",
+          "color": "#3b82f6"
+        },
+        {
+          "name": "4",
+          "description": "value",
+          "color": "#3b82f6"
+        },
+        {
+          "name": "5",
+          "description": "value",
+          "color": "#3b82f6"
+        },
+        {
+          "name": "6",
+          "description": "value",
+          "color": "#3b82f6"
+        },
+        {
+          "name": "7",
+          "description": "value",
+          "color": "#3b82f6"
+        },
+        {
+          "name": "8",
+          "description": "value",
+          "color": "#3b82f6"
+        },
+        {
+          "name": "9",
+          "description": "value",
+          "color": "#3b82f6"
+        },
+        {
+          "name": "10",
+          "description": "value",
+          "color": "#3b82f6"
+        },
+        {
+          "name": "11",
+          "description": "value",
+          "color": "#3b82f6"
+        },
+        {
+          "name": "12",
+          "description": "value",
+          "color": "#3b82f6"
+        },
+        {
+          "name": "13",
+          "description": "value",
+          "color": "#3b82f6"
+        },
+        {
+          "name": "14",
+          "description": "value",
+          "color": "#3b82f6"
+        },
+        {
+          "name": "15",
+          "description": "value",
+          "color": "#3b82f6"
+        },
+        {
+          "name": "16",
+          "description": "value",
+          "color": "#3b82f6"
+        }
+      ],
+      "relation_types": [
+        {
+          "name": "has size",
+          "description": "has size",
+          "valid_pairs": [
+            [
+              "max SUV",
+              "1"
+            ],
+            [
+              "max SUV",
+              "2"
+            ],
+            [
+              "max SUV",
+              "3"
+            ],
+            [
+              "max SUV",
+              "4"
+            ],
+            [
+              "max SUV",
+              "5"
+            ],
+            [
+              "max SUV",
+              "6"
+            ],
+            [
+              "max SUV",
+              "7"
+            ]
+          ]
+        }
+      ]
+    }
+  }
+}
