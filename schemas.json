@@ -1,5 +1,5 @@
 {
-  "active_schema": "pet_ct_oncology",
+  "active_schema": "radgraph",
   "schemas": {
     "radgraph": {
       "name": "RadGraph (Generic)",
