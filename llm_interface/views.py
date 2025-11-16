@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.db import models as django_models
 from pathlib import Path
 import json
 import subprocess
@@ -2231,4 +2232,518 @@ def delete_prompt(request):
         return JsonResponse({
             'success': False,
             'error': f'Failed to delete prompt: {str(e)}'
+        }, status=500)
+
+
+# ========== NEW: Ground Truth & Evaluation Endpoints ==========
+
+from .models import RadiologyReport, Triplet, ExtractionFunction, EvaluationRun, TripletComparison
+from .metrics import MetricsCalculator
+
+
+# Ground Truth Management
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_ground_truth(request, entry_number):
+    """Get ground truth triplets for a specific entry"""
+    try:
+        entry_number = int(entry_number)
+
+        # Get or create report
+        report, created = RadiologyReport.objects.get_or_create(
+            entry_number=entry_number,
+            defaults={'report_text': ''}  # Will be updated when CSV is loaded
+        )
+
+        # Get ground truth triplets
+        gt_triplets = report.get_ground_truth_triplets()
+
+        return JsonResponse({
+            'success': True,
+            'entry_number': entry_number,
+            'triplets': [t.to_dict() for t in gt_triplets],
+            'count': gt_triplets.count()
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to get ground truth: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def save_ground_truth(request):
+    """Save ground truth triplets for an entry"""
+    try:
+        data = json.loads(request.body)
+        entry_number = int(data.get('entry_number'))
+        triplets = data.get('triplets', [])
+
+        # Get or create report
+        report, created = RadiologyReport.objects.get_or_create(
+            entry_number=entry_number,
+            defaults={'report_text': data.get('report_text', '')}
+        )
+
+        # Delete existing ground truth triplets for this entry
+        report.triplets.filter(source=Triplet.SOURCE_GROUND_TRUTH).delete()
+
+        # Create new ground truth triplets
+        created_triplets = []
+        for triplet in triplets:
+            t = Triplet.objects.create(
+                report=report,
+                source=Triplet.SOURCE_GROUND_TRUTH,
+                entity1_text=triplet['entity1_text'],
+                entity1_type=triplet['entity1_type'],
+                relation_type=triplet['relation_type'],
+                entity2_text=triplet['entity2_text'],
+                entity2_type=triplet['entity2_type'],
+                confidence=triplet.get('confidence'),
+                notes=triplet.get('notes', '')
+            )
+            created_triplets.append(t.to_dict())
+
+        return JsonResponse({
+            'success': True,
+            'entry_number': entry_number,
+            'triplets_saved': len(created_triplets),
+            'triplets': created_triplets
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to save ground truth: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def delete_ground_truth(request, entry_number):
+    """Delete all ground truth triplets for an entry"""
+    try:
+        entry_number = int(entry_number)
+        report = RadiologyReport.objects.get(entry_number=entry_number)
+
+        deleted_count = report.triplets.filter(source=Triplet.SOURCE_GROUND_TRUTH).delete()[0]
+
+        return JsonResponse({
+            'success': True,
+            'entry_number': entry_number,
+            'deleted_count': deleted_count
+        })
+
+    except RadiologyReport.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': f'Entry {entry_number} not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to delete ground truth: {str(e)}'
+        }, status=500)
+
+
+# Extraction Function Management
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_extraction_functions_list(request):
+    """Get all extraction functions"""
+    try:
+        functions = ExtractionFunction.objects.filter(is_active=True)
+
+        return JsonResponse({
+            'success': True,
+            'functions': [{
+                'id': f.id,
+                'name': f.name,
+                'description': f.description,
+                'order': f.order,
+                'created_at': f.created_at.isoformat(),
+                'updated_at': f.updated_at.isoformat(),
+            } for f in functions]
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to get extraction functions: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_extraction_function_detail(request, function_id):
+    """Get details of a specific extraction function including code"""
+    try:
+        function = ExtractionFunction.objects.get(id=function_id)
+
+        return JsonResponse({
+            'success': True,
+            'function': {
+                'id': function.id,
+                'name': function.name,
+                'description': function.description,
+                'code': function.code,
+                'order': function.order,
+                'is_active': function.is_active,
+                'created_at': function.created_at.isoformat(),
+                'updated_at': function.updated_at.isoformat(),
+            }
+        })
+
+    except ExtractionFunction.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': f'Extraction function {function_id} not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to get extraction function: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def save_llm_extraction_function(request):
+    """Create or update an LLM extraction function"""
+    try:
+        data = json.loads(request.body)
+        function_id = data.get('id')
+
+        if function_id:
+            # Update existing
+            function = ExtractionFunction.objects.get(id=function_id)
+            function.name = data.get('name', function.name)
+            function.description = data.get('description', function.description)
+            function.code = data.get('code', function.code)
+            function.order = data.get('order', function.order)
+            function.is_active = data.get('is_active', function.is_active)
+            function.save()
+            message = 'Extraction function updated successfully'
+        else:
+            # Create new
+            # Get next order number
+            max_order = ExtractionFunction.objects.aggregate(django_models.Max('order'))['order__max'] or 0
+
+            function = ExtractionFunction.objects.create(
+                name=data['name'],
+                description=data.get('description', ''),
+                code=data['code'],
+                order=data.get('order', max_order + 1),
+                is_active=data.get('is_active', True)
+            )
+            message = 'Extraction function created successfully'
+
+        return JsonResponse({
+            'success': True,
+            'message': message,
+            'function': {
+                'id': function.id,
+                'name': function.name,
+                'description': function.description,
+                'code': function.code,
+                'order': function.order,
+                'is_active': function.is_active,
+            }
+        })
+
+    except ExtractionFunction.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Extraction function not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to save extraction function: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def delete_llm_extraction_function(request, function_id):
+    """Delete an LLM extraction function"""
+    try:
+        function = ExtractionFunction.objects.get(id=function_id)
+        function_name = function.name
+
+        # Also delete all triplets extracted by this function
+        Triplet.objects.filter(source=f'function_{function_id}').delete()
+
+        function.delete()
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Extraction function "{function_name}" deleted successfully'
+        })
+
+    except ExtractionFunction.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Extraction function not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to delete extraction function: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def execute_llm_extraction(request, function_id, entry_number):
+    """Execute an LLM extraction function on a specific entry"""
+    try:
+        function = ExtractionFunction.objects.get(id=function_id)
+        entry_number = int(entry_number)
+
+        # Get or create report
+        report, created = RadiologyReport.objects.get_or_create(
+            entry_number=entry_number,
+            defaults={'report_text': ''}
+        )
+
+        # Load report text from CSV if needed
+        if not report.report_text or created:
+            csv_entry = get_csv_entry_data(entry_number)
+            if csv_entry:
+                report.report_text = csv_entry.get('text', '')
+                report.save()
+
+        # Execute the extraction function code
+        # Create execution context
+        exec_globals = {
+            'report_text': report.report_text,
+            'entry_number': entry_number,
+            'llm_service': LlamaService(),
+            'json': json,
+            'requests': requests,
+        }
+
+        # Execute the code
+        exec(function.code, exec_globals)
+
+        # Get the extracted triplets (function should set 'extracted_triplets' variable)
+        extracted_triplets = exec_globals.get('extracted_triplets', [])
+
+        # Delete existing triplets from this function for this entry
+        report.triplets.filter(source=function.get_source_identifier()).delete()
+
+        # Save new triplets
+        created_triplets = []
+        for triplet in extracted_triplets:
+            t = Triplet.objects.create(
+                report=report,
+                source=function.get_source_identifier(),
+                entity1_text=triplet['entity1_text'],
+                entity1_type=triplet['entity1_type'],
+                relation_type=triplet['relation_type'],
+                entity2_text=triplet['entity2_text'],
+                entity2_type=triplet['entity2_type'],
+                confidence=triplet.get('confidence'),
+                notes=triplet.get('notes', '')
+            )
+            created_triplets.append(t.to_dict())
+
+        return JsonResponse({
+            'success': True,
+            'entry_number': entry_number,
+            'function_name': function.name,
+            'triplets_extracted': len(created_triplets),
+            'triplets': created_triplets
+        })
+
+    except ExtractionFunction.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Extraction function not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to execute extraction function: {str(e)}'
+        }, status=500)
+
+
+# Helper function to get CSV entry data
+def get_csv_entry_data(entry_number):
+    """Get CSV entry data (helper function)"""
+    try:
+        csv_metadata = get_csv_metadata()
+        if not csv_metadata:
+            return None
+
+        csv_file_path = PROJECT_ROOT / "large_data" / csv_metadata['filename']
+
+        with open(csv_file_path, 'r', encoding='utf-8', errors='replace') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for i, row in enumerate(reader, start=1):
+                if i == entry_number:
+                    return row
+        return None
+    except Exception:
+        return None
+
+
+# Evaluation Endpoints
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def evaluate_entry(request, entry_number):
+    """Evaluate LLM extractions against ground truth for a specific entry"""
+    try:
+        entry_number = int(entry_number)
+        data = json.loads(request.body) if request.body else {}
+        function_id = data.get('function_id')  # Optional: evaluate specific function
+
+        report = RadiologyReport.objects.get(entry_number=entry_number)
+
+        # Get ground truth
+        gt_triplets = list(report.get_ground_truth_triplets().values(
+            'entity1_text', 'entity1_type', 'relation_type', 'entity2_text', 'entity2_type'
+        ))
+
+        if not gt_triplets:
+            return JsonResponse({
+                'success': False,
+                'error': 'No ground truth available for this entry'
+            }, status=400)
+
+        # Get LLM triplets
+        if function_id:
+            llm_triplets = list(report.get_llm_triplets(function_id).values(
+                'entity1_text', 'entity1_type', 'relation_type', 'entity2_text', 'entity2_type'
+            ))
+        else:
+            # Use legacy LLM triplets
+            llm_triplets = list(report.triplets.filter(source=Triplet.SOURCE_LEGACY_LLM).values(
+                'entity1_text', 'entity1_type', 'relation_type', 'entity2_text', 'entity2_type'
+            ))
+
+        # Calculate metrics
+        calculator = MetricsCalculator()
+        metrics = calculator.compare_triplets(llm_triplets, gt_triplets)
+
+        return JsonResponse({
+            'success': True,
+            'entry_number': entry_number,
+            'metrics': metrics
+        })
+
+    except RadiologyReport.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': f'Entry {entry_number} not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to evaluate entry: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def evaluate_batch(request):
+    """Evaluate multiple entries and calculate aggregate metrics"""
+    try:
+        data = json.loads(request.body)
+        entry_numbers = data.get('entry_numbers', [])
+        function_id = data.get('function_id')
+
+        if not entry_numbers:
+            return JsonResponse({
+                'success': False,
+                'error': 'No entry numbers provided'
+            }, status=400)
+
+        calculator = MetricsCalculator()
+        entry_results = []
+
+        for entry_number in entry_numbers:
+            try:
+                report = RadiologyReport.objects.get(entry_number=entry_number)
+
+                gt_triplets = list(report.get_ground_truth_triplets().values(
+                    'entity1_text', 'entity1_type', 'relation_type', 'entity2_text', 'entity2_type'
+                ))
+
+                if not gt_triplets:
+                    continue  # Skip entries without ground truth
+
+                if function_id:
+                    llm_triplets = list(report.get_llm_triplets(function_id).values(
+                        'entity1_text', 'entity1_type', 'relation_type', 'entity2_text', 'entity2_type'
+                    ))
+                else:
+                    llm_triplets = list(report.triplets.filter(source=Triplet.SOURCE_LEGACY_LLM).values(
+                        'entity1_text', 'entity1_type', 'relation_type', 'entity2_text', 'entity2_type'
+                    ))
+
+                metrics = calculator.compare_triplets(llm_triplets, gt_triplets)
+                metrics['entry_number'] = entry_number
+                entry_results.append(metrics)
+
+            except RadiologyReport.DoesNotExist:
+                continue
+
+        # Calculate aggregate metrics
+        aggregate_metrics = calculator.calculate_batch_metrics(entry_results)
+
+        return JsonResponse({
+            'success': True,
+            'aggregate_metrics': aggregate_metrics,
+            'entry_results': entry_results
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to evaluate batch: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_llm_triplets(request, entry_number, function_id):
+    """Get LLM-extracted triplets for a specific entry and function"""
+    try:
+        entry_number = int(entry_number)
+        function_id = int(function_id)
+
+        report = RadiologyReport.objects.get(entry_number=entry_number)
+        function = ExtractionFunction.objects.get(id=function_id)
+
+        triplets = report.get_llm_triplets(function_id)
+
+        return JsonResponse({
+            'success': True,
+            'entry_number': entry_number,
+            'function_name': function.name,
+            'triplets': [t.to_dict() for t in triplets],
+            'count': triplets.count()
+        })
+
+    except RadiologyReport.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': f'Entry {entry_number} not found'
+        }, status=404)
+    except ExtractionFunction.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': f'Extraction function {function_id} not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to get LLM triplets: {str(e)}'
         }, status=500)
