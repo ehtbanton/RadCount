@@ -1,4 +1,3 @@
-{% load custom_filters %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -31,7 +30,7 @@
 
         .content {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr 0.5fr 1fr;
             gap: 0;
             flex: 1;
             overflow: hidden;
@@ -45,6 +44,12 @@
         .panel-left {
             border-right: 2px solid #e5e7eb;
             background: #fafafa;
+        }
+
+        .panel-middle {
+            border-right: 2px solid #e5e7eb;
+            background: #ffffff;
+            padding: 30px 20px;
         }
 
         .panel-right {
@@ -618,255 +623,6 @@
             border-radius: 4px;
             border: 1px solid #e5e7eb;
         }
-
-        /* Tab System Styles */
-        .tab-container {
-            margin-bottom: 20px;
-        }
-
-        .tab-bar {
-            display: flex;
-            gap: 4px;
-            border-bottom: 2px solid #e5e7eb;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .tab {
-            padding: 10px 20px;
-            background: #f3f4f6;
-            border: none;
-            border-bottom: 3px solid transparent;
-            cursor: pointer;
-            font-size: 0.95em;
-            color: #6b7280;
-            transition: all 0.2s;
-            position: relative;
-        }
-
-        .tab:hover {
-            background: #e5e7eb;
-            color: #374151;
-        }
-
-        .tab.active {
-            background: white;
-            color: #1f2937;
-            border-bottom-color: #3b82f6;
-            font-weight: 500;
-        }
-
-        .tab-add {
-            padding: 10px 15px;
-            background: #10b981;
-            color: white;
-            border: none;
-            cursor: pointer;
-            font-size: 0.9em;
-            transition: background 0.2s;
-            margin-left: auto;
-        }
-
-        .tab-add:hover {
-            background: #059669;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .triplet-card {
-            background: #f9fafb;
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
-            padding: 15px;
-            margin-bottom: 12px;
-            position: relative;
-        }
-
-        .triplet-match-indicator {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            display: flex;
-            gap: 8px;
-            font-size: 0.85em;
-        }
-
-        .match-badge {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-weight: 500;
-        }
-
-        .match-exact {
-            background: #d1fae5;
-            color: #065f46;
-        }
-
-        .match-partial {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .match-none {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        .triplet-field {
-            margin-bottom: 8px;
-            font-size: 0.95em;
-        }
-
-        .triplet-label {
-            font-weight: 500;
-            color: #6b7280;
-            display: inline-block;
-            width: 100px;
-        }
-
-        .triplet-value {
-            color: #1f2937;
-        }
-
-        .triplet-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px solid #e5e7eb;
-        }
-
-        .triplet-btn {
-            padding: 6px 12px;
-            border: 1px solid #d1d5db;
-            border-radius: 4px;
-            background: white;
-            cursor: pointer;
-            font-size: 0.85em;
-            transition: all 0.2s;
-        }
-
-        .triplet-btn:hover {
-            background: #f3f4f6;
-        }
-
-        .triplet-btn-primary {
-            background: #3b82f6;
-            color: white;
-            border-color: #3b82f6;
-        }
-
-        .triplet-btn-primary:hover {
-            background: #2563eb;
-        }
-
-        .triplet-btn-danger {
-            background: #ef4444;
-            color: white;
-            border-color: #ef4444;
-        }
-
-        .triplet-btn-danger:hover {
-            background: #dc2626;
-        }
-
-        .metrics-panel {
-            background: #f0f9ff;
-            border: 1px solid #bae6fd;
-            border-radius: 6px;
-            padding: 15px;
-            margin-top: 20px;
-        }
-
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-top: 10px;
-        }
-
-        .metric-item {
-            text-align: center;
-        }
-
-        .metric-value {
-            font-size: 1.5em;
-            font-weight: 600;
-            color: #1f2937;
-        }
-
-        .metric-label {
-            font-size: 0.85em;
-            color: #6b7280;
-            margin-top: 4px;
-        }
-
-        .code-editor-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .code-editor-modal.active {
-            display: flex;
-        }
-
-        .code-editor-content {
-            background: white;
-            border-radius: 8px;
-            width: 90%;
-            max-width: 1000px;
-            max-height: 90vh;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .code-editor-header {
-            padding: 20px;
-            border-bottom: 1px solid #e5e7eb;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .code-editor-body {
-            padding: 20px;
-            flex: 1;
-            overflow-y: auto;
-        }
-
-        .code-editor-textarea {
-            width: 100%;
-            min-height: 400px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
-            padding: 15px;
-            border: 1px solid #d1d5db;
-            border-radius: 4px;
-            resize: vertical;
-        }
-
-        .code-editor-footer {
-            padding: 20px;
-            border-top: 1px solid #e5e7eb;
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-        }
     </style>
 </head>
 <body>
@@ -966,47 +722,234 @@
 
                         <!-- Annotation & Extraction Section -->
                         <div style="background: #f8f9fa; padding: 20px; border-radius: 6px; border: 1px solid #e5e7eb; margin-top: 15px;">
-                            <h3 style="margin: 0 0 15px 0; font-size: 1.1em; color: #1f2937;">Annotation & Extraction</h3>
-                            <!-- Tab System -->
-                            <div class="tab-container">
-                                <div class="tab-bar">
-                                    <button class="tab active" data-tab="ground-truth" onclick="switchTab('ground-truth')">
-                                        Ground Truth
-                                    </button>
-                                    <!-- LLM extraction function tabs will be dynamically inserted here -->
-                                    <button class="tab-add" onclick="openNewFunctionModal()" title="Create new extraction function">
-                                        +
-                                    </button>
+
+                            <!-- Schema Selector (Applies to Both Tabs) -->
+                            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px;">
+                                <div style="font-weight: 400; color: #374151; font-size: 1.05em; white-space: nowrap; width: 150px;">
+                                    Schema:
                                 </div>
-
-                                <!-- Ground Truth Tab Content -->
-                                <div id="tab-ground-truth" class="tab-content active">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                        <h4 style="margin: 0; font-size: 1em; color: #1f2937;">Manual Annotation</h4>
-                                        <div style="display: flex; gap: 6px;">
-                                            <button onclick="saveGroundTruth()" class="triplet-btn triplet-btn-primary" style="font-size: 0.85em;">
-                                                Save
-                                            </button>
-                                            <button onclick="addNewTriplet()" class="triplet-btn" style="background: #10b981; color: white; border-color: #10b981; font-size: 0.85em;">
-                                                + Add
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div id="ground-truth-triplets-container">
-                                        <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 30px;">
-                                            No ground truth triplets yet. Click "+ Add" to manually annotate.
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- LLM Extraction Function Tab Contents (dynamically generated) -->
-                                <!-- Will be populated by JavaScript -->
+                                <select
+                                    id="schema-selector"
+                                    onchange="switchSchema()"
+                                    style="flex: 1; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9em; background: white; cursor: pointer;"
+                                >
+                                    <option value="">Loading schemas...</option>
+                                </select>
+                                <button
+                                    onclick="openSchemaEditorModal()"
+                                    style="padding: 6px 12px; background: #6366f1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s; white-space: nowrap;"
+                                    onmouseover="this.style.background='#4f46e5'"
+                                    onmouseout="this.style.background='#6366f1'"
+                                    title="Create or edit custom schemas"
+                                >
+                                    Edit Schema
+                                </button>
                             </div>
+
+                            <!-- Tab Navigation -->
+                            <div id="method-tabs-container" style="display: flex; border-bottom: 2px solid #e5e7eb; margin-bottom: 15px; gap: 4px;">
+                                <button
+                                    id="ground-truth-tab-btn"
+                                    class="annotation-tab-btn"
+                                    onclick="switchAnnotationTab('ground-truth')"
+                                    style="padding: 10px 20px; background: none; border: none; border-bottom: 2px solid #3b82f6; color: #3b82f6; cursor: pointer; font-size: 0.95em; font-weight: 500; margin-bottom: -2px;"
+                                >
+                                    Ground Truth Annotations
+                                </button>
+                                <button
+                                    id="auto-extracted-tab-btn"
+                                    class="annotation-tab-btn"
+                                    onclick="switchAnnotationTab('auto-extracted')"
+                                    style="padding: 10px 20px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; cursor: pointer; font-size: 0.95em; font-weight: 400; margin-bottom: -2px;"
+                                >
+                                    Auto-Extracted Annotations
+                                </button>
+                                <button
+                                    id="metrics-tab-btn"
+                                    class="annotation-tab-btn"
+                                    onclick="switchAnnotationTab('metrics')"
+                                    style="padding: 10px 20px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; cursor: pointer; font-size: 0.95em; font-weight: 400; margin-bottom: -2px;"
+                                >
+                                    Metrics
+                                </button>
+                            </div>
+
+                            <!-- Ground Truth Tab Content -->
+                            <div id="ground-truth-tab" class="annotation-tab-content" style="display: block;">
+
+                                <!-- Manual Annotation Form -->
+                                <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
+                                    <div style="font-weight: 500; color: #374151; margin-bottom: 12px; font-size: 0.95em;">
+                                        Add Ground Truth Triplet
+                                    </div>
+
+                                    <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: end;">
+                                        <!-- Entity 1 -->
+                                        <div>
+                                            <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Entity 1 Text</label>
+                                            <input
+                                                id="gt-entity1-text"
+                                                type="text"
+                                                placeholder="e.g., lung opacity"
+                                                style="width: 100%; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9em;"
+                                            />
+                                            <select
+                                                id="gt-entity1-type"
+                                                style="width: 100%; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em; margin-top: 6px; background: white;"
+                                            >
+                                                <option value="">Select type...</option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Relation -->
+                                        <div style="text-align: center; padding-bottom: 35px;">
+                                            <div style="font-size: 1.2em; color: #9ca3af;">→</div>
+                                            <select
+                                                id="gt-relation-type"
+                                                style="width: 120px; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em; margin-top: 6px; background: white;"
+                                            >
+                                                <option value="">Relation...</option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Entity 2 -->
+                                        <div>
+                                            <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Entity 2 Text</label>
+                                            <input
+                                                id="gt-entity2-text"
+                                                type="text"
+                                                placeholder="e.g., left lung"
+                                                style="width: 100%; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9em;"
+                                            />
+                                            <select
+                                                id="gt-entity2-type"
+                                                style="width: 100%; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em; margin-top: 6px; background: white;"
+                                            >
+                                                <option value="">Select type...</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
+                                        <button
+                                            onclick="addGroundTruthTriplet()"
+                                            style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: background 0.2s;"
+                                            onmouseover="this.style.background='#059669'"
+                                            onmouseout="this.style.background='#10b981'"
+                                        >
+                                            Add Triplet
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Ground Truth Triplets Display -->
+                                <div id="ground-truth-container" style="display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto;">
+                                    <div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">
+                                        No ground truth annotations yet. Add triplets using the form above.
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <!-- Auto-Extracted Tab Content -->
+                            <div id="auto-extracted-tab" class="annotation-tab-content" style="display: none;">
+                                <!-- Extraction prompt selector -->
+                                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px;">
+                                    <div style="font-weight: 400; color: #374151; font-size: 1.05em; white-space: nowrap; width: 150px;">Extraction Prompt:</div>
+                                    <select id="auto-extracted-prompt" onchange="updateAutoExtractedPrompt()" style="flex: 1; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9em; background: white; cursor: pointer;">
+                                    </select>
+                                </div>
+
+                                <!-- Extract button -->
+                                <div style="margin-bottom: 15px;">
+                                    <button
+                                        onclick="runAutoExtraction()"
+                                        style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: background 0.2s;"
+                                        onmouseover="this.style.background='#2563eb'"
+                                        onmouseout="this.style.background='#3b82f6'"
+                                    >
+                                        Run Extraction
+                                    </button>
+                                </div>
+
+                                <!-- Auto-extracted triplets display -->
+                                <div id="auto-extracted-container" style="display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto;">
+                                    <div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">
+                                        No auto-extracted annotations yet. Run extraction using the button above.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Metrics Tab Content -->
+                            <div id="metrics-tab" class="annotation-tab-content" style="display: none;">
+                                <div id="metrics-container">
+                                    <div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">
+                                        Add ground truth and auto-extracted annotations to see metrics.
+                                    </div>
+                                </div>
+                            </div>
+
                         </div>
                     {% else %}
                         <div class="no-context">
                             No CSV file found. Import a CSV file using the button above.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Middle Panel: Extraction Functions -->
+            <div class="panel panel-middle">
+                <h2 class="panel-title">Extraction Functions</h2>
+
+                <div class="context-section" style="background: white; border-left-color: #10b981;">
+                    <h2 style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="display: flex; align-items: center; gap: 10px;">
+                            Functions
+                            <span class="context-badge" id="function-count" style="background: #10b981;">
+                                0
+                            </span>
+                        </span>
+                        <button
+                            onclick="openExtractionModal('new')"
+                            class="create-btn"
+                            style="margin: 0; padding: 8px 16px; font-size: 0.9em; background: #10b981;"
+                            onmouseover="this.style.background='#059669'"
+                            onmouseout="this.style.background='#10b981'"
+                        >
+                            + Add
+                        </button>
+                    </h2>
+
+                    {% if csv_metadata %}
+                        <!-- Extraction Functions Panel -->
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; margin-top: 15px;">
+                            <div style="font-weight: 400; color: #374151; margin-bottom: 12px; font-size: 0.95em;">
+                                Click a function to extract data from the CSV file. Right-click to edit.
+                            </div>
+                            <div id="extraction-functions-container" style="display: flex; gap: 8px; flex-wrap: wrap; min-height: 60px;">
+                                <!-- Function buttons will be populated by JavaScript -->
+                            </div>
+                        </div>
+
+                        <!-- Debug Terminal -->
+                        <div style="background: #1f2937; padding: 15px; border-radius: 6px; border: 1px solid #374151; margin-top: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <span style="font-weight: 400; color: #9ca3af; font-size: 0.9em; font-family: 'Courier New', monospace;">Debug Output</span>
+                                <button
+                                    onclick="clearDebugTerminal()"
+                                    style="padding: 4px 10px; background: #374151; color: #9ca3af; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75em; font-family: 'Courier New', monospace;"
+                                    onmouseover="this.style.background='#4b5563'"
+                                    onmouseout="this.style.background='#374151'"
+                                >
+                                    Clear
+                                </button>
+                            </div>
+                            <pre id="debug-terminal" style="font-family: 'Courier New', monospace; font-size: 0.85em; color: #10b981; background: #111827; padding: 12px; border-radius: 4px; min-height: 200px; max-height: 400px; overflow-y: auto; margin: 0; white-space: pre-wrap; word-wrap: break-word;"></pre>
+                        </div>
+                    {% else %}
+                        <div class="no-context" style="margin-top: 15px;">
+                            No CSV file loaded. Import a CSV file first.
                         </div>
                     {% endif %}
                 </div>
@@ -1678,6 +1621,7 @@
         // Global variable to store current entry data for extraction functions
         let currentEntryData = null;
         let currentEntry = null;
+        let extractionPromptsData = null;
 
         async function loadCsvEntry() {
             const entryNumberInput = document.getElementById('entry-number');
@@ -1713,6 +1657,7 @@
 
                     // Update current entry for properties system
                     currentEntry = parseInt(entryNumber);
+                    renderEntities();
 
                     // Format the JSON data nicely for JSON view
                     jsonDisplayArea.textContent = JSON.stringify(data.data, null, 2);
@@ -1737,12 +1682,6 @@
                     } else {
                         textDisplayArea.textContent = 'No fields found';
                         textDisplayArea.style.color = '#6b7280';
-                    }
-
-                    // Sync annotation interface with this entry
-                    if (typeof currentEntryNumber !== 'undefined' && typeof loadAnnotationData === 'function') {
-                        currentEntryNumber = parseInt(entryNumber);
-                        loadAnnotationData();
                     }
                 } else {
                     jsonDisplayArea.textContent = `Error: ${data.error}`;
@@ -2402,7 +2341,7 @@
                     activeSchemaName = newSchemaName;
                     activeSchema = allSchemas[newSchemaName];
                     // Re-render entities with new schema colors
-                    // renderEntities(); // Removed - obsolete code
+                    renderEntities();
                     console.log(`Switched to schema: ${activeSchema.name}`);
                 } else {
                     alert(`Failed to switch schema: ${data.error}`);
@@ -2458,7 +2397,7 @@
 
                 if (result.success) {
                     entitiesData = result.data || [];
-                    // renderEntities(); // Removed - obsolete code
+                    renderEntities();
                 }
             } catch (error) {
                 console.error('Failed to load entities:', error);
@@ -2486,67 +2425,70 @@
             return entitiesData.find(e => e.entry === entryNum);
         }
 
-        // Ensure entity entry exists
+        // Ensure entity entry exists with schema-specific structure
         function ensureEntityEntryExists(entryNum) {
             let entryData = getEntityEntryData(entryNum);
             if (!entryData) {
-                entryData = { entry: entryNum, triplets: [] };
+                entryData = {
+                    entry: entryNum,
+                    active_schema: activeSchemaName || 'radgraph',
+                    ground_truths: {
+                        radgraph: {triplets: []},
+                        pet_ct_oncology: {triplets: []}
+                    },
+                    extraction_methods: {
+                        radgraph: [],
+                        pet_ct_oncology: []
+                    }
+                };
                 entitiesData.push(entryData);
                 entitiesData.sort((a, b) => a.entry - b.entry);
             }
-            if (!entryData.triplets) {
-                entryData.triplets = [];
+            // Ensure schema-specific structure fields exist
+            if (!entryData.active_schema) {
+                entryData.active_schema = activeSchemaName || 'radgraph';
+            }
+            if (!entryData.ground_truths) {
+                entryData.ground_truths = {};
+            }
+            if (!entryData.extraction_methods) {
+                entryData.extraction_methods = {};
+            }
+            // Ensure current schema exists in both structures
+            const currentSchema = entryData.active_schema;
+            if (!entryData.ground_truths[currentSchema]) {
+                entryData.ground_truths[currentSchema] = {triplets: []};
+            }
+            if (!entryData.extraction_methods[currentSchema]) {
+                entryData.extraction_methods[currentSchema] = [];
             }
             return entryData;
         }
 
-        // Render entities and relations for current entry
-        // OBSOLETE: This function is no longer used - replaced by new annotation interface
+        // State for annotation tabs
+        let activeAnnotationTab = 'ground-truth';
+        let activeMethodId = null;
+
+        // Render entities and relations for current entry (routes to tab-specific renderers)
         function renderEntities() {
-            // This function has been disabled as it references obsolete DOM elements
-            // The new annotation system handles entity display
-            return;
-            /*
-            const container = document.getElementById('entities-container');
-
             if (!currentEntry) {
-                container.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">Select an entry to view entities & relations</div>';
                 return;
             }
 
-            const entryData = ensureEntityEntryExists(currentEntry);
-            const triplets = entryData.triplets || [];
+            // Populate entity type dropdowns for ground truth form
+            populateEntityTypeDropdowns();
 
-            if (triplets.length === 0) {
-                container.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">No entities extracted yet. Click "Extract Entities & Relations" to analyze this report.</div>';
-                return;
+            // Populate extraction prompt dropdown for auto-extracted tab
+            populateExtractionPromptDropdown();
+
+            // Render the active tab content
+            if (activeAnnotationTab === 'ground-truth') {
+                renderGroundTruthTab();
+            } else if (activeAnnotationTab === 'auto-extracted') {
+                renderAutoExtractedTab();
+            } else if (activeAnnotationTab === 'metrics') {
+                renderMetricsTab();
             }
-
-            // Render triplets in a nice table format
-            let html = '<div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb;">';
-            html += '<div style="font-weight: 500; color: #374151; margin-bottom: 12px;">Extracted Triplets (' + triplets.length + ')</div>';
-            html += '<div style="display: flex; flex-direction: column; gap: 8px;">';
-
-            triplets.forEach((triplet, index) => {
-                const entity1Color = getEntityTypeColor(triplet.entity1_type);
-                const entity2Color = getEntityTypeColor(triplet.entity2_type);
-
-                html += '<div style="display: flex; align-items: center; gap: 8px; padding: 10px; background: #f9fafb; border-radius: 4px; font-size: 0.9em;">';
-                html += '<span style="flex: 2; display: flex; flex-direction: column; gap: 2px;">';
-                html += '<span style="font-weight: 500; color: #1f2937;">' + escapeHtml(triplet.entity1_text) + '</span>';
-                html += '<span style="font-size: 0.75em; color: ' + entity1Color + ';">' + triplet.entity1_type + '</span>';
-                html += '</span>';
-                html += '<span style="flex: 1; text-align: center; background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: 500;">' + triplet.relation_type + '</span>';
-                html += '<span style="flex: 2; display: flex; flex-direction: column; gap: 2px;">';
-                html += '<span style="font-weight: 500; color: #1f2937;">' + escapeHtml(triplet.entity2_text) + '</span>';
-                html += '<span style="font-size: 0.75em; color: ' + entity2Color + ';">' + triplet.entity2_type + '</span>';
-                html += '</span>';
-                html += '</div>';
-            });
-
-            html += '</div></div>';
-            container.innerHTML = html;
-            */
         }
 
         // HTML escape helper
@@ -2609,7 +2551,7 @@
                     entryData.triplets = result.triplets;
 
                     // Re-render
-                    // renderEntities(); // Removed - obsolete code
+                    renderEntities();
 
                     alert('Successfully extracted ' + result.count + ' entity-relation triplets');
                 } else {
@@ -2658,7 +2600,7 @@
                 if (confirm('This will replace all current entities. Continue?')) {
                     entitiesData = imported;
                     await saveEntitiesToServer();
-                    // renderEntities(); // Removed - obsolete code
+                    renderEntities();
                     alert('Entities imported successfully');
                 }
             } catch (error) {
@@ -2666,6 +2608,1424 @@
             }
 
             event.target.value = '';
+        }
+
+        // ===== New Tab and Annotation Functions =====
+
+        // Switch between annotation tabs
+        function switchAnnotationTab(tabName) {
+            activeAnnotationTab = tabName;
+
+            // Update all tab button styles
+            document.querySelectorAll('.annotation-tab-btn').forEach(btn => {
+                btn.style.borderBottom = '2px solid transparent';
+                btn.style.color = '#6b7280';
+                btn.style.fontWeight = '400';
+            });
+
+            // Highlight active tab
+            let activeBtn;
+            if (tabName === 'ground-truth') {
+                activeBtn = document.getElementById('ground-truth-tab-btn');
+            } else if (tabName === 'auto-extracted') {
+                activeBtn = document.getElementById('auto-extracted-tab-btn');
+            } else if (tabName === 'metrics') {
+                activeBtn = document.getElementById('metrics-tab-btn');
+            }
+
+            if (activeBtn) {
+                activeBtn.style.borderBottom = '2px solid #3b82f6';
+                activeBtn.style.color = '#3b82f6';
+                activeBtn.style.fontWeight = '500';
+            }
+
+            // Show/hide tab content
+            document.getElementById('ground-truth-tab').style.display = tabName === 'ground-truth' ? 'block' : 'none';
+            document.getElementById('auto-extracted-tab').style.display = tabName === 'auto-extracted' ? 'block' : 'none';
+            document.getElementById('metrics-tab').style.display = tabName === 'metrics' ? 'block' : 'none';
+
+            // Render content for active tab
+            if (tabName === 'ground-truth') {
+                renderGroundTruthTab();
+            } else if (tabName === 'auto-extracted') {
+                renderAutoExtractedTab();
+            } else if (tabName === 'metrics') {
+                renderMetricsTab();
+            }
+        }
+
+        // Save default method to server
+        async function saveDefaultMethodToServer(entryNumber, schema, defaultMethod) {
+            try {
+                const response = await fetch('/llm/create-extraction-method/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: entryNumber,
+                        method_name: defaultMethod.name,
+                        schema: schema,
+                        prompt: defaultMethod.prompt
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Update the local method ID with the server-generated one
+                    const entryData = ensureEntityEntryExists(entryNumber);
+                    const methods = entryData.extraction_methods[schema];
+                    const methodIndex = methods.findIndex(m => m.id === defaultMethod.id);
+                    if (methodIndex !== -1) {
+                        methods[methodIndex].id = result.method_id;
+                        // Update activeMethodId if it was pointing to the old ID
+                        if (activeMethodId === defaultMethod.id) {
+                            activeMethodId = result.method_id;
+                        }
+                    }
+                } else {
+                    console.error('Failed to save default method:', result.error);
+                }
+            } catch (error) {
+                console.error('Error saving default method to server:', error);
+            }
+        }
+
+        // Render method tabs dynamically
+        function renderMethodTabs() {
+            if (!currentEntry) return;
+
+            const entryData = ensureEntityEntryExists(currentEntry);
+            const currentSchema = entryData.active_schema || activeSchemaName || 'radgraph';
+
+            // Ensure extraction_methods structure exists
+            if (!entryData.extraction_methods) {
+                entryData.extraction_methods = {};
+            }
+            if (!entryData.extraction_methods[currentSchema]) {
+                entryData.extraction_methods[currentSchema] = [];
+            }
+
+            const methods = entryData.extraction_methods[currentSchema];
+
+            // Ensure there's always a default method (check by name to avoid duplicates)
+            const hasDefaultMethod = methods.some(m => m.name === 'Default Extraction');
+            if (methods.length === 0 || !hasDefaultMethod) {
+                const defaultMethod = {
+                    id: `method_default_${currentSchema}_${Date.now()}`,
+                    name: 'Default Extraction',
+                    schema: currentSchema,
+                    prompt: extractionPromptsData?.active_prompt || 'default_schema_based',
+                    timestamp: new Date().toISOString(),
+                    triplets: []
+                };
+
+                // Only add if not already present
+                if (!hasDefaultMethod) {
+                    methods.push(defaultMethod);
+                    // Save default method to server asynchronously
+                    saveDefaultMethodToServer(currentEntry, currentSchema, defaultMethod);
+                }
+            }
+
+            // Render tabs
+            const container = document.getElementById('method-tabs-container');
+            const addButton = document.getElementById('add-method-tab-btn');
+
+            // Remove old method tabs
+            const oldTabs = container.querySelectorAll('.method-tab-btn');
+            oldTabs.forEach(tab => tab.remove());
+
+            // Add method tabs before the + button
+            methods.forEach((method, index) => {
+                const btn = document.createElement('button');
+                btn.id = `method-tab-btn-${method.id}`;
+                btn.className = 'annotation-tab-btn method-tab-btn';
+                btn.textContent = method.name;
+                btn.onclick = () => switchAnnotationTab('method', method.id);
+                btn.style.cssText = 'padding: 10px 20px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; cursor: pointer; font-size: 0.95em; font-weight: 400; margin-bottom: -2px; position: relative;';
+
+                // Add delete button (x) if not the default method
+                if (index > 0) {
+                    const deleteBtn = document.createElement('span');
+                    deleteBtn.textContent = '×';
+                    deleteBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        deleteMethodTab(method.id);
+                    };
+                    deleteBtn.style.cssText = 'margin-left: 8px; color: #ef4444; cursor: pointer; font-size: 1.2em;';
+                    btn.appendChild(deleteBtn);
+                }
+
+                container.insertBefore(btn, addButton);
+            });
+
+            // Set active method if not set
+            if (!activeMethodId && methods.length > 0) {
+                activeMethodId = methods[0].id;
+            }
+        }
+
+        // Render a specific method tab content
+        function renderMethodTab(methodId) {
+            if (!currentEntry || !methodId) return;
+
+            const entryData = getEntityEntryData(currentEntry);
+            if (!entryData) return;
+
+            // Find the method
+            let method = null;
+            if (entryData.extraction_methods) {
+                for (const schemaName in entryData.extraction_methods) {
+                    const found = entryData.extraction_methods[schemaName].find(m => m.id === methodId);
+                    if (found) {
+                        method = found;
+                        break;
+                    }
+                }
+            }
+
+            if (!method) return;
+
+            // Create or get method tab content container
+            const contentContainer = document.getElementById('method-tabs-content');
+            let methodContent = document.getElementById(`method-tab-content-${methodId}`);
+
+            if (!methodContent) {
+                methodContent = document.createElement('div');
+                methodContent.id = `method-tab-content-${methodId}`;
+                methodContent.className = 'method-tab-content annotation-tab-content';
+                methodContent.style.display = 'none';
+                contentContainer.appendChild(methodContent);
+            }
+
+            // Build content
+            const triplets = method.triplets || [];
+
+            let html = '';
+
+            // Extraction prompt selector (if not default method)
+            html += '<div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px;">';
+            html += '<div style="font-weight: 400; color: #374151; font-size: 1.05em; white-space: nowrap; width: 150px;">Extraction Prompt:</div>';
+            html += `<select id="method-prompt-${methodId}" onchange="updateMethodPrompt('${methodId}')" style="flex: 1; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9em; background: white; cursor: pointer;">`;
+
+            if (extractionPromptsData && extractionPromptsData.prompts) {
+                Object.keys(extractionPromptsData.prompts).forEach(key => {
+                    const selected = method.prompt === key ? 'selected' : '';
+                    html += `<option value="${key}" ${selected}>${extractionPromptsData.prompts[key].name}</option>`;
+                });
+            }
+
+            html += '</select>';
+            html += '<button onclick="openExtractionPromptEditorModal()" style="padding: 6px 12px; background: #6366f1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Edit Prompts</button>';
+            html += '</div>';
+
+            // Extract button
+            html += '<div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">';
+            html += `<button id="extract-btn-${methodId}" onclick="runMethodExtraction(event, '${methodId}')" style="padding: 8px 16px; background: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9em; font-weight: 500;">Run Extraction</button>`;
+            html += '</div>';
+
+            // Results
+            if (triplets.length === 0) {
+                html += '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 40px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">No triplets extracted yet. Click "Run Extraction" to analyze the current report.</div>';
+            } else {
+                html += '<div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb;">';
+                html += `<div style="font-weight: 500; color: #374151; margin-bottom: 12px;">Extracted Triplets (${triplets.length})</div>`;
+                html += '<div style="display: flex; flex-direction: column; gap: 8px;">';
+
+                triplets.forEach((triplet) => {
+                    const entity1Color = getEntityTypeColor(triplet.entity1_type);
+                    const entity2Color = getEntityTypeColor(triplet.entity2_type);
+
+                    html += '<div style="display: flex; align-items: center; gap: 8px; padding: 10px; background: #f9fafb; border-radius: 4px; font-size: 0.9em;">';
+                    html += '<span style="flex: 2; display: flex; flex-direction: column; gap: 2px;">';
+                    html += `<span style="font-weight: 500; color: #1f2937;">${escapeHtml(triplet.entity1_text)}</span>`;
+                    html += `<span style="font-size: 0.75em; color: ${entity1Color};">${triplet.entity1_type}</span>`;
+                    html += '</span>';
+                    html += `<span style="flex: 1; text-align: center; background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: 500;">${triplet.relation_type}</span>`;
+                    html += '<span style="flex: 2; display: flex; flex-direction: column; gap: 2px;">';
+                    html += `<span style="font-weight: 500; color: #1f2937;">${escapeHtml(triplet.entity2_text)}</span>`;
+                    html += `<span style="font-size: 0.75em; color: ${entity2Color};">${triplet.entity2_type}</span>`;
+                    html += '</span>';
+                    html += '</div>';
+                });
+
+                html += '</div></div>';
+            }
+
+            // Metrics
+            html += `<div id="method-metrics-${methodId}" style="margin-top: 15px;"></div>`;
+
+            methodContent.innerHTML = html;
+            methodContent.style.display = 'block';
+
+            // Calculate metrics
+            calculateMethodMetrics(methodId);
+        }
+
+        // Populate entity type dropdowns from active schema
+        function populateEntityTypeDropdowns() {
+            if (!activeSchema) return;
+
+            const dropdowns = [
+                document.getElementById('gt-entity1-type'),
+                document.getElementById('gt-entity2-type')
+            ];
+
+            dropdowns.forEach(dropdown => {
+                if (dropdown) {
+                    dropdown.innerHTML = '<option value="">Select type...</option>';
+                    activeSchema.entity_types.forEach(et => {
+                        const option = document.createElement('option');
+                        option.value = et.name;
+                        option.textContent = et.name;
+                        dropdown.appendChild(option);
+                    });
+                }
+            });
+
+            const relationDropdown = document.getElementById('gt-relation-type');
+            if (relationDropdown) {
+                relationDropdown.innerHTML = '<option value="">Relation...</option>';
+                activeSchema.relation_types.forEach(rt => {
+                    const option = document.createElement('option');
+                    option.value = rt.name;
+                    option.textContent = rt.name;
+                    relationDropdown.appendChild(option);
+                });
+            }
+        }
+
+        // Add ground truth triplet
+        async function addGroundTruthTriplet() {
+            if (!currentEntry) {
+                alert('Please select a CSV entry first');
+                return;
+            }
+
+            const entity1Text = document.getElementById('gt-entity1-text').value.trim();
+            const entity1Type = document.getElementById('gt-entity1-type').value;
+            const relationType = document.getElementById('gt-relation-type').value;
+            const entity2Text = document.getElementById('gt-entity2-text').value.trim();
+            const entity2Type = document.getElementById('gt-entity2-type').value;
+
+            if (!entity1Text || !entity1Type || !relationType || !entity2Text || !entity2Type) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            const triplet = {
+                entity1_text: entity1Text,
+                entity1_type: entity1Type,
+                relation_type: relationType,
+                entity2_text: entity2Text,
+                entity2_type: entity2Type
+            };
+
+            try {
+                const response = await fetch('/llm/add-ground-truth-triplet/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        triplet: triplet
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Update local data
+                    const entryData = ensureEntityEntryExists(currentEntry);
+                    const currentSchema = entryData.active_schema || activeSchemaName || 'radgraph';
+                    if (!entryData.ground_truths[currentSchema]) {
+                        entryData.ground_truths[currentSchema] = {triplets: []};
+                    }
+                    entryData.ground_truths[currentSchema].triplets.push(triplet);
+
+                    // Clear form
+                    document.getElementById('gt-entity1-text').value = '';
+                    document.getElementById('gt-entity1-type').value = '';
+                    document.getElementById('gt-relation-type').value = '';
+                    document.getElementById('gt-entity2-text').value = '';
+                    document.getElementById('gt-entity2-type').value = '';
+
+                    // Re-render
+                    renderGroundTruthTab();
+                } else {
+                    alert('Failed to add triplet: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Failed to add ground truth triplet:', error);
+                alert('Failed to add triplet: ' + error.message);
+            }
+        }
+
+        // Delete ground truth triplet
+        async function deleteGroundTruthTriplet(index) {
+            if (!confirm('Delete this ground truth triplet?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/llm/delete-ground-truth-triplet/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        triplet_index: index
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Update local data
+                    const entryData = getEntityEntryData(currentEntry);
+                    if (entryData && entryData.ground_truths) {
+                        const currentSchema = entryData.active_schema || activeSchemaName || 'radgraph';
+                        if (entryData.ground_truths[currentSchema]) {
+                            entryData.ground_truths[currentSchema].triplets.splice(index, 1);
+                        }
+                    }
+
+                    // Re-render
+                    renderGroundTruthTab();
+                } else {
+                    alert('Failed to delete triplet: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Failed to delete ground truth triplet:', error);
+                alert('Failed to delete triplet: ' + error.message);
+            }
+        }
+
+        // Render ground truth tab
+        function renderGroundTruthTab() {
+            const container = document.getElementById('ground-truth-container');
+
+            if (!currentEntry) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">Select an entry to view ground truth</div>';
+                return;
+            }
+
+            const entryData = ensureEntityEntryExists(currentEntry);
+            const currentSchema = entryData.active_schema || activeSchemaName || 'radgraph';
+            const triplets = (entryData.ground_truths && entryData.ground_truths[currentSchema])
+                ? entryData.ground_truths[currentSchema].triplets || []
+                : [];
+
+            if (triplets.length === 0) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">No ground truth annotations yet. Add triplets using the form above.</div>';
+                return;
+            }
+
+            // Render triplets
+            let html = '<div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb;">';
+            html += '<div style="font-weight: 500; color: #374151; margin-bottom: 12px;">Ground Truth Triplets (' + triplets.length + ')</div>';
+            html += '<div style="display: flex; flex-direction: column; gap: 8px;">';
+
+            triplets.forEach((triplet, index) => {
+                const entity1Color = getEntityTypeColor(triplet.entity1_type);
+                const entity2Color = getEntityTypeColor(triplet.entity2_type);
+
+                html += '<div style="display: flex; align-items: center; gap: 8px; padding: 10px; background: #f9fafb; border-radius: 4px; font-size: 0.9em;">';
+                html += '<span style="flex: 2; display: flex; flex-direction: column; gap: 2px;">';
+                html += '<span style="font-weight: 500; color: #1f2937;">' + escapeHtml(triplet.entity1_text) + '</span>';
+                html += '<span style="font-size: 0.75em; color: ' + entity1Color + ';">' + triplet.entity1_type + '</span>';
+                html += '</span>';
+                html += '<span style="flex: 1; text-align: center; background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: 500;">' + triplet.relation_type + '</span>';
+                html += '<span style="flex: 2; display: flex; flex-direction: column; gap: 2px;">';
+                html += '<span style="font-weight: 500; color: #1f2937;">' + escapeHtml(triplet.entity2_text) + '</span>';
+                html += '<span style="font-size: 0.75em; color: ' + entity2Color + ';">' + triplet.entity2_type + '</span>';
+                html += '</span>';
+                html += '<button onclick="deleteGroundTruthTriplet(' + index + ')" style="padding: 4px 8px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75em;">Delete</button>';
+                html += '</div>';
+            });
+
+            html += '</div></div>';
+            container.innerHTML = html;
+        }
+
+        // Populate extraction prompt dropdown
+        function populateExtractionPromptDropdown() {
+            const dropdown = document.getElementById('auto-extracted-prompt');
+            if (!dropdown) return;
+
+            dropdown.innerHTML = '';
+
+            if (extractionPromptsData && extractionPromptsData.prompts) {
+                const currentPrompt = getAutoExtractedPromptKey();
+                Object.keys(extractionPromptsData.prompts).forEach(key => {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = extractionPromptsData.prompts[key].name;
+                    if (key === currentPrompt) {
+                        option.selected = true;
+                    }
+                    dropdown.appendChild(option);
+                });
+            }
+        }
+
+        // Get the current prompt key for auto-extracted annotations
+        function getAutoExtractedPromptKey() {
+            if (!currentEntry) return 'default_schema_based';
+
+            const entryData = getEntityEntryData(currentEntry);
+            if (!entryData || !entryData.auto_extracted_prompt) {
+                return extractionPromptsData?.active_prompt || 'default_schema_based';
+            }
+            return entryData.auto_extracted_prompt;
+        }
+
+        // Update auto-extracted prompt
+        function updateAutoExtractedPrompt() {
+            if (!currentEntry) return;
+
+            const dropdown = document.getElementById('auto-extracted-prompt');
+            const selectedPrompt = dropdown.value;
+
+            const entryData = ensureEntityEntryExists(currentEntry);
+            entryData.auto_extracted_prompt = selectedPrompt;
+
+            saveEntitiesToServer();
+        }
+
+        // Run auto extraction
+        async function runAutoExtraction() {
+            if (!currentEntry) {
+                alert('Please select a CSV entry first');
+                return;
+            }
+
+            // Check if LLM server is running
+            try {
+                const statusResponse = await fetch('/llm/status/');
+                const statusResult = await statusResponse.json();
+                if (!statusResult.server_running) {
+                    alert('LLM server is not running. Please start it first.');
+                    return;
+                }
+            } catch (error) {
+                alert('Failed to check LLM server status');
+                return;
+            }
+
+            // Get report text from current entry (last field)
+            const lastKey = Object.keys(currentEntryData)[Object.keys(currentEntryData).length - 1];
+            const reportText = currentEntryData[lastKey];
+
+            if (!reportText) {
+                alert('No report text found in current entry');
+                return;
+            }
+
+            const entryData = ensureEntityEntryExists(currentEntry);
+            const currentSchema = entryData.active_schema || activeSchemaName || 'radgraph';
+            const promptKey = getAutoExtractedPromptKey();
+
+            try {
+                const response = await fetch('/llm/extract-entities-relations/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        report_text: reportText,
+                        entry_number: currentEntry,
+                        schema: currentSchema,
+                        prompt_key: promptKey
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Store auto-extracted triplets
+                    if (!entryData.auto_extracted_triplets) {
+                        entryData.auto_extracted_triplets = {};
+                    }
+                    entryData.auto_extracted_triplets[currentSchema] = result.triplets;
+
+                    await saveEntitiesToServer();
+                    renderAutoExtractedTab();
+
+                    alert('Successfully extracted ' + result.count + ' entity-relation triplets');
+                } else {
+                    alert('Extraction failed: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Extraction error:', error);
+                alert('Failed to extract entities: ' + error.message);
+            }
+        }
+
+        // Render auto-extracted tab
+        function renderAutoExtractedTab() {
+            if (!currentEntry) return;
+
+            const entryData = getEntityEntryData(currentEntry);
+            if (!entryData) return;
+
+            const currentSchema = entryData.active_schema || activeSchemaName || 'radgraph';
+            const triplets = entryData.auto_extracted_triplets?.[currentSchema] || [];
+
+            const container = document.getElementById('auto-extracted-container');
+            if (!container) return;
+
+            if (triplets.length === 0) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">No auto-extracted annotations yet. Run extraction using the button above.</div>';
+                return;
+            }
+
+            let html = '<div style="background: white; border-radius: 6px; padding: 15px;">';
+            html += '<div style="font-weight: 500; color: #374151; margin-bottom: 12px; font-size: 0.95em;">Auto-Extracted Triplets (' + triplets.length + ')</div>';
+            html += '<div style="display: flex; flex-direction: column; gap: 8px;">';
+
+            triplets.forEach((triplet, index) => {
+                const entity1Color = getEntityTypeColor(triplet.entity1_type);
+                const entity2Color = getEntityTypeColor(triplet.entity2_type);
+
+                html += '<div style="display: flex; align-items: center; gap: 8px; padding: 10px; background: #f9fafb; border-radius: 4px; font-size: 0.9em;">';
+                html += '<span style="flex: 2; display: flex; flex-direction: column; gap: 2px;">';
+                html += '<span style="font-weight: 500; color: #1f2937;">' + escapeHtml(triplet.entity1_text) + '</span>';
+                html += '<span style="font-size: 0.75em; color: ' + entity1Color + ';">' + triplet.entity1_type + '</span>';
+                html += '</span>';
+                html += '<span style="flex: 1; text-align: center; background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: 500;">' + triplet.relation_type + '</span>';
+                html += '<span style="flex: 2; display: flex; flex-direction: column; gap: 2px;">';
+                html += '<span style="font-weight: 500; color: #1f2937;">' + escapeHtml(triplet.entity2_text) + '</span>';
+                html += '<span style="font-size: 0.75em; color: ' + entity2Color + ';">' + triplet.entity2_type + '</span>';
+                html += '</span>';
+                html += '</div>';
+            });
+
+            html += '</div></div>';
+            container.innerHTML = html;
+        }
+
+        // Calculate metrics
+        function calculateMetrics() {
+            if (!currentEntry) return null;
+
+            const entryData = getEntityEntryData(currentEntry);
+            if (!entryData) return null;
+
+            const currentSchema = entryData.active_schema || activeSchemaName || 'radgraph';
+            const groundTruth = entryData.ground_truths?.[currentSchema]?.triplets || [];
+            const autoExtracted = entryData.auto_extracted_triplets?.[currentSchema] || [];
+
+            if (groundTruth.length === 0 || autoExtracted.length === 0) {
+                return null;
+            }
+
+            // Helper to normalize triplet for comparison
+            function normalizeTriplet(t) {
+                return {
+                    e1: t.entity1_text.toLowerCase().trim(),
+                    e1t: t.entity1_type,
+                    r: t.relation_type,
+                    e2: t.entity2_text.toLowerCase().trim(),
+                    e2t: t.entity2_type
+                };
+            }
+
+            // Helper to compare triplets
+            function tripletsEqual(t1, t2) {
+                return t1.e1 === t2.e1 &&
+                       t1.e1t === t2.e1t &&
+                       t1.r === t2.r &&
+                       t1.e2 === t2.e2 &&
+                       t1.e2t === t2.e2t;
+            }
+
+            const gtNormalized = groundTruth.map(normalizeTriplet);
+            const aeNormalized = autoExtracted.map(normalizeTriplet);
+
+            // Calculate true positives, false positives, false negatives
+            let truePositives = 0;
+            let falsePositives = 0;
+            let falseNegatives = 0;
+
+            const matched = new Set();
+
+            // Find true positives
+            aeNormalized.forEach((aeTriplet, aeIdx) => {
+                let found = false;
+                gtNormalized.forEach((gtTriplet, gtIdx) => {
+                    if (!matched.has(gtIdx) && tripletsEqual(aeTriplet, gtTriplet)) {
+                        found = true;
+                        matched.add(gtIdx);
+                    }
+                });
+                if (found) {
+                    truePositives++;
+                } else {
+                    falsePositives++;
+                }
+            });
+
+            // False negatives are ground truth triplets not matched
+            falseNegatives = groundTruth.length - truePositives;
+
+            // Calculate precision, recall, F1
+            const precision = truePositives + falsePositives > 0
+                ? truePositives / (truePositives + falsePositives)
+                : 0;
+            const recall = truePositives + falseNegatives > 0
+                ? truePositives / (truePositives + falseNegatives)
+                : 0;
+            const f1 = precision + recall > 0
+                ? 2 * (precision * recall) / (precision + recall)
+                : 0;
+
+            return {
+                truePositives,
+                falsePositives,
+                falseNegatives,
+                precision,
+                recall,
+                f1,
+                groundTruthCount: groundTruth.length,
+                autoExtractedCount: autoExtracted.length
+            };
+        }
+
+        // Render metrics tab
+        function renderMetricsTab() {
+            const container = document.getElementById('metrics-container');
+            if (!container) return;
+
+            const metrics = calculateMetrics();
+
+            if (!metrics) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">Add ground truth and auto-extracted annotations to see metrics.</div>';
+                return;
+            }
+
+            let html = '<div style="background: white; border-radius: 6px; padding: 20px;">';
+            html += '<h3 style="margin: 0 0 20px 0; color: #1f2937; font-size: 1.1em;">Annotation Comparison Metrics</h3>';
+
+            // Summary cards
+            html += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 25px;">';
+
+            // Precision card
+            html += '<div style="background: #dbeafe; padding: 15px; border-radius: 6px; text-align: center;">';
+            html += '<div style="font-size: 0.85em; color: #1e40af; font-weight: 500; margin-bottom: 8px;">Precision</div>';
+            html += '<div style="font-size: 1.8em; color: #1e40af; font-weight: 600;">' + (metrics.precision * 100).toFixed(1) + '%</div>';
+            html += '</div>';
+
+            // Recall card
+            html += '<div style="background: #d1fae5; padding: 15px; border-radius: 6px; text-align: center;">';
+            html += '<div style="font-size: 0.85em; color: #059669; font-weight: 500; margin-bottom: 8px;">Recall</div>';
+            html += '<div style="font-size: 1.8em; color: #059669; font-weight: 600;">' + (metrics.recall * 100).toFixed(1) + '%</div>';
+            html += '</div>';
+
+            // F1 card
+            html += '<div style="background: #e0e7ff; padding: 15px; border-radius: 6px; text-align: center;">';
+            html += '<div style="font-size: 0.85em; color: #4f46e5; font-weight: 500; margin-bottom: 8px;">F1 Score</div>';
+            html += '<div style="font-size: 1.8em; color: #4f46e5; font-weight: 600;">' + (metrics.f1 * 100).toFixed(1) + '%</div>';
+            html += '</div>';
+
+            html += '</div>';
+
+            // Detailed metrics
+            html += '<div style="background: #f9fafb; padding: 15px; border-radius: 6px;">';
+            html += '<div style="font-weight: 500; color: #374151; margin-bottom: 12px;">Detailed Breakdown</div>';
+            html += '<div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.9em;">';
+
+            html += '<div style="display: flex; justify-content: space-between; padding: 8px; background: white; border-radius: 4px;">';
+            html += '<span style="color: #6b7280;">Ground Truth Triplets:</span>';
+            html += '<span style="font-weight: 500; color: #1f2937;">' + metrics.groundTruthCount + '</span>';
+            html += '</div>';
+
+            html += '<div style="display: flex; justify-content: space-between; padding: 8px; background: white; border-radius: 4px;">';
+            html += '<span style="color: #6b7280;">Auto-Extracted Triplets:</span>';
+            html += '<span style="font-weight: 500; color: #1f2937;">' + metrics.autoExtractedCount + '</span>';
+            html += '</div>';
+
+            html += '<div style="display: flex; justify-content: space-between; padding: 8px; background: white; border-radius: 4px;">';
+            html += '<span style="color: #6b7280;">True Positives:</span>';
+            html += '<span style="font-weight: 500; color: #10b981;">' + metrics.truePositives + '</span>';
+            html += '</div>';
+
+            html += '<div style="display: flex; justify-content: space-between; padding: 8px; background: white; border-radius: 4px;">';
+            html += '<span style="color: #6b7280;">False Positives:</span>';
+            html += '<span style="font-weight: 500; color: #ef4444;">' + metrics.falsePositives + '</span>';
+            html += '</div>';
+
+            html += '<div style="display: flex; justify-content: space-between; padding: 8px; background: white; border-radius: 4px;">';
+            html += '<span style="color: #6b7280;">False Negatives:</span>';
+            html += '<span style="font-weight: 500; color: #f59e0b;">' + metrics.falseNegatives + '</span>';
+            html += '</div>';
+
+            html += '</div></div>';
+
+            // Explanation
+            html += '<div style="margin-top: 20px; padding: 12px; background: #f3f4f6; border-radius: 6px; font-size: 0.85em; color: #6b7280;">';
+            html += '<strong>How metrics are calculated:</strong><br>';
+            html += '• <strong>Precision:</strong> Of the auto-extracted triplets, how many are correct (TP / (TP + FP))<br>';
+            html += '• <strong>Recall:</strong> Of the ground truth triplets, how many were found (TP / (TP + FN))<br>';
+            html += '• <strong>F1 Score:</strong> Harmonic mean of precision and recall (2 * P * R / (P + R))';
+            html += '</div>';
+
+            html += '</div>';
+
+            container.innerHTML = html;
+        }
+
+        // Disabled - no longer used with new tab system
+        // Prompt to add new method tab
+        async function promptAddMethod() {
+            if (!currentEntry) {
+                alert('Please select a CSV entry first');
+                return;
+            }
+
+            const methodName = prompt('Enter method name:', 'New Extraction Method');
+            if (!methodName) return;
+
+            const entryData = ensureEntityEntryExists(currentEntry);
+            const currentSchema = entryData.active_schema || activeSchemaName || 'radgraph';
+
+            // Create new method
+            const methodId = `method_${currentEntry}_${currentSchema}_${Date.now()}`;
+            const newMethod = {
+                id: methodId,
+                name: methodName,
+                schema: currentSchema,
+                prompt: extractionPromptsData?.active_prompt || 'default_schema_based',
+                timestamp: new Date().toISOString(),
+                triplets: []
+            };
+
+            try {
+                const response = await fetch('/llm/create-extraction-method/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        method_name: methodName,
+                        schema: currentSchema,
+                        prompt: newMethod.prompt
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Add to local data
+                    if (!entryData.extraction_methods[currentSchema]) {
+                        entryData.extraction_methods[currentSchema] = [];
+                    }
+                    newMethod.id = result.method_id;
+                    entryData.extraction_methods[currentSchema].push(newMethod);
+
+                    // Switch to new tab
+                    activeMethodId = newMethod.id;
+                    renderEntities();
+                    switchAnnotationTab('method', newMethod.id);
+                } else {
+                    alert('Failed to create method: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Failed to create method:', error);
+                alert('Failed to create method: ' + error.message);
+            }
+        }
+
+        // Delete a method tab
+        async function deleteMethodTab(methodId) {
+            if (!confirm('Delete this extraction method?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/llm/delete-extraction-method/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        method_id: methodId
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Update local data
+                    const entryData = getEntityEntryData(currentEntry);
+                    if (entryData && entryData.extraction_methods) {
+                        for (const schemaName in entryData.extraction_methods) {
+                            const index = entryData.extraction_methods[schemaName].findIndex(m => m.id === methodId);
+                            if (index !== -1) {
+                                entryData.extraction_methods[schemaName].splice(index, 1);
+                                break;
+                            }
+                        }
+                    }
+
+                    // Switch to ground truth or first method
+                    if (activeMethodId === methodId) {
+                        switchAnnotationTab('ground-truth');
+                    }
+
+                    // Re-render
+                    renderEntities();
+                } else {
+                    alert('Failed to delete method: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Failed to delete method:', error);
+                alert('Failed to delete method: ' + error.message);
+            }
+        }
+
+        // Run extraction for a specific method
+        async function runMethodExtraction(event, methodId) {
+            // Verify we have entry data loaded
+            if (!currentEntryData) {
+                alert('Please load a CSV entry first');
+                return;
+            }
+
+            // Get report text
+            const lastKey = Object.keys(currentEntryData)[Object.keys(currentEntryData).length - 1];
+            const reportText = currentEntryData[lastKey];
+
+            if (!reportText) {
+                alert('No report text found in current entry');
+                return;
+            }
+
+            // Get button reference
+            const button = event.target;
+            const originalText = button.textContent;
+
+            try {
+                // Show loading (disable button temporarily)
+                button.textContent = 'Extracting...';
+                button.disabled = true;
+
+                const response = await fetch('/llm/run-extraction-method/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        method_id: methodId,
+                        report_text: reportText
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Reload entities
+                    await loadEntities();
+
+                    // Re-render this tab
+                    renderMethodTab(methodId);
+
+                    alert('Successfully extracted ' + result.count + ' triplets');
+                } else {
+                    alert('Extraction failed: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Failed to run extraction:', error);
+                alert('Failed to run extraction: ' + error.message);
+            } finally {
+                // Always re-enable button
+                if (button) {
+                    button.textContent = originalText;
+                    button.disabled = false;
+                }
+            }
+        }
+
+        // Update method's prompt
+        function updateMethodPrompt(methodId) {
+            const selector = document.getElementById(`method-prompt-${methodId}`);
+            if (!selector) return;
+
+            const newPrompt = selector.value;
+
+            // Update local data
+            const entryData = getEntityEntryData(currentEntry);
+            if (entryData && entryData.extraction_methods) {
+                for (const schemaName in entryData.extraction_methods) {
+                    const method = entryData.extraction_methods[schemaName].find(m => m.id === methodId);
+                    if (method) {
+                        method.prompt = newPrompt;
+                        saveEntitiesToServer();
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Calculate metrics for a specific method
+        async function calculateMethodMetrics(methodId) {
+            const entryData = getEntityEntryData(currentEntry);
+            if (!entryData) {
+                return;
+            }
+
+            // Get the schema of the method
+            let methodSchema = null;
+            if (entryData.extraction_methods) {
+                for (const schemaName in entryData.extraction_methods) {
+                    const found = entryData.extraction_methods[schemaName].find(m => m.id === methodId);
+                    if (found) {
+                        methodSchema = schemaName;
+                        break;
+                    }
+                }
+            }
+
+            const metricsContainer = document.getElementById(`method-metrics-${methodId}`);
+            if (!metricsContainer) return;
+
+            if (!methodSchema || !entryData.ground_truths || !entryData.ground_truths[methodSchema] ||
+                entryData.ground_truths[methodSchema].triplets.length === 0) {
+                metricsContainer.innerHTML = '';
+                return;
+            }
+
+            try {
+                const response = await fetch('/llm/calculate-metrics/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        method_id: methodId
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const metrics = result.metrics;
+                    let html = '<div style="background: #f0f9ff; padding: 15px; border-radius: 6px; border: 1px solid #bae6fd;">';
+                    html += '<div style="font-weight: 500; color: #374151; margin-bottom: 10px;">Evaluation Metrics (vs Ground Truth)</div>';
+                    html += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">';
+                    html += '<div style="background: white; padding: 10px; border-radius: 4px; text-align: center;">';
+                    html += '<div style="font-size: 0.75em; color: #6b7280;">Precision</div>';
+                    html += '<div style="font-size: 1.5em; font-weight: 600; color: #3b82f6;">' + (metrics.precision * 100).toFixed(1) + '%</div>';
+                    html += '</div>';
+                    html += '<div style="background: white; padding: 10px; border-radius: 4px; text-align: center;">';
+                    html += '<div style="font-size: 0.75em; color: #6b7280;">Recall</div>';
+                    html += '<div style="font-size: 1.5em; font-weight: 600; color: #10b981;">' + (metrics.recall * 100).toFixed(1) + '%</div>';
+                    html += '</div>';
+                    html += '<div style="background: white; padding: 10px; border-radius: 4px; text-align: center;">';
+                    html += '<div style="font-size: 0.75em; color: #6b7280;">F1 Score</div>';
+                    html += '<div style="font-size: 1.5em; font-weight: 600; color: #f59e0b;">' + (metrics.f1_score * 100).toFixed(1) + '%</div>';
+                    html += '</div>';
+                    html += '</div>';
+                    html += '<div style="font-size: 0.75em; color: #6b7280; margin-top: 10px; text-align: center;">';
+                    html += 'TP: ' + metrics.true_positives + ' • FP: ' + metrics.false_positives + ' • FN: ' + metrics.false_negatives;
+                    html += '</div>';
+                    html += '</div>';
+                    metricsContainer.innerHTML = html;
+                }
+            } catch (error) {
+                console.error('Failed to calculate metrics:', error);
+            }
+        }
+
+        // OLD FUNCTION - NO LONGER USED
+        function renderAutomaticExtractionTab() {
+            if (!currentEntry) {
+                return;
+            }
+
+            const entryData = ensureEntityEntryExists(currentEntry);
+            const currentSchema = entryData.active_schema || activeSchemaName || 'radgraph';
+            const methods = (entryData.extraction_methods && entryData.extraction_methods[currentSchema])
+                ? entryData.extraction_methods[currentSchema] || []
+                : [];
+
+            const listContainer = document.getElementById('extraction-methods-list');
+
+            if (methods.length === 0) {
+                listContainer.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">No extraction methods yet. Click "+ Add Extraction Method" to create one.</div>';
+                document.getElementById('method-results-container').style.display = 'none';
+                return;
+            }
+
+            // Render methods list
+            let html = '';
+            methods.forEach((method, index) => {
+                const isSelected = selectedMethodId === method.id;
+                html += '<div style="background: white; padding: 12px; border-radius: 6px; border: 1px solid ' + (isSelected ? '#3b82f6' : '#e5e7eb') + '; display: flex; align-items: center; gap: 12px;">';
+                html += '<div style="flex: 1;">';
+                html += '<div style="font-weight: 500; color: #1f2937; font-size: 0.9em;">' + escapeHtml(method.name) + '</div>';
+                html += '<div style="font-size: 0.75em; color: #6b7280; margin-top: 2px;">';
+                html += 'Schema: ' + method.schema + ' • Prompt: ' + method.prompt + ' • ' + method.triplets.length + ' triplets';
+                html += '</div>';
+                html += '</div>';
+                html += '<button onclick="viewMethodResults(\'' + method.id + '\')" style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;">View</button>';
+                html += '<button onclick="runMethodAgain(\'' + method.id + '\')" style="padding: 6px 12px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;">Run Again</button>';
+                html += '<button onclick="deleteMethod(\'' + method.id + '\')" style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;">Delete</button>';
+                html += '</div>';
+            });
+
+            listContainer.innerHTML = html;
+
+            // Show selected method results if any
+            if (selectedMethodId) {
+                displayMethodResults(selectedMethodId);
+            }
+        }
+
+        // View method results
+        function viewMethodResults(methodId) {
+            selectedMethodId = methodId;
+            displayMethodResults(methodId);
+        }
+
+        // Display method results
+        function displayMethodResults(methodId) {
+            const entryData = getEntityEntryData(currentEntry);
+            if (!entryData) return;
+
+            // Find method across all schemas
+            let method = null;
+            if (entryData.extraction_methods) {
+                for (const schemaName in entryData.extraction_methods) {
+                    const found = entryData.extraction_methods[schemaName].find(m => m.id === methodId);
+                    if (found) {
+                        method = found;
+                        break;
+                    }
+                }
+            }
+            if (!method) return;
+
+            document.getElementById('selected-method-name').textContent = method.name;
+            document.getElementById('method-results-container').style.display = 'block';
+
+            const triplets = method.triplets || [];
+            const container = document.getElementById('method-triplets-container');
+
+            if (triplets.length === 0) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">No triplets extracted yet.</div>';
+            } else {
+                let html = '<div style="font-weight: 500; color: #374151; margin-bottom: 12px;">Extracted Triplets (' + triplets.length + ')</div>';
+                html += '<div style="display: flex; flex-direction: column; gap: 8px;">';
+
+                triplets.forEach((triplet, index) => {
+                    const entity1Color = getEntityTypeColor(triplet.entity1_type);
+                    const entity2Color = getEntityTypeColor(triplet.entity2_type);
+
+                    html += '<div style="display: flex; align-items: center; gap: 8px; padding: 10px; background: #f9fafb; border-radius: 4px; font-size: 0.9em;">';
+                    html += '<span style="flex: 2; display: flex; flex-direction: column; gap: 2px;">';
+                    html += '<span style="font-weight: 500; color: #1f2937;">' + escapeHtml(triplet.entity1_text) + '</span>';
+                    html += '<span style="font-size: 0.75em; color: ' + entity1Color + ';">' + triplet.entity1_type + '</span>';
+                    html += '</span>';
+                    html += '<span style="flex: 1; text-align: center; background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: 500;">' + triplet.relation_type + '</span>';
+                    html += '<span style="flex: 2; display: flex; flex-direction: column; gap: 2px;">';
+                    html += '<span style="font-weight: 500; color: #1f2937;">' + escapeHtml(triplet.entity2_text) + '</span>';
+                    html += '<span style="font-size: 0.75em; color: ' + entity2Color + ';">' + triplet.entity2_type + '</span>';
+                    html += '</span>';
+                    html += '</div>';
+                });
+
+                html += '</div>';
+                container.innerHTML = html;
+            }
+
+            // Calculate and display metrics if ground truth exists
+            calculateAndDisplayMetrics(methodId);
+        }
+
+        // Calculate and display metrics
+        async function calculateAndDisplayMetrics(methodId) {
+            const entryData = getEntityEntryData(currentEntry);
+            if (!entryData) {
+                document.getElementById('method-metrics').innerHTML = '';
+                return;
+            }
+
+            // Get the schema of the method to check corresponding ground truth
+            let methodSchema = null;
+            if (entryData.extraction_methods) {
+                for (const schemaName in entryData.extraction_methods) {
+                    const found = entryData.extraction_methods[schemaName].find(m => m.id === methodId);
+                    if (found) {
+                        methodSchema = schemaName;
+                        break;
+                    }
+                }
+            }
+
+            if (!methodSchema || !entryData.ground_truths || !entryData.ground_truths[methodSchema] ||
+                entryData.ground_truths[methodSchema].triplets.length === 0) {
+                document.getElementById('method-metrics').innerHTML = '';
+                return;
+            }
+
+            try {
+                const response = await fetch('/llm/calculate-metrics/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        method_id: methodId
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const metrics = result.metrics;
+                    let html = '<div style="background: #f0f9ff; padding: 15px; border-radius: 6px; border: 1px solid #bae6fd;">';
+                    html += '<div style="font-weight: 500; color: #374151; margin-bottom: 10px;">Evaluation Metrics (vs Ground Truth)</div>';
+                    html += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">';
+                    html += '<div style="background: white; padding: 10px; border-radius: 4px; text-align: center;">';
+                    html += '<div style="font-size: 0.75em; color: #6b7280;">Precision</div>';
+                    html += '<div style="font-size: 1.5em; font-weight: 600; color: #3b82f6;">' + (metrics.precision * 100).toFixed(1) + '%</div>';
+                    html += '</div>';
+                    html += '<div style="background: white; padding: 10px; border-radius: 4px; text-align: center;">';
+                    html += '<div style="font-size: 0.75em; color: #6b7280;">Recall</div>';
+                    html += '<div style="font-size: 1.5em; font-weight: 600; color: #10b981;">' + (metrics.recall * 100).toFixed(1) + '%</div>';
+                    html += '</div>';
+                    html += '<div style="background: white; padding: 10px; border-radius: 4px; text-align: center;">';
+                    html += '<div style="font-size: 0.75em; color: #6b7280;">F1 Score</div>';
+                    html += '<div style="font-size: 1.5em; font-weight: 600; color: #f59e0b;">' + (metrics.f1_score * 100).toFixed(1) + '%</div>';
+                    html += '</div>';
+                    html += '</div>';
+                    html += '<div style="font-size: 0.75em; color: #6b7280; margin-top: 10px; text-align: center;">';
+                    html += 'TP: ' + metrics.true_positives + ' • FP: ' + metrics.false_positives + ' • FN: ' + metrics.false_negatives;
+                    html += '</div>';
+                    html += '</div>';
+                    document.getElementById('method-metrics').innerHTML = html;
+                }
+            } catch (error) {
+                console.error('Failed to calculate metrics:', error);
+            }
+        }
+
+        // Open Add Method Modal
+        function openAddMethodModal() {
+            if (!currentEntry) {
+                alert('Please select a CSV entry first');
+                return;
+            }
+
+            // Populate schema dropdown
+            const schemaSelect = document.getElementById('method-schema-select');
+            if (schemasData && schemasData.schemas) {
+                schemaSelect.innerHTML = '';
+                Object.keys(schemasData.schemas).forEach(key => {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = schemasData.schemas[key].name;
+                    if (key === activeSchemaName) {
+                        option.selected = true;
+                    }
+                    schemaSelect.appendChild(option);
+                });
+            }
+
+            // Populate prompt dropdown
+            const promptSelect = document.getElementById('method-prompt-select');
+            if (extractionPromptsData && extractionPromptsData.prompts) {
+                promptSelect.innerHTML = '';
+                Object.keys(extractionPromptsData.prompts).forEach(key => {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = extractionPromptsData.prompts[key].name;
+                    if (key === extractionPromptsData.active_prompt) {
+                        option.selected = true;
+                    }
+                    promptSelect.appendChild(option);
+                });
+            }
+
+            document.getElementById('add-method-modal').style.display = 'flex';
+        }
+
+        // Close Add Method Modal
+        function closeAddMethodModal() {
+            document.getElementById('add-method-modal').style.display = 'none';
+            document.getElementById('method-name-input').value = '';
+        }
+
+        // Create and run extraction method
+        async function createAndRunMethod() {
+            const methodName = document.getElementById('method-name-input').value.trim();
+            const schema = document.getElementById('method-schema-select').value;
+            const prompt = document.getElementById('method-prompt-select').value;
+
+            if (!methodName) {
+                alert('Please enter a method name');
+                return;
+            }
+
+            if (!schema || !prompt) {
+                alert('Please select schema and prompt');
+                return;
+            }
+
+            // Get report text
+            const lastKey = Object.keys(currentEntryData)[Object.keys(currentEntryData).length - 1];
+            const reportText = currentEntryData[lastKey];
+
+            if (!reportText) {
+                alert('No report text found in current entry');
+                return;
+            }
+
+            try {
+                // Create method
+                const createResponse = await fetch('/llm/create-extraction-method/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        method_name: methodName,
+                        schema: schema,
+                        prompt: prompt
+                    })
+                });
+
+                const createResult = await createResponse.json();
+
+                if (!createResult.success) {
+                    alert('Failed to create method: ' + (createResult.error || 'Unknown error'));
+                    return;
+                }
+
+                const methodId = createResult.method_id;
+
+                // Close modal
+                closeAddMethodModal();
+
+                // Show loading message
+                alert('Running extraction... This may take a minute.');
+
+                // Run the method
+                const runResponse = await fetch('/llm/run-extraction-method/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        method_id: methodId,
+                        report_text: reportText
+                    })
+                });
+
+                const runResult = await runResponse.json();
+
+                if (runResult.success) {
+                    // Reload entities to get updated data
+                    await loadEntities();
+
+                    // Select and view this method
+                    selectedMethodId = methodId;
+                    switchAnnotationTab('automatic');
+
+                    alert('Successfully extracted ' + runResult.count + ' triplets');
+                } else {
+                    alert('Extraction failed: ' + (runResult.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Failed to create and run method:', error);
+                alert('Failed to create and run method: ' + error.message);
+            }
+        }
+
+        // Run method again
+        async function runMethodAgain(methodId) {
+            // Get report text
+            const lastKey = Object.keys(currentEntryData)[Object.keys(currentEntryData).length - 1];
+            const reportText = currentEntryData[lastKey];
+
+            if (!reportText) {
+                alert('No report text found in current entry');
+                return;
+            }
+
+            if (!confirm('Re-run this extraction method? This will replace existing results.')) {
+                return;
+            }
+
+            try {
+                alert('Running extraction... This may take a minute.');
+
+                const response = await fetch('/llm/run-extraction-method/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        method_id: methodId,
+                        report_text: reportText
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Reload entities
+                    await loadEntities();
+
+                    // Re-render
+                    selectedMethodId = methodId;
+                    renderAutomaticExtractionTab();
+
+                    alert('Successfully extracted ' + result.count + ' triplets');
+                } else {
+                    alert('Extraction failed: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Failed to run method:', error);
+                alert('Failed to run method: ' + error.message);
+            }
+        }
+
+        // Delete extraction method
+        async function deleteMethod(methodId) {
+            if (!confirm('Delete this extraction method?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/llm/delete-extraction-method/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        method_id: methodId
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Update local data
+                    const entryData = getEntityEntryData(currentEntry);
+                    if (entryData && entryData.extraction_methods) {
+                        // Find and remove method across all schemas
+                        for (const schemaName in entryData.extraction_methods) {
+                            const index = entryData.extraction_methods[schemaName].findIndex(m => m.id === methodId);
+                            if (index !== -1) {
+                                entryData.extraction_methods[schemaName].splice(index, 1);
+                                break;
+                            }
+                        }
+                    }
+
+                    // Clear selection if deleted method was selected
+                    if (selectedMethodId === methodId) {
+                        selectedMethodId = null;
+                    }
+
+                    // Re-render
+                    renderAutomaticExtractionTab();
+                } else {
+                    alert('Failed to delete method: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Failed to delete method:', error);
+                alert('Failed to delete method: ' + error.message);
+            }
         }
 
         // Open schema information modal
@@ -3118,6 +4478,12 @@
                     allExtractionPrompts = data.prompts;
                     activePromptName = data.active_prompt;
 
+                    // Set global extractionPromptsData for use in entity rendering
+                    extractionPromptsData = {
+                        prompts: data.prompts,
+                        active_prompt: data.active_prompt
+                    };
+
                     // Update prompt selector in main UI
                     const promptSelector = document.getElementById('extraction-prompt-selector');
                     promptSelector.innerHTML = '';
@@ -3156,6 +4522,10 @@
                 const data = await response.json();
                 if (data.success) {
                     activePromptName = promptName;
+                    // Update global extractionPromptsData
+                    if (extractionPromptsData) {
+                        extractionPromptsData.active_prompt = promptName;
+                    }
                     // Switched successfully - no need to show alert
                 } else {
                     alert(`Error: ${data.error}`);
@@ -3530,7 +4900,7 @@
                 nameInput.value = '';
                 dimensionsInput.value = '';
                 renderPropertyTypesList();
-                // renderEntities(); // Removed - obsolete code
+                renderEntities();
             } else {
                 alert('Failed to add property type');
             }
@@ -3564,7 +4934,7 @@
             const success = await savePropertiesToServer();
             if (success) {
                 renderPropertyTypesList();
-                // renderEntities(); // Removed - obsolete code
+                renderEntities();
             } else {
                 alert('Failed to remove property type');
             }
@@ -3580,7 +4950,7 @@
                 readOnlyProperties.add(propertyName);
             }
             renderPropertyTypesList();
-            // renderEntities(); // Removed - obsolete code
+            renderEntities();
         }
 
         function isPropertyReadOnly(propertyName) {
@@ -3722,7 +5092,7 @@
                 if (success) {
                     alert('Properties imported successfully');
                     renderPropertyTypesList();
-                    // renderEntities(); // Removed - obsolete code
+                    renderEntities();
                 } else {
                     alert('Failed to save imported properties');
                 }
@@ -3879,7 +5249,7 @@
             const saved = await savePropertiesToServer();
 
             // Refresh the display
-            // renderEntities(); // Removed - obsolete code
+            renderEntities();
 
             // Show results
             if (saved) {
@@ -3907,14 +5277,10 @@
             initPromptEditorListeners();
             initPropertyModalListeners();
 
-            // Load schemas, prompts, and entities (old system)
+            // Load schemas, prompts, and entities
             loadSchemas();
             loadExtractionPrompts();
             loadEntities();
-
-            // Load annotation interface data (new system)
-            loadActiveSchema();
-            loadLLMFunctions();
 
             console.log('Initialization complete');
         });
@@ -4079,723 +5445,5 @@
         </div>
     </div>
 
-    <!-- Triplet Add/Edit Modal -->
-    <div id="triplet-modal" class="code-editor-modal">
-        <div class="code-editor-content" style="max-width: 700px;">
-            <div class="code-editor-header">
-                <h3 id="triplet-modal-title">Add Triplet</h3>
-                <button onclick="closeTripletModal()" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: #6b7280;">&times;</button>
-            </div>
-            <div class="code-editor-body">
-                <input type="hidden" id="triplet-edit-index" value="">
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label style="display: block; font-weight: 500; margin-bottom: 5px;">Entity 1 Text</label>
-                    <input type="text" id="triplet-entity1-text" placeholder="e.g., lung nodule" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
-                </div>
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label style="display: block; font-weight: 500; margin-bottom: 5px;">Entity 1 Type</label>
-                    <select id="triplet-entity1-type" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
-                        <option value="">Select entity type...</option>
-                    </select>
-                </div>
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label style="display: block; font-weight: 500; margin-bottom: 5px;">Relation Type</label>
-                    <select id="triplet-relation-type" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
-                        <option value="">Select relation type...</option>
-                    </select>
-                </div>
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label style="display: block; font-weight: 500; margin-bottom: 5px;">Entity 2 Text</label>
-                    <input type="text" id="triplet-entity2-text" placeholder="e.g., right upper lobe" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
-                </div>
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label style="display: block; font-weight: 500; margin-bottom: 5px;">Entity 2 Type</label>
-                    <select id="triplet-entity2-type" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
-                        <option value="">Select entity type...</option>
-                    </select>
-                </div>
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label style="display: block; font-weight: 500; margin-bottom: 5px;">Notes (optional)</label>
-                    <textarea id="triplet-notes" placeholder="Optional notes..." style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; min-height: 60px;"></textarea>
-                </div>
-            </div>
-            <div class="code-editor-footer">
-                <button onclick="closeTripletModal()" class="triplet-btn">Cancel</button>
-                <button onclick="saveTripletFromModal()" class="triplet-btn triplet-btn-primary">Save Triplet</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Extraction Function Code Editor Modal -->
-    <div id="function-code-modal" class="code-editor-modal">
-        <div class="code-editor-content">
-            <div class="code-editor-header">
-                <h3 id="function-modal-title">New Extraction Function</h3>
-                <button onclick="closeFunctionModal()" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: #6b7280;">&times;</button>
-            </div>
-            <div class="code-editor-body">
-                <input type="hidden" id="function-edit-id" value="">
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label style="display: block; font-weight: 500; margin-bottom: 5px;">Function Name</label>
-                    <input type="text" id="function-name" placeholder="e.g., LLM Extraction v1" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
-                </div>
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label style="display: block; font-weight: 500; margin-bottom: 5px;">Description (optional)</label>
-                    <input type="text" id="function-description" placeholder="Brief description of this extraction method" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
-                </div>
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label style="display: block; font-weight: 500; margin-bottom: 5px;">Python Code</label>
-                    <div style="font-size: 0.85em; color: #6b7280; margin-bottom: 8px;">
-                        Your code should set the variable <code>extracted_triplets</code> to a list of triplet dictionaries.<br>
-                        Available variables: <code>report_text</code>, <code>entry_number</code>, <code>llm_service</code>, <code>json</code>, <code>requests</code>
-                    </div>
-                    <textarea id="function-code" class="code-editor-textarea" rows="15"></textarea>
-                </div>
-            </div>
-            <div class="code-editor-footer">
-                <button onclick="closeFunctionModal()" class="triplet-btn">Cancel</button>
-                <button onclick="saveFunctionFromModal()" class="triplet-btn triplet-btn-primary">Save Function</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // ========== Global State ==========
-        let currentEntryNumber = 1;
-        let currentReportText = '';
-        let groundTruthTriplets = [];
-        let llmFunctions = [];
-        let activeSchema = null;
-        let currentActiveTab = 'ground-truth';
-
-        // ========== Utility Functions ==========
-        function showMessage(message, type = 'success') {
-            const color = type === 'success' ? '#10b981' : '#ef4444';
-            const messageDiv = document.createElement('div');
-            messageDiv.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: ${color};
-                color: white;
-                padding: 15px 20px;
-                border-radius: 6px;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                z-index: 10000;
-                animation: slideIn 0.3s ease;
-            `;
-            messageDiv.textContent = message;
-            document.body.appendChild(messageDiv);
-
-            setTimeout(() => {
-                messageDiv.style.animation = 'slideOut 0.3s ease';
-                setTimeout(() => messageDiv.remove(), 300);
-            }, 3000);
-        }
-
-        // ========== Schema Loading ==========
-        async function loadActiveSchema() {
-            try {
-                const response = await fetch('/llm/active-schema/');
-                const data = await response.json();
-                if (data.success) {
-                    activeSchema = data.schema;
-                    populateSchemaDropdowns();
-                }
-            } catch (error) {
-                console.error('Failed to load schema:', error);
-            }
-        }
-
-        function populateSchemaDropdowns() {
-            if (!activeSchema) return;
-
-            const selects = [
-                document.getElementById('triplet-entity1-type'),
-                document.getElementById('triplet-entity2-type')
-            ];
-
-            selects.forEach(select => {
-                select.innerHTML = '<option value="">Select entity type...</option>';
-                activeSchema.entity_types.forEach(et => {
-                    const option = document.createElement('option');
-                    option.value = et.name;
-                    option.textContent = et.name;
-                    select.appendChild(option);
-                });
-            });
-
-            const relationSelect = document.getElementById('triplet-relation-type');
-            relationSelect.innerHTML = '<option value="">Select relation type...</option>';
-            activeSchema.relation_types.forEach(rt => {
-                const option = document.createElement('option');
-                option.value = rt.name;
-                option.textContent = rt.name;
-                relationSelect.appendChild(option);
-            });
-        }
-
-        // ========== Entry Data Loading ==========
-        async function loadEntryData() {
-            const entrySelector = document.getElementById('entry-selector');
-            currentEntryNumber = parseInt(entrySelector.value);
-
-            // Load report text
-            try {
-                const response = await fetch(`/llm/csv-entry/?entry_number=${currentEntryNumber}`);
-                const data = await response.json();
-                if (data.success) {
-                    currentReportText = data.entry.text || data.entry.report || '';
-                    document.getElementById('current-report-text').textContent = currentReportText;
-                }
-            } catch (error) {
-                console.error('Failed to load entry:', error);
-            }
-
-            // Load ground truth
-            await loadGroundTruth();
-
-            // Load LLM triplets for all functions
-            await loadAllLLMTriplets();
-        }
-
-        // ========== Ground Truth Management ==========
-        async function loadGroundTruth() {
-            try {
-                const response = await fetch(`/llm/ground-truth/${currentEntryNumber}/`);
-                const data = await response.json();
-                if (data.success) {
-                    groundTruthTriplets = data.triplets;
-                    renderGroundTruthTriplets();
-                }
-            } catch (error) {
-                console.error('Failed to load ground truth:', error);
-                groundTruthTriplets = [];
-                renderGroundTruthTriplets();
-            }
-        }
-
-        // Load all annotation data for current entry (ground truth + LLM extractions)
-        async function loadAnnotationData() {
-            if (!currentEntryNumber) return;
-
-            // Load ground truth
-            await loadGroundTruth();
-
-            // Load LLM triplets for all functions
-            if (typeof loadAllLLMTriplets === 'function') {
-                await loadAllLLMTriplets();
-            }
-        }
-
-        function renderGroundTruthTriplets() {
-            const container = document.getElementById('ground-truth-triplets-container');
-
-            if (groundTruthTriplets.length === 0) {
-                container.innerHTML = `
-                    <div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 40px;">
-                        No ground truth triplets yet. Click "+ Add Triplet" to manually annotate.
-                    </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = groundTruthTriplets.map((triplet, index) => `
-                <div class="triplet-card">
-                    <div class="triplet-field">
-                        <span class="triplet-label">Entity 1:</span>
-                        <span class="triplet-value">${triplet.entity1_text}</span>
-                        <span style="color: #6b7280; font-size: 0.85em; margin-left: 8px;">(${triplet.entity1_type})</span>
-                    </div>
-                    <div class="triplet-field">
-                        <span class="triplet-label">Relation:</span>
-                        <span class="triplet-value">${triplet.relation_type}</span>
-                    </div>
-                    <div class="triplet-field">
-                        <span class="triplet-label">Entity 2:</span>
-                        <span class="triplet-value">${triplet.entity2_text}</span>
-                        <span style="color: #6b7280; font-size: 0.85em; margin-left: 8px;">(${triplet.entity2_type})</span>
-                    </div>
-                    ${triplet.notes ? `
-                        <div class="triplet-field">
-                            <span class="triplet-label">Notes:</span>
-                            <span class="triplet-value">${triplet.notes}</span>
-                        </div>
-                    ` : ''}
-                    <div class="triplet-actions">
-                        <button onclick="editTriplet(${index})" class="triplet-btn">Edit</button>
-                        <button onclick="deleteTriplet(${index})" class="triplet-btn triplet-btn-danger">Delete</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function addNewTriplet() {
-            document.getElementById('triplet-modal-title').textContent = 'Add Triplet';
-            document.getElementById('triplet-edit-index').value = '';
-            document.getElementById('triplet-entity1-text').value = '';
-            document.getElementById('triplet-entity1-type').value = '';
-            document.getElementById('triplet-relation-type').value = '';
-            document.getElementById('triplet-entity2-text').value = '';
-            document.getElementById('triplet-entity2-type').value = '';
-            document.getElementById('triplet-notes').value = '';
-            document.getElementById('triplet-modal').classList.add('active');
-        }
-
-        function editTriplet(index) {
-            const triplet = groundTruthTriplets[index];
-            document.getElementById('triplet-modal-title').textContent = 'Edit Triplet';
-            document.getElementById('triplet-edit-index').value = index;
-            document.getElementById('triplet-entity1-text').value = triplet.entity1_text;
-            document.getElementById('triplet-entity1-type').value = triplet.entity1_type;
-            document.getElementById('triplet-relation-type').value = triplet.relation_type;
-            document.getElementById('triplet-entity2-text').value = triplet.entity2_text;
-            document.getElementById('triplet-entity2-type').value = triplet.entity2_type;
-            document.getElementById('triplet-notes').value = triplet.notes || '';
-            document.getElementById('triplet-modal').classList.add('active');
-        }
-
-        function deleteTriplet(index) {
-            if (confirm('Delete this triplet?')) {
-                groundTruthTriplets.splice(index, 1);
-                renderGroundTruthTriplets();
-            }
-        }
-
-        function closeTripletModal() {
-            document.getElementById('triplet-modal').classList.remove('active');
-        }
-
-        function saveTripletFromModal() {
-            const triplet = {
-                entity1_text: document.getElementById('triplet-entity1-text').value,
-                entity1_type: document.getElementById('triplet-entity1-type').value,
-                relation_type: document.getElementById('triplet-relation-type').value,
-                entity2_text: document.getElementById('triplet-entity2-text').value,
-                entity2_type: document.getElementById('triplet-entity2-type').value,
-                notes: document.getElementById('triplet-notes').value
-            };
-
-            // Validation
-            if (!triplet.entity1_text || !triplet.entity1_type || !triplet.relation_type ||
-                !triplet.entity2_text || !triplet.entity2_type) {
-                alert('Please fill in all required fields');
-                return;
-            }
-
-            const editIndex = document.getElementById('triplet-edit-index').value;
-            if (editIndex === '') {
-                groundTruthTriplets.push(triplet);
-            } else {
-                groundTruthTriplets[parseInt(editIndex)] = triplet;
-            }
-
-            renderGroundTruthTriplets();
-            closeTripletModal();
-        }
-
-        async function saveGroundTruth() {
-            try {
-                const response = await fetch('/llm/ground-truth/save/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        entry_number: currentEntryNumber,
-                        report_text: currentReportText,
-                        triplets: groundTruthTriplets
-                    })
-                });
-
-                const data = await response.json();
-                if (data.success) {
-                    showMessage(`Saved ${data.triplets_saved} ground truth triplets`);
-                } else {
-                    showMessage(data.error, 'error');
-                }
-            } catch (error) {
-                showMessage('Failed to save ground truth: ' + error.message, 'error');
-            }
-        }
-
-        // ========== Tab Management ==========
-        function switchTab(tabName) {
-            // Update tab buttons
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            const activeTab = document.querySelector(`[data-tab="${tabName}"]`);
-            if (activeTab) {
-                activeTab.classList.add('active');
-            }
-
-            // Update tab content
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            const activeContent = document.getElementById(`tab-${tabName}`);
-            if (activeContent) {
-                activeContent.classList.add('active');
-            }
-
-            currentActiveTab = tabName;
-        }
-
-        // ========== LLM Extraction Functions Management ==========
-        async function loadLLMFunctions() {
-            try {
-                const response = await fetch('/llm/llm-functions/');
-                const data = await response.json();
-                if (data.success) {
-                    llmFunctions = data.functions;
-                    renderLLMFunctionTabs();
-                }
-            } catch (error) {
-                console.error('Failed to load LLM functions:', error);
-            }
-        }
-
-        function renderLLMFunctionTabs() {
-            const tabBar = document.querySelector('.tab-bar');
-            const addButton = tabBar.querySelector('.tab-add');
-
-            // Remove existing function tabs
-            const existingFunctionTabs = tabBar.querySelectorAll('[data-tab^="function-"]');
-            existingFunctionTabs.forEach(tab => tab.remove());
-
-            // Add tabs for each function (before the + button)
-            llmFunctions.forEach(func => {
-                const tab = document.createElement('button');
-                tab.className = 'tab';
-                tab.dataset.tab = `function-${func.id}`;
-                tab.textContent = func.name;
-                tab.onclick = () => switchTab(`function-${func.id}`);
-                tabBar.insertBefore(tab, addButton);
-            });
-
-            // Create tab content for each function
-            const tabContainer = document.querySelector('.tab-container');
-            const existingFunctionContents = tabContainer.querySelectorAll('[id^="tab-function-"]');
-            existingFunctionContents.forEach(content => content.remove());
-
-            llmFunctions.forEach(func => {
-                const content = document.createElement('div');
-                content.id = `tab-function-${func.id}`;
-                content.className = 'tab-content';
-                content.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <h3 style="margin: 0; font-size: 1.1em; color: #1f2937;">${func.name}</h3>
-                        <div style="display: flex; gap: 8px;">
-                            <button onclick="editFunction(${func.id})" class="triplet-btn">
-                                Edit Code
-                            </button>
-                            <button onclick="executeFunction(${func.id})" class="triplet-btn triplet-btn-primary">
-                                Run Extraction
-                            </button>
-                            <button onclick="evaluateFunction(${func.id})" class="triplet-btn" style="background: #6366f1; color: white; border-color: #6366f1;">
-                                Evaluate
-                            </button>
-                        </div>
-                    </div>
-                    ${func.description ? `<p style="color: #6b7280; font-size: 0.9em; margin-bottom: 15px;">${func.description}</p>` : ''}
-                    <div id="function-${func.id}-triplets-container">
-                        <div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 40px;">
-                            Click "Run Extraction" to extract triplets using this function.
-                        </div>
-                    </div>
-                    <div id="function-${func.id}-metrics" style="display: none;"></div>
-                `;
-                tabContainer.appendChild(content);
-            });
-        }
-
-        async function loadAllLLMTriplets() {
-            for (const func of llmFunctions) {
-                await loadLLMTripletsForFunction(func.id);
-            }
-        }
-
-        async function loadLLMTripletsForFunction(functionId) {
-            try {
-                const response = await fetch(`/llm/llm-triplets/${currentEntryNumber}/${functionId}/`);
-                const data = await response.json();
-                if (data.success) {
-                    renderLLMTriplets(functionId, data.triplets);
-                }
-            } catch (error) {
-                console.error(`Failed to load triplets for function ${functionId}:`, error);
-            }
-        }
-
-        function renderLLMTriplets(functionId, triplets, evaluation = null) {
-            const container = document.getElementById(`function-${functionId}-triplets-container`);
-
-            if (!triplets || triplets.length === 0) {
-                container.innerHTML = `
-                    <div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 40px;">
-                        No triplets extracted yet. Click "Run Extraction" to extract.
-                    </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = triplets.map((triplet, index) => {
-                let matchBadge = '';
-                if (evaluation && evaluation.comparisons[index]) {
-                    const comp = evaluation.comparisons[index];
-                    if (comp.match_type === 'exact') {
-                        matchBadge = '<span class="match-badge match-exact">✓ Exact Match</span>';
-                    } else if (comp.match_type === 'entity_type' || comp.match_type === 'entity_only') {
-                        matchBadge = '<span class="match-badge match-partial">~ Partial Match</span>';
-                    } else if (comp.is_false_positive) {
-                        matchBadge = '<span class="match-badge match-none">✗ False Positive</span>';
-                    }
-                }
-
-                return `
-                    <div class="triplet-card">
-                        ${matchBadge ? `<div class="triplet-match-indicator">${matchBadge}</div>` : ''}
-                        <div class="triplet-field">
-                            <span class="triplet-label">Entity 1:</span>
-                            <span class="triplet-value">${triplet.entity1_text}</span>
-                            <span style="color: #6b7280; font-size: 0.85em; margin-left: 8px;">(${triplet.entity1_type})</span>
-                        </div>
-                        <div class="triplet-field">
-                            <span class="triplet-label">Relation:</span>
-                            <span class="triplet-value">${triplet.relation_type}</span>
-                        </div>
-                        <div class="triplet-field">
-                            <span class="triplet-label">Entity 2:</span>
-                            <span class="triplet-value">${triplet.entity2_text}</span>
-                            <span style="color: #6b7280; font-size: 0.85em; margin-left: 8px;">(${triplet.entity2_type})</span>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function openNewFunctionModal() {
-            document.getElementById('function-modal-title').textContent = 'New Extraction Function';
-            document.getElementById('function-edit-id').value = '';
-            document.getElementById('function-name').value = '';
-            document.getElementById('function-description').value = '';
-
-            // Set default template code
-            const defaultCode = `# Extract triplets using the LLM
-# Build a prompt for the LLM
-prompt = f\"\"\"Extract entity-relation-entity triplets from this radiology report.
-Return as JSON array with each triplet as: entity1_text, entity1_type, relation_type, entity2_text, entity2_type, confidence
-
-Report: {report_text}
-\"\"\"
-
-# Call the LLM
-response = llm_service.generate_response(
-    messages=[{'role': 'user', 'content': prompt}],
-    temperature=0.1,
-    max_tokens=2000
-)
-
-# Parse the response
-try:
-    extracted_triplets = json.loads(response)
-except:
-    # If JSON parsing fails, return empty list
-    extracted_triplets = []
-`;
-            document.getElementById('function-code').value = defaultCode;
-            document.getElementById('function-code-modal').classList.add('active');
-        }
-
-        async function editFunction(functionId) {
-            try {
-                const response = await fetch(`/llm/llm-functions/${functionId}/`);
-                const data = await response.json();
-                if (data.success) {
-                    const func = data.function;
-                    document.getElementById('function-modal-title').textContent = 'Edit Extraction Function';
-                    document.getElementById('function-edit-id').value = func.id;
-                    document.getElementById('function-name').value = func.name;
-                    document.getElementById('function-description').value = func.description;
-                    document.getElementById('function-code').value = func.code;
-                    document.getElementById('function-code-modal').classList.add('active');
-                }
-            } catch (error) {
-                showMessage('Failed to load function: ' + error.message, 'error');
-            }
-        }
-
-        function closeFunctionModal() {
-            document.getElementById('function-code-modal').classList.remove('active');
-        }
-
-        async function saveFunctionFromModal() {
-            const functionData = {
-                name: document.getElementById('function-name').value,
-                description: document.getElementById('function-description').value,
-                code: document.getElementById('function-code').value
-            };
-
-            const editId = document.getElementById('function-edit-id').value;
-            if (editId) {
-                functionData.id = parseInt(editId);
-            }
-
-            // Validation
-            if (!functionData.name || !functionData.code) {
-                alert('Please provide function name and code');
-                return;
-            }
-
-            try {
-                const response = await fetch('/llm/llm-functions/save/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(functionData)
-                });
-
-                const data = await response.json();
-                if (data.success) {
-                    showMessage(data.message);
-                    closeFunctionModal();
-                    await loadLLMFunctions();
-                } else {
-                    showMessage(data.error, 'error');
-                }
-            } catch (error) {
-                showMessage('Failed to save function: ' + error.message, 'error');
-            }
-        }
-
-        async function executeFunction(functionId) {
-            showMessage('Running extraction...');
-            try {
-                const response = await fetch(`/llm/llm-functions/${functionId}/execute/${currentEntryNumber}/`, {
-                    method: 'POST'
-                });
-
-                const data = await response.json();
-                if (data.success) {
-                    showMessage(`Extracted ${data.triplets_extracted} triplets`);
-                    renderLLMTriplets(functionId, data.triplets);
-                } else {
-                    showMessage(data.error, 'error');
-                }
-            } catch (error) {
-                showMessage('Failed to execute function: ' + error.message, 'error');
-            }
-        }
-
-        async function evaluateFunction(functionId) {
-            if (groundTruthTriplets.length === 0) {
-                showMessage('No ground truth available. Add ground truth first.', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch(`/llm/evaluate/${currentEntryNumber}/`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ function_id: functionId })
-                });
-
-                const data = await response.json();
-                if (data.success) {
-                    const metrics = data.metrics;
-                    renderEvaluationMetrics(functionId, metrics);
-
-                    // Re-render triplets with match indicators
-                    const triplets = await (await fetch(`/llm/llm-triplets/${currentEntryNumber}/${functionId}/`)).json();
-                    if (triplets.success) {
-                        renderLLMTriplets(functionId, triplets.triplets, metrics);
-                    }
-
-                    showMessage('Evaluation completed');
-                } else {
-                    showMessage(data.error, 'error');
-                }
-            } catch (error) {
-                showMessage('Failed to evaluate: ' + error.message, 'error');
-            }
-        }
-
-        function renderEvaluationMetrics(functionId, metrics) {
-            const metricsContainer = document.getElementById(`function-${functionId}-metrics`);
-            metricsContainer.style.display = 'block';
-            metricsContainer.innerHTML = `
-                <div class="metrics-panel">
-                    <h4 style="margin: 0 0 10px 0; font-size: 1em; color: #1f2937;">Evaluation Metrics</h4>
-                    <div class="metrics-grid">
-                        <div class="metric-item">
-                            <div class="metric-value">${(metrics.precision * 100).toFixed(1)}%</div>
-                            <div class="metric-label">Precision</div>
-                        </div>
-                        <div class="metric-item">
-                            <div class="metric-value">${(metrics.recall * 100).toFixed(1)}%</div>
-                            <div class="metric-label">Recall</div>
-                        </div>
-                        <div class="metric-item">
-                            <div class="metric-value">${(metrics.f1_score * 100).toFixed(1)}%</div>
-                            <div class="metric-label">F1 Score</div>
-                        </div>
-                        <div class="metric-item">
-                            <div class="metric-value">${metrics.exact_matches}</div>
-                            <div class="metric-label">Exact Matches</div>
-                        </div>
-                        <div class="metric-item">
-                            <div class="metric-value">${metrics.false_positives}</div>
-                            <div class="metric-label">False Positives</div>
-                        </div>
-                        <div class="metric-item">
-                            <div class="metric-value">${metrics.false_negatives}</div>
-                            <div class="metric-label">False Negatives</div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        // ========== Make functions globally available ==========
-        window.openNewFunctionModal = openNewFunctionModal;
-        window.closeFunctionModal = closeFunctionModal;
-        window.saveFunctionFromModal = saveFunctionFromModal;
-        window.editFunction = editFunction;
-        window.executeFunction = executeFunction;
-        window.evaluateFunction = evaluateFunction;
-        window.switchTab = switchTab;
-        window.openTripletModal = openTripletModal;
-        window.closeTripletModal = closeTripletModal;
-        window.saveTriplet = saveTriplet;
-        window.deleteTriplet = deleteTriplet;
-        window.saveGroundTruth = saveGroundTruth;
-        window.loadAnnotationData = loadAnnotationData;
-
-        // ========== Initialization ==========
-        async function initializeAnnotationSystem() {
-            await loadActiveSchema();
-            await loadLLMFunctions();
-            await loadEntryData();
-        }
-
-        // Run initialization when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializeAnnotationSystem);
-        } else {
-            initializeAnnotationSystem();
-        }
-
-        // Add CSS animations
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideIn {
-                from { transform: translateX(100%); opacity: 0; }
-                to { transform: translateX(0); opacity: 1; }
-            }
-            @keyframes slideOut {
-                from { transform: translateX(0); opacity: 1; }
-                to { transform: translateX(100%); opacity: 0; }
-            }
-        `;
-        document.head.appendChild(style);
-    </script>
 </body>
 </html>

@@ -24,6 +24,13 @@ urlpatterns = [
     path('entities/', views.get_entities, name='get_entities'),
     path('save-entities/', views.save_entities, name='save_entities'),
     path('extract-entities-relations/', views.extract_entities_relations, name='extract_entities_relations'),
+    # Ground Truth and Extraction Methods
+    path('add-ground-truth-triplet/', views.add_ground_truth_triplet, name='add_ground_truth_triplet'),
+    path('delete-ground-truth-triplet/', views.delete_ground_truth_triplet, name='delete_ground_truth_triplet'),
+    path('create-extraction-method/', views.create_extraction_method, name='create_extraction_method'),
+    path('run-extraction-method/', views.run_extraction_method, name='run_extraction_method'),
+    path('delete-extraction-method/', views.delete_extraction_method, name='delete_extraction_method'),
+    path('calculate-metrics/', views.calculate_metrics, name='calculate_metrics'),
     path('schemas/', views.get_schemas, name='get_schemas'),
     path('active-schema/', views.get_active_schema, name='get_active_schema'),
     path('set-active-schema/', views.set_active_schema, name='set_active_schema'),
@@ -34,21 +41,4 @@ urlpatterns = [
     path('save-prompt/', views.save_prompt, name='save_prompt'),
     path('delete-prompt/', views.delete_prompt, name='delete_prompt'),
     path('execute-extraction/', views.execute_extraction_function, name='execute_extraction_function'),
-
-    # Ground Truth Management
-    path('ground-truth/<int:entry_number>/', views.get_ground_truth, name='get_ground_truth'),
-    path('ground-truth/save/', views.save_ground_truth, name='save_ground_truth'),
-    path('ground-truth/<int:entry_number>/delete/', views.delete_ground_truth, name='delete_ground_truth'),
-
-    # LLM Extraction Function Management
-    path('llm-functions/', views.get_extraction_functions_list, name='get_llm_functions'),
-    path('llm-functions/<int:function_id>/', views.get_extraction_function_detail, name='get_llm_function_detail'),
-    path('llm-functions/save/', views.save_llm_extraction_function, name='save_llm_function'),
-    path('llm-functions/<int:function_id>/delete/', views.delete_llm_extraction_function, name='delete_llm_function'),
-    path('llm-functions/<int:function_id>/execute/<int:entry_number>/', views.execute_llm_extraction, name='execute_llm_extraction'),
-    path('llm-triplets/<int:entry_number>/<int:function_id>/', views.get_llm_triplets, name='get_llm_triplets'),
-
-    # Evaluation
-    path('evaluate/<int:entry_number>/', views.evaluate_entry, name='evaluate_entry'),
-    path('evaluate/batch/', views.evaluate_batch, name='evaluate_batch'),
 ]
