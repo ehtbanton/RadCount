@@ -2461,9 +2461,9 @@ def extract_relations_llm(request):
             json={
                 'messages': messages,
                 'temperature': 0.1,
-                'max_tokens': 2000
+                'max_tokens': 4000
             },
-            timeout=120
+            timeout=180
         )
 
         if response.status_code != 200:
@@ -2483,9 +2483,22 @@ def extract_relations_llm(request):
         # Parse JSON response
         try:
             import re
+            # Try to find a complete JSON array
             json_match = re.search(r'\[.*\]', generated_text, re.DOTALL)
             if json_match:
-                relations = json.loads(json_match.group())
+                json_str = json_match.group()
+                # Check if JSON appears truncated (doesn't end properly)
+                json_str = json_str.strip()
+                try:
+                    relations = json.loads(json_str)
+                except json.JSONDecodeError:
+                    # Try to fix truncated JSON by finding last complete object
+                    last_complete = json_str.rfind('},')
+                    if last_complete > 0:
+                        json_str = json_str[:last_complete+1] + ']'
+                        relations = json.loads(json_str)
+                    else:
+                        raise
             else:
                 # Handle case where LLM returns just "[]" or empty array
                 if generated_text.strip() == '[]':
@@ -2498,7 +2511,7 @@ def extract_relations_llm(request):
                 return JsonResponse({
                     'success': False,
                     'error': 'LLM response is not a valid array of relations',
-                    'raw_response': generated_text
+                    'raw_response': generated_text[:1000]
                 }, status=500)
 
             # Create entity ID lookup
@@ -2535,10 +2548,15 @@ def extract_relations_llm(request):
             })
 
         except json.JSONDecodeError as e:
+            # Show context around error
+            error_pos = e.pos if hasattr(e, 'pos') and e.pos else 0
+            error_context = generated_text[max(0, error_pos-100):error_pos+100]
             return JsonResponse({
                 'success': False,
                 'error': f'Failed to parse LLM response as JSON: {str(e)}',
-                'raw_response': generated_text
+                'error_context': f'...{error_context}...',
+                'raw_response_length': len(generated_text),
+                'suggestion': 'The response may be truncated or malformed. Try with fewer entities.'
             }, status=500)
 
     except json.JSONDecodeError:
