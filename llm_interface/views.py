@@ -1886,6 +1886,699 @@ def delete_ground_truth_triplet(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+def add_ground_truth_entity(request):
+    """Add a ground truth entity to a specific entry."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        entry_number = data.get('entry_number')
+        entity = data.get('entity')
+
+        if entry_number is None:
+            return JsonResponse({'success': False, 'error': 'entry_number is required'}, status=400)
+
+        if not entity:
+            return JsonResponse({'success': False, 'error': 'entity is required'}, status=400)
+
+        # Validate entity structure
+        required_fields = ['text', 'type']
+        for field in required_fields:
+            if field not in entity:
+                return JsonResponse({'success': False, 'error': f'Entity missing required field: {field}'}, status=400)
+
+        entities_file = PROJECT_ROOT / "entities.json"
+
+        if not entities_file.exists():
+            return JsonResponse({'success': False, 'error': 'entities.json not found'}, status=404)
+
+        with open(entities_file, 'r', encoding='utf-8') as f:
+            entities_data = json.load(f)
+
+        # Find and update the entry
+        entry_found = False
+        new_entity_id = None
+        for entry in entities_data:
+            if entry.get('entry') == entry_number:
+                active_schema = entry.get('active_schema', 'radgraph')
+                if 'ground_truths' not in entry:
+                    entry['ground_truths'] = {}
+                if active_schema not in entry['ground_truths']:
+                    entry['ground_truths'][active_schema] = {"entities": [], "triplets": []}
+                if 'entities' not in entry['ground_truths'][active_schema]:
+                    entry['ground_truths'][active_schema]['entities'] = []
+
+                # Generate entity ID
+                existing_ids = [e.get('id', '') for e in entry['ground_truths'][active_schema]['entities']]
+                entity_num = 1
+                while f"e{entity_num}" in existing_ids:
+                    entity_num += 1
+                new_entity_id = f"e{entity_num}"
+
+                entity['id'] = new_entity_id
+                entry['ground_truths'][active_schema]['entities'].append(entity)
+                entry_found = True
+                break
+
+        if not entry_found:
+            return JsonResponse({'success': False, 'error': f'Entry {entry_number} not found'}, status=404)
+
+        # Save updated data
+        with open(entities_file, 'w', encoding='utf-8') as f:
+            json.dump(entities_data, f, indent=2, ensure_ascii=False)
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Ground truth entity added successfully',
+            'entity_id': new_entity_id
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON in request body'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Failed to add ground truth entity: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def delete_ground_truth_entity(request):
+    """Delete a ground truth entity from a specific entry (also removes related triplets)."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        entry_number = data.get('entry_number')
+        entity_id = data.get('entity_id')
+
+        if entry_number is None:
+            return JsonResponse({'success': False, 'error': 'entry_number is required'}, status=400)
+
+        if not entity_id:
+            return JsonResponse({'success': False, 'error': 'entity_id is required'}, status=400)
+
+        entities_file = PROJECT_ROOT / "entities.json"
+
+        if not entities_file.exists():
+            return JsonResponse({'success': False, 'error': 'entities.json not found'}, status=404)
+
+        with open(entities_file, 'r', encoding='utf-8') as f:
+            entities_data = json.load(f)
+
+        # Find and update the entry
+        entry_found = False
+        for entry in entities_data:
+            if entry.get('entry') == entry_number:
+                active_schema = entry.get('active_schema', 'radgraph')
+                if 'ground_truths' in entry and active_schema in entry['ground_truths']:
+                    gt = entry['ground_truths'][active_schema]
+                    if 'entities' in gt:
+                        # Find and remove the entity
+                        original_len = len(gt['entities'])
+                        gt['entities'] = [e for e in gt['entities'] if e.get('id') != entity_id]
+                        if len(gt['entities']) < original_len:
+                            entry_found = True
+                            # Also remove any triplets referencing this entity
+                            if 'triplets' in gt:
+                                gt['triplets'] = [
+                                    t for t in gt['triplets']
+                                    if t.get('entity1_id') != entity_id and t.get('entity2_id') != entity_id
+                                ]
+                break
+
+        if not entry_found:
+            return JsonResponse({'success': False, 'error': f'Entity {entity_id} not found'}, status=404)
+
+        # Save updated data
+        with open(entities_file, 'w', encoding='utf-8') as f:
+            json.dump(entities_data, f, indent=2, ensure_ascii=False)
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Ground truth entity deleted successfully'
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON in request body'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Failed to delete ground truth entity: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def add_ground_truth_relation(request):
+    """Add a ground truth relation (triplet using entity IDs) to a specific entry."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        entry_number = data.get('entry_number')
+        relation = data.get('relation')
+
+        if entry_number is None:
+            return JsonResponse({'success': False, 'error': 'entry_number is required'}, status=400)
+
+        if not relation:
+            return JsonResponse({'success': False, 'error': 'relation is required'}, status=400)
+
+        # Validate relation structure
+        required_fields = ['entity1_id', 'relation_type', 'entity2_id']
+        for field in required_fields:
+            if field not in relation:
+                return JsonResponse({'success': False, 'error': f'Relation missing required field: {field}'}, status=400)
+
+        entities_file = PROJECT_ROOT / "entities.json"
+
+        if not entities_file.exists():
+            return JsonResponse({'success': False, 'error': 'entities.json not found'}, status=404)
+
+        with open(entities_file, 'r', encoding='utf-8') as f:
+            entities_data = json.load(f)
+
+        # Find and update the entry
+        entry_found = False
+        for entry in entities_data:
+            if entry.get('entry') == entry_number:
+                active_schema = entry.get('active_schema', 'radgraph')
+                if 'ground_truths' not in entry:
+                    entry['ground_truths'] = {}
+                if active_schema not in entry['ground_truths']:
+                    entry['ground_truths'][active_schema] = {"entities": [], "triplets": []}
+                if 'triplets' not in entry['ground_truths'][active_schema]:
+                    entry['ground_truths'][active_schema]['triplets'] = []
+
+                # Verify entity IDs exist
+                entity_ids = {e.get('id') for e in entry['ground_truths'][active_schema].get('entities', [])}
+                if relation['entity1_id'] not in entity_ids:
+                    return JsonResponse({'success': False, 'error': f"Entity {relation['entity1_id']} not found"}, status=400)
+                if relation['entity2_id'] not in entity_ids:
+                    return JsonResponse({'success': False, 'error': f"Entity {relation['entity2_id']} not found"}, status=400)
+
+                entry['ground_truths'][active_schema]['triplets'].append(relation)
+                entry_found = True
+                break
+
+        if not entry_found:
+            return JsonResponse({'success': False, 'error': f'Entry {entry_number} not found'}, status=404)
+
+        # Save updated data
+        with open(entities_file, 'w', encoding='utf-8') as f:
+            json.dump(entities_data, f, indent=2, ensure_ascii=False)
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Ground truth relation added successfully'
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON in request body'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Failed to add ground truth relation: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def delete_ground_truth_relation(request):
+    """Delete a ground truth relation from a specific entry."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        entry_number = data.get('entry_number')
+        relation_index = data.get('relation_index')
+
+        if entry_number is None:
+            return JsonResponse({'success': False, 'error': 'entry_number is required'}, status=400)
+
+        if relation_index is None:
+            return JsonResponse({'success': False, 'error': 'relation_index is required'}, status=400)
+
+        entities_file = PROJECT_ROOT / "entities.json"
+
+        if not entities_file.exists():
+            return JsonResponse({'success': False, 'error': 'entities.json not found'}, status=404)
+
+        with open(entities_file, 'r', encoding='utf-8') as f:
+            entities_data = json.load(f)
+
+        # Find and update the entry
+        entry_found = False
+        for entry in entities_data:
+            if entry.get('entry') == entry_number:
+                active_schema = entry.get('active_schema', 'radgraph')
+                if 'ground_truths' in entry and active_schema in entry['ground_truths'] and 'triplets' in entry['ground_truths'][active_schema]:
+                    if 0 <= relation_index < len(entry['ground_truths'][active_schema]['triplets']):
+                        del entry['ground_truths'][active_schema]['triplets'][relation_index]
+                        entry_found = True
+                    else:
+                        return JsonResponse({'success': False, 'error': 'Invalid relation_index'}, status=400)
+                break
+
+        if not entry_found:
+            return JsonResponse({'success': False, 'error': f'Entry {entry_number} not found or has no ground truth'}, status=404)
+
+        # Save updated data
+        with open(entities_file, 'w', encoding='utf-8') as f:
+            json.dump(entities_data, f, indent=2, ensure_ascii=False)
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Ground truth relation deleted successfully'
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON in request body'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Failed to delete ground truth relation: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def extract_entities_llm(request):
+    """Extract entities only using LLM (first step of two-step extraction)."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        entry_number = data.get('entry_number')
+        method_id = data.get('method_id')
+        report_text = data.get('report_text', '')
+
+        if entry_number is None:
+            return JsonResponse({'success': False, 'error': 'entry_number is required'}, status=400)
+
+        if not method_id:
+            return JsonResponse({'success': False, 'error': 'method_id is required'}, status=400)
+
+        if not report_text:
+            return JsonResponse({'success': False, 'error': 'report_text is required'}, status=400)
+
+        entities_file = PROJECT_ROOT / "entities.json"
+
+        if not entities_file.exists():
+            return JsonResponse({'success': False, 'error': 'entities.json not found'}, status=404)
+
+        # Load entities
+        with open(entities_file, 'r', encoding='utf-8') as f:
+            entities_data = json.load(f)
+
+        # Find the entry and method
+        target_entry = None
+        target_method = None
+
+        for entry in entities_data:
+            if entry.get('entry') == entry_number:
+                target_entry = entry
+                if 'extraction_methods' in entry:
+                    for schema_name, methods in entry['extraction_methods'].items():
+                        for method in methods:
+                            if method.get('id') == method_id:
+                                target_method = method
+                                break
+                        if target_method:
+                            break
+                break
+
+        if not target_entry:
+            return JsonResponse({'success': False, 'error': f'Entry {entry_number} not found'}, status=404)
+
+        if not target_method:
+            return JsonResponse({'success': False, 'error': f'Method {method_id} not found'}, status=404)
+
+        # Get schema
+        schema_name = target_method.get('schema', 'radgraph')
+
+        # Load schema
+        schemas_file = PROJECT_ROOT / "schemas.json"
+        with open(schemas_file, 'r', encoding='utf-8') as f:
+            schemas_data = json.load(f)
+
+        if schema_name not in schemas_data['schemas']:
+            return JsonResponse({'success': False, 'error': f'Schema {schema_name} not found'}, status=404)
+
+        active_schema = schemas_data['schemas'][schema_name]
+
+        # Build entity extraction prompt - filter for findings/observations only (exclude Anatomy)
+        finding_types = [et for et in active_schema['entity_types'] if 'anatomy' not in et['name'].lower()]
+
+        entity_types_text = ""
+        for i, entity_type in enumerate(finding_types, 1):
+            entity_types_text += f"{i}. **{entity_type['name']}**: {entity_type['description']}\n"
+
+        system_prompt = f"""You are a clinical information extraction system specialized in radiology reports. Extract ONLY clinical findings (not anatomical structures) from the provided radiology report.
+
+SCHEMA: {active_schema['name']}
+
+FINDING TYPES TO EXTRACT ({len(finding_types)} types):
+
+{entity_types_text}
+
+EXTRACTION INSTRUCTIONS:
+
+1. Read the radiology report carefully
+2. Extract ONLY clinical findings, observations, and abnormalities
+3. DO NOT extract anatomical structures (e.g., "lung", "heart", "liver") - only extract what is observed about them
+4. For each finding, determine its certainty level based on the report language:
+   - "Definitely Present": Confirmed findings stated with certainty
+   - "Uncertain": Findings described as possible, suspected, likely, may represent, etc.
+   - "Definitely Absent": Explicitly negated findings (no, without, absent, ruled out)
+5. Include measurements, sizes, and quantitative values as findings
+6. Extract modifiers and descriptors (e.g., "large", "mild", "stable", "new")
+
+EXAMPLES:
+- "No pneumothorax" → "pneumothorax" as Observation:Definitely Absent
+- "Possible consolidation" → "consolidation" as Observation:Uncertain
+- "2.3 cm nodule" → "nodule" as Observation:Definitely Present, "2.3 cm" as Observation:Definitely Present
+- "Stable cardiomegaly" → "cardiomegaly" as Observation:Definitely Present, "stable" as Observation:Definitely Present
+
+OUTPUT FORMAT:
+
+Return a JSON array of findings. Each finding must have this exact structure:
+{{
+  "id": "e1",  // Unique ID like e1, e2, e3, etc.
+  "text": "the finding text as it appears in the report",
+  "type": "one of the finding types listed above"
+}}
+
+IMPORTANT:
+- Return ONLY the JSON array, no additional text
+- DO NOT include anatomical structures - only findings/observations
+- Ensure all JSON is valid and properly formatted
+- Extract ALL clinical findings
+- Use sequential IDs starting from e1"""
+
+        # Check if LLM server is running
+        llm_service = LlamaService()
+        if not llm_service.is_server_running():
+            return JsonResponse({'success': False, 'error': 'LLM server is not running'}, status=503)
+
+        # Build messages
+        messages = [
+            {
+                'role': 'system',
+                'content': system_prompt
+            },
+            {
+                'role': 'user',
+                'content': f"Extract all entities from this radiology report:\n\n{report_text}"
+            }
+        ]
+
+        # Call LLM
+        response = requests.post(
+            f"{llm_service.base_url}/v1/chat/completions",
+            headers={'Content-Type': 'application/json'},
+            json={
+                'messages': messages,
+                'temperature': 0.1,
+                'max_tokens': 2000
+            },
+            timeout=120
+        )
+
+        if response.status_code != 200:
+            return JsonResponse({'success': False, 'error': f'LLM request failed: {response.text}'}, status=500)
+
+        result = response.json()
+        generated_text = result['choices'][0]['message']['content']
+
+        # Parse JSON response
+        try:
+            import re
+            json_match = re.search(r'\[.*\]', generated_text, re.DOTALL)
+            if json_match:
+                entities = json.loads(json_match.group())
+            else:
+                entities = json.loads(generated_text)
+
+            # Validate entity structure
+            if not isinstance(entities, list):
+                return JsonResponse({
+                    'success': False,
+                    'error': 'LLM response is not a valid array of entities',
+                    'raw_response': generated_text
+                }, status=500)
+
+            # Validate each entity and ensure IDs are unique
+            required_fields = ['text', 'type']
+            seen_ids = set()
+            for i, entity in enumerate(entities):
+                if not isinstance(entity, dict):
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Entity {i} is not a valid object',
+                        'raw_response': generated_text
+                    }, status=500)
+                for field in required_fields:
+                    if field not in entity:
+                        return JsonResponse({
+                            'success': False,
+                            'error': f'Entity {i} missing required field: {field}',
+                            'raw_response': generated_text
+                        }, status=500)
+                # Ensure ID exists and is unique
+                if 'id' not in entity:
+                    entity['id'] = f"e{i+1}"
+                if entity['id'] in seen_ids:
+                    entity['id'] = f"e{len(seen_ids)+1}"
+                seen_ids.add(entity['id'])
+
+            # Save entities to method
+            target_method['entities'] = entities
+            target_method['triplets'] = []  # Clear triplets since we're re-extracting
+            target_method['timestamp'] = datetime.now().isoformat()
+
+            # Save updated data
+            with open(entities_file, 'w', encoding='utf-8') as f:
+                json.dump(entities_data, f, indent=2, ensure_ascii=False)
+
+            return JsonResponse({
+                'success': True,
+                'entities': entities,
+                'count': len(entities)
+            })
+
+        except json.JSONDecodeError as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Failed to parse LLM response as JSON: {str(e)}',
+                'raw_response': generated_text
+            }, status=500)
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON in request body'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Failed to extract entities: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def extract_relations_llm(request):
+    """Extract relations using LLM given existing entities (second step of two-step extraction)."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        entry_number = data.get('entry_number')
+        method_id = data.get('method_id')
+        report_text = data.get('report_text', '')
+
+        if entry_number is None:
+            return JsonResponse({'success': False, 'error': 'entry_number is required'}, status=400)
+
+        if not method_id:
+            return JsonResponse({'success': False, 'error': 'method_id is required'}, status=400)
+
+        if not report_text:
+            return JsonResponse({'success': False, 'error': 'report_text is required'}, status=400)
+
+        entities_file = PROJECT_ROOT / "entities.json"
+
+        if not entities_file.exists():
+            return JsonResponse({'success': False, 'error': 'entities.json not found'}, status=404)
+
+        # Load entities
+        with open(entities_file, 'r', encoding='utf-8') as f:
+            entities_data = json.load(f)
+
+        # Find the entry and method
+        target_entry = None
+        target_method = None
+
+        for entry in entities_data:
+            if entry.get('entry') == entry_number:
+                target_entry = entry
+                if 'extraction_methods' in entry:
+                    for schema_name, methods in entry['extraction_methods'].items():
+                        for method in methods:
+                            if method.get('id') == method_id:
+                                target_method = method
+                                break
+                        if target_method:
+                            break
+                break
+
+        if not target_entry:
+            return JsonResponse({'success': False, 'error': f'Entry {entry_number} not found'}, status=404)
+
+        if not target_method:
+            return JsonResponse({'success': False, 'error': f'Method {method_id} not found'}, status=404)
+
+        # Check if entities exist
+        existing_entities = target_method.get('entities', [])
+        if not existing_entities:
+            return JsonResponse({'success': False, 'error': 'No entities found. Please extract entities first.'}, status=400)
+
+        # Get schema
+        schema_name = target_method.get('schema', 'radgraph')
+
+        # Load schema
+        schemas_file = PROJECT_ROOT / "schemas.json"
+        with open(schemas_file, 'r', encoding='utf-8') as f:
+            schemas_data = json.load(f)
+
+        if schema_name not in schemas_data['schemas']:
+            return JsonResponse({'success': False, 'error': f'Schema {schema_name} not found'}, status=404)
+
+        active_schema = schemas_data['schemas'][schema_name]
+
+        # Build relation extraction prompt with entities context
+        relation_types_text = ""
+        for i, relation_type in enumerate(active_schema['relation_types'], 1):
+            relation_types_text += f"{i}. **{relation_type['name']}**: {relation_type['description']}\n"
+            if relation_type.get('valid_pairs'):
+                pairs_str = ", ".join([f"({pair[0]} → {pair[1]})" for pair in relation_type['valid_pairs'][:3]])
+                if len(relation_type['valid_pairs']) > 3:
+                    pairs_str += f" (and {len(relation_type['valid_pairs']) - 3} more)"
+                relation_types_text += f"   Valid pairs: {pairs_str}\n"
+
+        # Format entities for the prompt
+        entities_text = "EXTRACTED ENTITIES:\n"
+        for entity in existing_entities:
+            entities_text += f"- {entity['id']}: \"{entity['text']}\" (Type: {entity['type']})\n"
+
+        system_prompt = f"""You are a clinical information extraction system specialized in radiology reports. Given a list of already-extracted entities, identify the RELATIONS between them using the {active_schema['name']} schema.
+
+SCHEMA: {active_schema['name']}
+{active_schema['description']}
+
+{entities_text}
+
+RELATION TYPES ({len(active_schema['relation_types'])} types):
+
+{relation_types_text}
+
+EXTRACTION INSTRUCTIONS:
+
+1. Review the radiology report and the extracted entities
+2. Identify relationships between the given entities using the relation types above
+3. Only create relations between entities that are listed above
+4. Use the entity IDs (e1, e2, etc.) to reference entities
+5. Be thorough - identify ALL valid relations between entities
+
+OUTPUT FORMAT:
+
+Return a JSON array of relations. Each relation must have this exact structure:
+{{
+  "entity1_id": "e1",  // ID of the first entity
+  "relation_type": "one of the relation types listed above",
+  "entity2_id": "e2"   // ID of the second entity
+}}
+
+IMPORTANT:
+- Return ONLY the JSON array, no additional text
+- Ensure all JSON is valid and properly formatted
+- Only use entity IDs from the provided list
+- Create ALL valid relations between entities
+- If no relations exist, return an empty array []"""
+
+        # Check if LLM server is running
+        llm_service = LlamaService()
+        if not llm_service.is_server_running():
+            return JsonResponse({'success': False, 'error': 'LLM server is not running'}, status=503)
+
+        # Build messages
+        messages = [
+            {
+                'role': 'system',
+                'content': system_prompt
+            },
+            {
+                'role': 'user',
+                'content': f"Identify all relations between the entities in this radiology report:\n\n{report_text}"
+            }
+        ]
+
+        # Call LLM
+        response = requests.post(
+            f"{llm_service.base_url}/v1/chat/completions",
+            headers={'Content-Type': 'application/json'},
+            json={
+                'messages': messages,
+                'temperature': 0.1,
+                'max_tokens': 2000
+            },
+            timeout=120
+        )
+
+        if response.status_code != 200:
+            return JsonResponse({'success': False, 'error': f'LLM request failed: {response.text}'}, status=500)
+
+        result = response.json()
+        generated_text = result['choices'][0]['message']['content']
+
+        # Parse JSON response
+        try:
+            import re
+            json_match = re.search(r'\[.*\]', generated_text, re.DOTALL)
+            if json_match:
+                relations = json.loads(json_match.group())
+            else:
+                relations = json.loads(generated_text)
+
+            # Validate relation structure
+            if not isinstance(relations, list):
+                return JsonResponse({
+                    'success': False,
+                    'error': 'LLM response is not a valid array of relations',
+                    'raw_response': generated_text
+                }, status=500)
+
+            # Create entity ID lookup
+            valid_entity_ids = {e['id'] for e in existing_entities}
+
+            # Validate each relation
+            required_fields = ['entity1_id', 'relation_type', 'entity2_id']
+            valid_relations = []
+            for i, relation in enumerate(relations):
+                if not isinstance(relation, dict):
+                    continue
+                # Check required fields
+                if not all(field in relation for field in required_fields):
+                    continue
+                # Check entity IDs are valid
+                if relation['entity1_id'] not in valid_entity_ids:
+                    continue
+                if relation['entity2_id'] not in valid_entity_ids:
+                    continue
+                valid_relations.append(relation)
+
+            # Save relations to method
+            target_method['triplets'] = valid_relations
+            target_method['timestamp'] = datetime.now().isoformat()
+
+            # Save updated data
+            with open(entities_file, 'w', encoding='utf-8') as f:
+                json.dump(entities_data, f, indent=2, ensure_ascii=False)
+
+            return JsonResponse({
+                'success': True,
+                'relations': valid_relations,
+                'count': len(valid_relations)
+            })
+
+        except json.JSONDecodeError as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Failed to parse LLM response as JSON: {str(e)}',
+                'raw_response': generated_text
+            }, status=500)
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON in request body'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Failed to extract relations: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
 def create_extraction_method(request):
     """Create a new extraction method for a specific entry."""
     try:
@@ -2190,7 +2883,12 @@ def delete_extraction_method(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def calculate_metrics(request):
-    """Calculate evaluation metrics comparing ground truth to an extraction method."""
+    """Calculate evaluation metrics comparing ground truth to an extraction method.
+
+    Returns both entity-level and triplet-level metrics:
+    - Entity metrics: precision, recall, F1 based on (text, type) matching
+    - Triplet metrics: precision, recall, F1 based on full triplet signature
+    """
     try:
         data = json.loads(request.body) if request.body else {}
         entry_number = data.get('entry_number')
@@ -2236,16 +2934,59 @@ def calculate_metrics(request):
         if not target_method:
             return JsonResponse({'success': False, 'error': f'Method {method_id} not found'}, status=404)
 
-        # Get ground truth triplets for this schema
-        ground_truth_triplets = []
+        # Get ground truth data for this schema
+        gt_data = {}
         if 'ground_truths' in target_entry and method_schema in target_entry['ground_truths']:
-            ground_truth_triplets = target_entry['ground_truths'][method_schema].get('triplets', [])
+            gt_data = target_entry['ground_truths'][method_schema]
 
-        # Get predicted triplets
+        ground_truth_entities = gt_data.get('entities', [])
+        ground_truth_triplets = gt_data.get('triplets', [])
+
+        # Get predicted data
+        predicted_entities = target_method.get('entities', [])
         predicted_triplets = target_method.get('triplets', [])
 
-        # Helper function to create triplet signature for exact matching
-        def triplet_signature(triplet):
+        # ============ ENTITY METRICS ============
+        # Entity signature: (text, type) - case-insensitive, whitespace-normalized
+        def entity_signature(entity):
+            return (
+                entity.get('text', '').lower().strip(),
+                entity.get('type', '').lower().strip()
+            )
+
+        gt_entity_set = {entity_signature(e) for e in ground_truth_entities}
+        pred_entity_set = {entity_signature(e) for e in predicted_entities}
+
+        entity_tp = len(gt_entity_set & pred_entity_set)
+        entity_fp = len(pred_entity_set - gt_entity_set)
+        entity_fn = len(gt_entity_set - pred_entity_set)
+
+        entity_precision = entity_tp / len(pred_entity_set) if len(pred_entity_set) > 0 else 0.0
+        entity_recall = entity_tp / len(gt_entity_set) if len(gt_entity_set) > 0 else 0.0
+        entity_f1 = (2 * entity_precision * entity_recall) / (entity_precision + entity_recall) if (entity_precision + entity_recall) > 0 else 0.0
+
+        # ============ TRIPLET METRICS ============
+        # Build entity lookup maps for resolving IDs to (text, type)
+        def build_entity_lookup(entities):
+            return {e.get('id'): (e.get('text', '').lower().strip(), e.get('type', '').lower().strip()) for e in entities}
+
+        gt_entity_lookup = build_entity_lookup(ground_truth_entities)
+        pred_entity_lookup = build_entity_lookup(predicted_entities)
+
+        # Triplet signature using new format (entity IDs -> resolved to text+type)
+        def triplet_signature_new(triplet, entity_lookup):
+            e1_id = triplet.get('entity1_id', '')
+            e2_id = triplet.get('entity2_id', '')
+            e1 = entity_lookup.get(e1_id, ('', ''))
+            e2 = entity_lookup.get(e2_id, ('', ''))
+            return (
+                e1[0], e1[1],  # entity1 text, type
+                triplet.get('relation_type', '').lower().strip(),
+                e2[0], e2[1]   # entity2 text, type
+            )
+
+        # Legacy triplet signature (old format with inline entity data)
+        def triplet_signature_legacy(triplet):
             return (
                 triplet.get('entity1_text', '').lower().strip(),
                 triplet.get('entity1_type', '').lower().strip(),
@@ -2254,30 +2995,53 @@ def calculate_metrics(request):
                 triplet.get('entity2_type', '').lower().strip()
             )
 
-        # Create sets of triplet signatures
-        ground_truth_set = {triplet_signature(t) for t in ground_truth_triplets}
-        predicted_set = {triplet_signature(t) for t in predicted_triplets}
+        # Determine format and create triplet sets
+        def create_triplet_set(triplets, entity_lookup):
+            result = set()
+            for t in triplets:
+                # Check if new format (has entity IDs)
+                if 'entity1_id' in t and 'entity2_id' in t:
+                    sig = triplet_signature_new(t, entity_lookup)
+                else:
+                    # Legacy format
+                    sig = triplet_signature_legacy(t)
+                result.add(sig)
+            return result
 
-        # Calculate metrics
-        true_positives = len(ground_truth_set & predicted_set)
-        false_positives = len(predicted_set - ground_truth_set)
-        false_negatives = len(ground_truth_set - predicted_set)
+        gt_triplet_set = create_triplet_set(ground_truth_triplets, gt_entity_lookup)
+        pred_triplet_set = create_triplet_set(predicted_triplets, pred_entity_lookup)
 
-        precision = true_positives / len(predicted_set) if len(predicted_set) > 0 else 0.0
-        recall = true_positives / len(ground_truth_set) if len(ground_truth_set) > 0 else 0.0
-        f1_score = (2 * precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
+        triplet_tp = len(gt_triplet_set & pred_triplet_set)
+        triplet_fp = len(pred_triplet_set - gt_triplet_set)
+        triplet_fn = len(gt_triplet_set - pred_triplet_set)
+
+        triplet_precision = triplet_tp / len(pred_triplet_set) if len(pred_triplet_set) > 0 else 0.0
+        triplet_recall = triplet_tp / len(gt_triplet_set) if len(gt_triplet_set) > 0 else 0.0
+        triplet_f1 = (2 * triplet_precision * triplet_recall) / (triplet_precision + triplet_recall) if (triplet_precision + triplet_recall) > 0 else 0.0
 
         return JsonResponse({
             'success': True,
             'metrics': {
-                'precision': round(precision, 4),
-                'recall': round(recall, 4),
-                'f1_score': round(f1_score, 4),
-                'true_positives': true_positives,
-                'false_positives': false_positives,
-                'false_negatives': false_negatives,
-                'ground_truth_count': len(ground_truth_triplets),
-                'predicted_count': len(predicted_triplets)
+                'entity': {
+                    'precision': round(entity_precision, 4),
+                    'recall': round(entity_recall, 4),
+                    'f1_score': round(entity_f1, 4),
+                    'true_positives': entity_tp,
+                    'false_positives': entity_fp,
+                    'false_negatives': entity_fn,
+                    'ground_truth_count': len(ground_truth_entities),
+                    'predicted_count': len(predicted_entities)
+                },
+                'triplet': {
+                    'precision': round(triplet_precision, 4),
+                    'recall': round(triplet_recall, 4),
+                    'f1_score': round(triplet_f1, 4),
+                    'true_positives': triplet_tp,
+                    'false_positives': triplet_fp,
+                    'false_negatives': triplet_fn,
+                    'ground_truth_count': len(ground_truth_triplets),
+                    'predicted_count': len(predicted_triplets)
+                }
             }
         })
 

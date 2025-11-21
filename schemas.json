@@ -42,6 +42,10 @@
             [
               "Observation:Uncertain",
               "Observation:Definitely Present"
+            ],
+            [
+              "Observation:Uncertain",
+              "Observation:Uncertain"
             ]
           ]
         },
@@ -72,8 +76,20 @@
               "Observation:Definitely Present"
             ],
             [
+              "Observation:Definitely Present",
+              "Observation:Uncertain"
+            ],
+            [
+              "Observation:Definitely Present",
+              "Observation:Definitely Absent"
+            ],
+            [
               "Observation:Uncertain",
               "Observation:Uncertain"
+            ],
+            [
+              "Observation:Definitely Absent",
+              "Observation:Definitely Absent"
             ],
             [
               "Anatomy",

@@ -24,12 +24,22 @@ urlpatterns = [
     path('entities/', views.get_entities, name='get_entities'),
     path('save-entities/', views.save_entities, name='save_entities'),
     path('extract-entities-relations/', views.extract_entities_relations, name='extract_entities_relations'),
-    # Ground Truth and Extraction Methods
+    # Ground Truth - Entities and Relations (new entity-first workflow)
+    path('add-ground-truth-entity/', views.add_ground_truth_entity, name='add_ground_truth_entity'),
+    path('delete-ground-truth-entity/', views.delete_ground_truth_entity, name='delete_ground_truth_entity'),
+    path('add-ground-truth-relation/', views.add_ground_truth_relation, name='add_ground_truth_relation'),
+    path('delete-ground-truth-relation/', views.delete_ground_truth_relation, name='delete_ground_truth_relation'),
+    # Legacy triplet endpoints (for backward compatibility)
     path('add-ground-truth-triplet/', views.add_ground_truth_triplet, name='add_ground_truth_triplet'),
     path('delete-ground-truth-triplet/', views.delete_ground_truth_triplet, name='delete_ground_truth_triplet'),
+    # Extraction Methods
     path('create-extraction-method/', views.create_extraction_method, name='create_extraction_method'),
     path('run-extraction-method/', views.run_extraction_method, name='run_extraction_method'),
     path('delete-extraction-method/', views.delete_extraction_method, name='delete_extraction_method'),
+    # Two-step LLM extraction
+    path('extract-entities-llm/', views.extract_entities_llm, name='extract_entities_llm'),
+    path('extract-relations-llm/', views.extract_relations_llm, name='extract_relations_llm'),
+    # Metrics
     path('calculate-metrics/', views.calculate_metrics, name='calculate_metrics'),
     path('schemas/', views.get_schemas, name='get_schemas'),
     path('active-schema/', views.get_active_schema, name='get_active_schema'),

@@ -699,25 +699,25 @@
                                 <button
                                     id="json-view-btn"
                                     onclick="switchEntryView('json')"
-                                    style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s;"
+                                    style="padding: 6px 12px; background: #e5e7eb; color: #6b7280; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s;"
                                 >
                                     JSON View
                                 </button>
                                 <button
                                     id="text-view-btn"
                                     onclick="switchEntryView('text')"
-                                    style="padding: 6px 12px; background: #e5e7eb; color: #6b7280; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s;"
+                                    style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s;"
                                 >
                                     Report View
                                 </button>
                             </div>
 
-                            <div id="json-view-label" style="font-size: 0.85em; color: #6b7280; margin-bottom: 10px;">Entry Data (JSON):</div>
-                            <div id="text-view-label" style="font-size: 0.85em; color: #6b7280; margin-bottom: 10px; display: none;">Entry Data (Report):</div>
+                            <div id="json-view-label" style="font-size: 0.85em; color: #6b7280; margin-bottom: 10px; display: none;">Entry Data (JSON):</div>
+                            <div id="text-view-label" style="font-size: 0.85em; color: #6b7280; margin-bottom: 10px;">Entry Data (Report):</div>
 
-                            <pre id="csv-entry-display" style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 0.85em; line-height: 1.5; height: 400px; overflow-y: scroll; overflow-x: hidden; color: #1f2937; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;">No entry loaded</pre>
+                            <pre id="csv-entry-display" style="display: none; background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 0.85em; line-height: 1.5; height: 400px; overflow-y: scroll; overflow-x: hidden; color: #1f2937; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;">No entry loaded</pre>
 
-                            <div id="csv-entry-text-display" style="display: none; background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 1.02em; line-height: 1.6; height: 400px; overflow-y: scroll; overflow-x: hidden; color: #1f2937; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;">No entry loaded</div>
+                            <div id="csv-entry-text-display" style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 1.02em; line-height: 1.6; height: 400px; overflow-y: scroll; overflow-x: hidden; color: #1f2937; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;">No entry loaded</div>
                         </div>
 
                         <!-- Annotation & Extraction Section -->
@@ -777,75 +777,104 @@
                             <!-- Ground Truth Tab Content -->
                             <div id="ground-truth-tab" class="annotation-tab-content" style="display: block;">
 
-                                <!-- Manual Annotation Form -->
+                                <!-- Step 1: Add Entity Form -->
                                 <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
                                     <div style="font-weight: 500; color: #374151; margin-bottom: 12px; font-size: 0.95em;">
-                                        Add Ground Truth Triplet
+                                        Step 1: Add Entities
                                     </div>
 
-                                    <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: end;">
-                                        <!-- Entity 1 -->
-                                        <div>
-                                            <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Entity 1 Text</label>
+                                    <div style="display: flex; gap: 10px; align-items: end;">
+                                        <div style="flex: 2;">
+                                            <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Entity Text</label>
                                             <input
-                                                id="gt-entity1-text"
+                                                id="gt-entity-text"
                                                 type="text"
                                                 placeholder="e.g., lung opacity"
                                                 style="width: 100%; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9em;"
                                             />
+                                        </div>
+                                        <div style="flex: 1;">
+                                            <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Entity Type</label>
                                             <select
-                                                id="gt-entity1-type"
-                                                style="width: 100%; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em; margin-top: 6px; background: white;"
+                                                id="gt-entity-type"
+                                                style="width: 100%; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em; background: white;"
                                             >
                                                 <option value="">Select type...</option>
                                             </select>
                                         </div>
-
-                                        <!-- Relation -->
-                                        <div style="text-align: center; padding-bottom: 35px;">
-                                            <div style="font-size: 1.2em; color: #9ca3af;">→</div>
-                                            <select
-                                                id="gt-relation-type"
-                                                style="width: 120px; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em; margin-top: 6px; background: white;"
-                                            >
-                                                <option value="">Relation...</option>
-                                            </select>
-                                        </div>
-
-                                        <!-- Entity 2 -->
-                                        <div>
-                                            <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Entity 2 Text</label>
-                                            <input
-                                                id="gt-entity2-text"
-                                                type="text"
-                                                placeholder="e.g., left lung"
-                                                style="width: 100%; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9em;"
-                                            />
-                                            <select
-                                                id="gt-entity2-type"
-                                                style="width: 100%; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em; margin-top: 6px; background: white;"
-                                            >
-                                                <option value="">Select type...</option>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
                                         <button
-                                            onclick="addGroundTruthTriplet()"
+                                            onclick="addGroundTruthEntity()"
                                             style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: background 0.2s;"
                                             onmouseover="this.style.background='#059669'"
                                             onmouseout="this.style.background='#10b981'"
                                         >
-                                            Add Triplet
+                                            Add Entity
                                         </button>
                                     </div>
                                 </div>
 
-                                <!-- Ground Truth Triplets Display -->
-                                <div id="ground-truth-container" style="display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto;">
-                                    <div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">
-                                        No ground truth annotations yet. Add triplets using the form above.
+                                <!-- Ground Truth Entities Display -->
+                                <div style="margin-bottom: 15px;">
+                                    <div style="font-weight: 500; color: #374151; margin-bottom: 8px; font-size: 0.9em;">
+                                        Entities (<span id="gt-entity-count">0</span>)
+                                    </div>
+                                    <div id="gt-entities-container" style="display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; background: #f9fafb; border-radius: 6px; min-height: 40px; max-height: 150px; overflow-y: auto;">
+                                        <div style="color: #6b7280; font-size: 0.85em;">No entities yet.</div>
+                                    </div>
+                                </div>
+
+                                <!-- Step 2: Add Relation Form -->
+                                <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
+                                    <div style="font-weight: 500; color: #374151; margin-bottom: 12px; font-size: 0.95em;">
+                                        Step 2: Add Relations
+                                    </div>
+
+                                    <div style="display: flex; gap: 10px; align-items: end;">
+                                        <div style="flex: 1;">
+                                            <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Entity 1</label>
+                                            <select
+                                                id="gt-relation-entity1"
+                                                style="width: 100%; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em; background: white;"
+                                            >
+                                                <option value="">Select entity...</option>
+                                            </select>
+                                        </div>
+                                        <div style="flex-shrink: 0;">
+                                            <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Relation</label>
+                                            <select
+                                                id="gt-relation-type"
+                                                style="width: 120px; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em; background: white;"
+                                            >
+                                                <option value="">Relation...</option>
+                                            </select>
+                                        </div>
+                                        <div style="flex: 1;">
+                                            <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Entity 2</label>
+                                            <select
+                                                id="gt-relation-entity2"
+                                                style="width: 100%; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em; background: white;"
+                                            >
+                                                <option value="">Select entity...</option>
+                                            </select>
+                                        </div>
+                                        <button
+                                            onclick="addGroundTruthRelation()"
+                                            style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: background 0.2s;"
+                                            onmouseover="this.style.background='#2563eb'"
+                                            onmouseout="this.style.background='#3b82f6'"
+                                        >
+                                            Add Relation
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Ground Truth Relations Display -->
+                                <div>
+                                    <div style="font-weight: 500; color: #374151; margin-bottom: 8px; font-size: 0.9em;">
+                                        Relations (<span id="gt-relation-count">0</span>)
+                                    </div>
+                                    <div id="gt-relations-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto;">
+                                        <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">No relations yet.</div>
                                     </div>
                                 </div>
 
@@ -853,29 +882,45 @@
 
                             <!-- Auto-Extracted Tab Content -->
                             <div id="auto-extracted-tab" class="annotation-tab-content" style="display: none;">
-                                <!-- Extraction prompt selector -->
-                                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px;">
-                                    <div style="font-weight: 400; color: #374151; font-size: 1.05em; white-space: nowrap; width: 150px;">Extraction Prompt:</div>
-                                    <select id="auto-extracted-prompt" onchange="updateAutoExtractedPrompt()" style="flex: 1; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9em; background: white; cursor: pointer;">
-                                    </select>
-                                </div>
-
-                                <!-- Extract button -->
-                                <div style="margin-bottom: 15px;">
+                                <!-- Two-step extraction buttons -->
+                                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                                     <button
-                                        onclick="runAutoExtraction()"
-                                        style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: background 0.2s;"
+                                        id="extract-entities-btn"
+                                        onclick="runEntityExtraction()"
+                                        style="flex: 1; padding: 10px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: background 0.2s;"
+                                        onmouseover="this.style.background='#059669'"
+                                        onmouseout="this.style.background='#10b981'"
+                                    >
+                                        Step 1: Extract Entities
+                                    </button>
+                                    <button
+                                        id="extract-relations-btn"
+                                        onclick="runRelationExtraction()"
+                                        style="flex: 1; padding: 10px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: background 0.2s;"
                                         onmouseover="this.style.background='#2563eb'"
                                         onmouseout="this.style.background='#3b82f6'"
                                     >
-                                        Run Extraction
+                                        Step 2: Extract Relations
                                     </button>
                                 </div>
 
-                                <!-- Auto-extracted triplets display -->
-                                <div id="auto-extracted-container" style="display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto;">
-                                    <div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">
-                                        No auto-extracted annotations yet. Run extraction using the button above.
+                                <!-- Extracted Entities Display -->
+                                <div style="margin-bottom: 15px;">
+                                    <div style="font-weight: 500; color: #374151; margin-bottom: 8px; font-size: 0.9em;">
+                                        Extracted Entities (<span id="auto-entity-count">0</span>)
+                                    </div>
+                                    <div id="auto-entities-container" style="display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; background: #f9fafb; border-radius: 6px; min-height: 40px; max-height: 150px; overflow-y: auto;">
+                                        <div style="color: #6b7280; font-size: 0.85em;">No entities extracted yet. Click "Extract Entities" to start.</div>
+                                    </div>
+                                </div>
+
+                                <!-- Extracted Relations Display -->
+                                <div>
+                                    <div style="font-weight: 500; color: #374151; margin-bottom: 8px; font-size: 0.9em;">
+                                        Extracted Relations (<span id="auto-relation-count">0</span>)
+                                    </div>
+                                    <div id="auto-relations-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto;">
+                                        <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">No relations extracted yet. Extract entities first, then click "Extract Relations".</div>
                                     </div>
                                 </div>
                             </div>
@@ -1622,6 +1667,7 @@
         let currentEntryData = null;
         let currentEntry = null;
         let extractionPromptsData = null;
+        let currentReportText = '';
 
         async function loadCsvEntry() {
             const entryNumberInput = document.getElementById('entry-number');
@@ -1679,9 +1725,20 @@
 
                         textDisplayArea.textContent = textContent || 'No content';
                         textDisplayArea.style.color = '#1f2937';
+                        currentReportText = textContent || '';
+
+                        // Render ground truth UI (check if functions exist first)
+                        if (typeof renderGroundTruthEntities === 'function') {
+                            renderGroundTruthEntities();
+                            renderGroundTruthRelations();
+                            updateEntityDropdowns();
+                            renderAutoExtractedEntities();
+                            renderAutoExtractedRelations();
+                        }
                     } else {
                         textDisplayArea.textContent = 'No fields found';
                         textDisplayArea.style.color = '#6b7280';
+                        currentReportText = '';
                     }
                 } else {
                     jsonDisplayArea.textContent = `Error: ${data.error}`;
@@ -2866,23 +2923,19 @@
         function populateEntityTypeDropdowns() {
             if (!activeSchema) return;
 
-            const dropdowns = [
-                document.getElementById('gt-entity1-type'),
-                document.getElementById('gt-entity2-type')
-            ];
+            // Entity type dropdown for adding entities
+            const entityTypeDropdown = document.getElementById('gt-entity-type');
+            if (entityTypeDropdown) {
+                entityTypeDropdown.innerHTML = '<option value="">Select type...</option>';
+                activeSchema.entity_types.forEach(et => {
+                    const option = document.createElement('option');
+                    option.value = et.name;
+                    option.textContent = et.name;
+                    entityTypeDropdown.appendChild(option);
+                });
+            }
 
-            dropdowns.forEach(dropdown => {
-                if (dropdown) {
-                    dropdown.innerHTML = '<option value="">Select type...</option>';
-                    activeSchema.entity_types.forEach(et => {
-                        const option = document.createElement('option');
-                        option.value = et.name;
-                        option.textContent = et.name;
-                        dropdown.appendChild(option);
-                    });
-                }
-            });
-
+            // Relation type dropdown
             const relationDropdown = document.getElementById('gt-relation-type');
             if (relationDropdown) {
                 relationDropdown.innerHTML = '<option value="">Relation...</option>';
@@ -2893,6 +2946,560 @@
                     relationDropdown.appendChild(option);
                 });
             }
+
+            // Update entity dropdowns for relation form
+            updateEntityDropdowns();
+        }
+
+        // Update entity dropdowns in the relation form based on current entities
+        function updateEntityDropdowns() {
+            const entity1Dropdown = document.getElementById('gt-relation-entity1');
+            const entity2Dropdown = document.getElementById('gt-relation-entity2');
+
+            if (!entity1Dropdown || !entity2Dropdown) return;
+
+            const entryData = getEntityEntryData(currentEntry);
+            const currentSchema = entryData?.active_schema || activeSchemaName || 'radgraph';
+            const entities = entryData?.ground_truths?.[currentSchema]?.entities || [];
+
+            const baseHtml = '<option value="">Select entity...</option>';
+            let optionsHtml = baseHtml;
+
+            entities.forEach(e => {
+                const color = getEntityTypeColor(e.type);
+                optionsHtml += `<option value="${e.id}" style="color: ${color};">[${e.id}] ${escapeHtml(e.text)} (${e.type})</option>`;
+            });
+
+            entity1Dropdown.innerHTML = optionsHtml;
+            entity2Dropdown.innerHTML = optionsHtml;
+        }
+
+        // Add ground truth entity
+        async function addGroundTruthEntity() {
+            if (!currentEntry) {
+                alert('Please select a CSV entry first');
+                return;
+            }
+
+            const entityText = document.getElementById('gt-entity-text').value.trim();
+            const entityType = document.getElementById('gt-entity-type').value;
+
+            if (!entityText || !entityType) {
+                alert('Please fill in both entity text and type');
+                return;
+            }
+
+            const entity = {
+                text: entityText,
+                type: entityType
+            };
+
+            try {
+                const response = await fetch('/llm/add-ground-truth-entity/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        entity: entity
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Update local data
+                    const entryData = ensureEntityEntryExists(currentEntry);
+                    const currentSchema = entryData.active_schema || activeSchemaName || 'radgraph';
+                    if (!entryData.ground_truths[currentSchema]) {
+                        entryData.ground_truths[currentSchema] = {entities: [], triplets: []};
+                    }
+                    if (!entryData.ground_truths[currentSchema].entities) {
+                        entryData.ground_truths[currentSchema].entities = [];
+                    }
+                    entity.id = result.entity_id;
+                    entryData.ground_truths[currentSchema].entities.push(entity);
+
+                    // Clear form
+                    document.getElementById('gt-entity-text').value = '';
+                    document.getElementById('gt-entity-type').value = '';
+
+                    // Re-render
+                    renderGroundTruthEntities();
+                    updateEntityDropdowns();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error adding entity: ' + error.message);
+            }
+        }
+
+        // Delete ground truth entity
+        async function deleteGroundTruthEntity(entityId) {
+            if (!currentEntry) return;
+
+            try {
+                const response = await fetch('/llm/delete-ground-truth-entity/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        entity_id: entityId
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Update local data
+                    const entryData = getEntityEntryData(currentEntry);
+                    const currentSchema = entryData?.active_schema || activeSchemaName || 'radgraph';
+                    if (entryData?.ground_truths?.[currentSchema]?.entities) {
+                        entryData.ground_truths[currentSchema].entities =
+                            entryData.ground_truths[currentSchema].entities.filter(e => e.id !== entityId);
+                        // Also remove related relations
+                        if (entryData.ground_truths[currentSchema].triplets) {
+                            entryData.ground_truths[currentSchema].triplets =
+                                entryData.ground_truths[currentSchema].triplets.filter(
+                                    t => t.entity1_id !== entityId && t.entity2_id !== entityId
+                                );
+                        }
+                    }
+
+                    // Re-render
+                    renderGroundTruthEntities();
+                    renderGroundTruthRelations();
+                    updateEntityDropdowns();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error deleting entity: ' + error.message);
+            }
+        }
+
+        // Add ground truth relation
+        async function addGroundTruthRelation() {
+            if (!currentEntry) {
+                alert('Please select a CSV entry first');
+                return;
+            }
+
+            const entity1Id = document.getElementById('gt-relation-entity1').value;
+            const relationType = document.getElementById('gt-relation-type').value;
+            const entity2Id = document.getElementById('gt-relation-entity2').value;
+
+            if (!entity1Id || !relationType || !entity2Id) {
+                alert('Please select both entities and a relation type');
+                return;
+            }
+
+            const relation = {
+                entity1_id: entity1Id,
+                relation_type: relationType,
+                entity2_id: entity2Id
+            };
+
+            try {
+                const response = await fetch('/llm/add-ground-truth-relation/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        relation: relation
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Update local data
+                    const entryData = ensureEntityEntryExists(currentEntry);
+                    const currentSchema = entryData.active_schema || activeSchemaName || 'radgraph';
+                    if (!entryData.ground_truths[currentSchema]) {
+                        entryData.ground_truths[currentSchema] = {entities: [], triplets: []};
+                    }
+                    if (!entryData.ground_truths[currentSchema].triplets) {
+                        entryData.ground_truths[currentSchema].triplets = [];
+                    }
+                    entryData.ground_truths[currentSchema].triplets.push(relation);
+
+                    // Clear form
+                    document.getElementById('gt-relation-entity1').value = '';
+                    document.getElementById('gt-relation-type').value = '';
+                    document.getElementById('gt-relation-entity2').value = '';
+
+                    // Re-render
+                    renderGroundTruthRelations();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error adding relation: ' + error.message);
+            }
+        }
+
+        // Delete ground truth relation
+        async function deleteGroundTruthRelation(relationIndex) {
+            if (!currentEntry) return;
+
+            try {
+                const response = await fetch('/llm/delete-ground-truth-relation/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        relation_index: relationIndex
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Update local data
+                    const entryData = getEntityEntryData(currentEntry);
+                    const currentSchema = entryData?.active_schema || activeSchemaName || 'radgraph';
+                    if (entryData?.ground_truths?.[currentSchema]?.triplets) {
+                        entryData.ground_truths[currentSchema].triplets.splice(relationIndex, 1);
+                    }
+
+                    // Re-render
+                    renderGroundTruthRelations();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error deleting relation: ' + error.message);
+            }
+        }
+
+        // Render ground truth entities
+        function renderGroundTruthEntities() {
+            const container = document.getElementById('gt-entities-container');
+            const countSpan = document.getElementById('gt-entity-count');
+            if (!container) return;
+
+            const entryData = getEntityEntryData(currentEntry);
+            const currentSchema = entryData?.active_schema || activeSchemaName || 'radgraph';
+            const entities = entryData?.ground_truths?.[currentSchema]?.entities || [];
+
+            if (countSpan) countSpan.textContent = entities.length;
+
+            if (entities.length === 0) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.85em;">No entities yet.</div>';
+                return;
+            }
+
+            let html = '';
+            entities.forEach(e => {
+                const color = getEntityTypeColor(e.type);
+                html += `<div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: white; border: 1px solid ${color}; border-radius: 16px; font-size: 0.85em;">
+                    <span style="font-weight: 500; color: ${color};">[${e.id}]</span>
+                    <span style="color: #374151;">${escapeHtml(e.text)}</span>
+                    <span style="color: ${color}; font-size: 0.8em;">(${e.type})</span>
+                    <button onclick="deleteGroundTruthEntity('${e.id}')" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0 2px; font-size: 1em;">&times;</button>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        // Render ground truth relations
+        function renderGroundTruthRelations() {
+            const container = document.getElementById('gt-relations-container');
+            const countSpan = document.getElementById('gt-relation-count');
+            if (!container) return;
+
+            const entryData = getEntityEntryData(currentEntry);
+            const currentSchema = entryData?.active_schema || activeSchemaName || 'radgraph';
+            const relations = entryData?.ground_truths?.[currentSchema]?.triplets || [];
+            const entities = entryData?.ground_truths?.[currentSchema]?.entities || [];
+
+            if (countSpan) countSpan.textContent = relations.length;
+
+            if (relations.length === 0) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">No relations yet.</div>';
+                return;
+            }
+
+            // Build entity lookup
+            const entityLookup = {};
+            entities.forEach(e => { entityLookup[e.id] = e; });
+
+            let html = '';
+            relations.forEach((rel, index) => {
+                const e1 = entityLookup[rel.entity1_id] || { text: rel.entity1_id, type: '?' };
+                const e2 = entityLookup[rel.entity2_id] || { text: rel.entity2_id, type: '?' };
+                const color1 = getEntityTypeColor(e1.type);
+                const color2 = getEntityTypeColor(e2.type);
+
+                html += `<div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f9fafb; border-radius: 4px; font-size: 0.85em;">
+                    <span style="flex: 2; color: ${color1};">[${rel.entity1_id}] ${escapeHtml(e1.text)}</span>
+                    <span style="flex-shrink: 0; background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 4px; font-size: 0.9em;">${rel.relation_type}</span>
+                    <span style="flex: 2; color: ${color2};">[${rel.entity2_id}] ${escapeHtml(e2.text)}</span>
+                    <button onclick="deleteGroundTruthRelation(${index})" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0 4px; font-size: 1em;">&times;</button>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        // Ensure an extraction method exists, create one if not
+        async function ensureExtractionMethodExists() {
+            if (activeMethodId) return true;
+
+            const entryData = ensureEntityEntryExists(currentEntry);
+            const currentSchema = entryData.active_schema || activeSchemaName || 'radgraph';
+
+            try {
+                const createResponse = await fetch('/llm/create-extraction-method/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        method_name: 'Auto Extraction',
+                        schema: currentSchema,
+                        prompt: 'default_schema_based'
+                    })
+                });
+                const createResult = await createResponse.json();
+                if (createResult.success) {
+                    activeMethodId = createResult.method_id;
+                    if (!entryData.extraction_methods) {
+                        entryData.extraction_methods = {};
+                    }
+                    if (!entryData.extraction_methods[currentSchema]) {
+                        entryData.extraction_methods[currentSchema] = [];
+                    }
+                    entryData.extraction_methods[currentSchema].push({
+                        id: activeMethodId,
+                        name: 'Auto Extraction',
+                        schema: currentSchema,
+                        prompt: 'default_schema_based',
+                        entities: [],
+                        triplets: []
+                    });
+                    return true;
+                } else {
+                    alert('Failed to create extraction method: ' + createResult.error);
+                    return false;
+                }
+            } catch (error) {
+                alert('Error creating extraction method: ' + error.message);
+                return false;
+            }
+        }
+
+        // Run entity extraction (LLM)
+        async function runEntityExtraction() {
+            if (!currentEntry) {
+                alert('Please select a CSV entry first');
+                return;
+            }
+
+            const reportText = currentReportText;
+            if (!reportText) {
+                alert('No report text available');
+                return;
+            }
+
+            // Auto-create extraction method if needed
+            if (!await ensureExtractionMethodExists()) {
+                return;
+            }
+
+            const btn = document.getElementById('extract-entities-btn');
+            const originalText = btn.textContent;
+            btn.textContent = 'Extracting...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/llm/extract-entities-llm/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        method_id: activeMethodId,
+                        report_text: reportText
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Update local data
+                    const entryData = getEntityEntryData(currentEntry);
+                    if (entryData?.extraction_methods) {
+                        for (const schema in entryData.extraction_methods) {
+                            const method = entryData.extraction_methods[schema].find(m => m.id === activeMethodId);
+                            if (method) {
+                                method.entities = result.entities;
+                                method.triplets = [];
+                                break;
+                            }
+                        }
+                    }
+
+                    // Re-render
+                    renderAutoExtractedEntities();
+                    renderAutoExtractedRelations();
+                    alert(`Extracted ${result.count} entities`);
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error extracting entities: ' + error.message);
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // Run relation extraction (LLM)
+        async function runRelationExtraction() {
+            if (!currentEntry) {
+                alert('Please select a CSV entry first');
+                return;
+            }
+
+            if (!activeMethodId) {
+                alert('Please extract entities first');
+                return;
+            }
+
+            const reportText = currentReportText;
+            if (!reportText) {
+                alert('No report text available');
+                return;
+            }
+
+            const btn = document.getElementById('extract-relations-btn');
+            const originalText = btn.textContent;
+            btn.textContent = 'Extracting...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/llm/extract-relations-llm/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        method_id: activeMethodId,
+                        report_text: reportText
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Update local data
+                    const entryData = getEntityEntryData(currentEntry);
+                    if (entryData?.extraction_methods) {
+                        for (const schema in entryData.extraction_methods) {
+                            const method = entryData.extraction_methods[schema].find(m => m.id === activeMethodId);
+                            if (method) {
+                                method.triplets = result.relations;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Re-render
+                    renderAutoExtractedRelations();
+                    alert(`Extracted ${result.count} relations`);
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error extracting relations: ' + error.message);
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // Render auto-extracted entities
+        function renderAutoExtractedEntities() {
+            const container = document.getElementById('auto-entities-container');
+            const countSpan = document.getElementById('auto-entity-count');
+            if (!container) return;
+
+            const entryData = getEntityEntryData(currentEntry);
+            let entities = [];
+
+            if (entryData?.extraction_methods && activeMethodId) {
+                for (const schema in entryData.extraction_methods) {
+                    const method = entryData.extraction_methods[schema].find(m => m.id === activeMethodId);
+                    if (method) {
+                        entities = method.entities || [];
+                        break;
+                    }
+                }
+            }
+
+            if (countSpan) countSpan.textContent = entities.length;
+
+            if (entities.length === 0) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.85em;">No entities extracted yet. Click "Extract Entities" to start.</div>';
+                return;
+            }
+
+            let html = '';
+            entities.forEach(e => {
+                const color = getEntityTypeColor(e.type);
+                html += `<div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: white; border: 1px solid ${color}; border-radius: 16px; font-size: 0.85em;">
+                    <span style="font-weight: 500; color: ${color};">[${e.id}]</span>
+                    <span style="color: #374151;">${escapeHtml(e.text)}</span>
+                    <span style="color: ${color}; font-size: 0.8em;">(${e.type})</span>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        // Render auto-extracted relations
+        function renderAutoExtractedRelations() {
+            const container = document.getElementById('auto-relations-container');
+            const countSpan = document.getElementById('auto-relation-count');
+            if (!container) return;
+
+            const entryData = getEntityEntryData(currentEntry);
+            let relations = [];
+            let entities = [];
+
+            if (entryData?.extraction_methods && activeMethodId) {
+                for (const schema in entryData.extraction_methods) {
+                    const method = entryData.extraction_methods[schema].find(m => m.id === activeMethodId);
+                    if (method) {
+                        relations = method.triplets || [];
+                        entities = method.entities || [];
+                        break;
+                    }
+                }
+            }
+
+            if (countSpan) countSpan.textContent = relations.length;
+
+            if (relations.length === 0) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">No relations extracted yet. Extract entities first, then click "Extract Relations".</div>';
+                return;
+            }
+
+            // Build entity lookup
+            const entityLookup = {};
+            entities.forEach(e => { entityLookup[e.id] = e; });
+
+            let html = '';
+            relations.forEach((rel, index) => {
+                const e1 = entityLookup[rel.entity1_id] || { text: rel.entity1_id, type: '?' };
+                const e2 = entityLookup[rel.entity2_id] || { text: rel.entity2_id, type: '?' };
+                const color1 = getEntityTypeColor(e1.type);
+                const color2 = getEntityTypeColor(e2.type);
+
+                html += `<div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f9fafb; border-radius: 4px; font-size: 0.85em;">
+                    <span style="flex: 2; color: ${color1};">[${rel.entity1_id}] ${escapeHtml(e1.text)}</span>
+                    <span style="flex-shrink: 0; background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 4px; font-size: 0.9em;">${rel.relation_type}</span>
+                    <span style="flex: 2; color: ${color2};">[${rel.entity2_id}] ${escapeHtml(e2.text)}</span>
+                </div>`;
+            });
+            container.innerHTML = html;
         }
 
         // Add ground truth triplet
@@ -3001,49 +3608,12 @@
 
         // Render ground truth tab
         function renderGroundTruthTab() {
-            const container = document.getElementById('ground-truth-container');
-
-            if (!currentEntry) {
-                container.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">Select an entry to view ground truth</div>';
-                return;
+            // Use the new entity-first render functions
+            if (typeof renderGroundTruthEntities === 'function') {
+                renderGroundTruthEntities();
+                renderGroundTruthRelations();
+                updateEntityDropdowns();
             }
-
-            const entryData = ensureEntityEntryExists(currentEntry);
-            const currentSchema = entryData.active_schema || activeSchemaName || 'radgraph';
-            const triplets = (entryData.ground_truths && entryData.ground_truths[currentSchema])
-                ? entryData.ground_truths[currentSchema].triplets || []
-                : [];
-
-            if (triplets.length === 0) {
-                container.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">No ground truth annotations yet. Add triplets using the form above.</div>';
-                return;
-            }
-
-            // Render triplets
-            let html = '<div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb;">';
-            html += '<div style="font-weight: 500; color: #374151; margin-bottom: 12px;">Ground Truth Triplets (' + triplets.length + ')</div>';
-            html += '<div style="display: flex; flex-direction: column; gap: 8px;">';
-
-            triplets.forEach((triplet, index) => {
-                const entity1Color = getEntityTypeColor(triplet.entity1_type);
-                const entity2Color = getEntityTypeColor(triplet.entity2_type);
-
-                html += '<div style="display: flex; align-items: center; gap: 8px; padding: 10px; background: #f9fafb; border-radius: 4px; font-size: 0.9em;">';
-                html += '<span style="flex: 2; display: flex; flex-direction: column; gap: 2px;">';
-                html += '<span style="font-weight: 500; color: #1f2937;">' + escapeHtml(triplet.entity1_text) + '</span>';
-                html += '<span style="font-size: 0.75em; color: ' + entity1Color + ';">' + triplet.entity1_type + '</span>';
-                html += '</span>';
-                html += '<span style="flex: 1; text-align: center; background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: 500;">' + triplet.relation_type + '</span>';
-                html += '<span style="flex: 2; display: flex; flex-direction: column; gap: 2px;">';
-                html += '<span style="font-weight: 500; color: #1f2937;">' + escapeHtml(triplet.entity2_text) + '</span>';
-                html += '<span style="font-size: 0.75em; color: ' + entity2Color + ';">' + triplet.entity2_type + '</span>';
-                html += '</span>';
-                html += '<button onclick="deleteGroundTruthTriplet(' + index + ')" style="padding: 4px 8px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75em;">Delete</button>';
-                html += '</div>';
-            });
-
-            html += '</div></div>';
-            container.innerHTML = html;
         }
 
         // Populate extraction prompt dropdown
@@ -3160,45 +3730,11 @@
 
         // Render auto-extracted tab
         function renderAutoExtractedTab() {
-            if (!currentEntry) return;
-
-            const entryData = getEntityEntryData(currentEntry);
-            if (!entryData) return;
-
-            const currentSchema = entryData.active_schema || activeSchemaName || 'radgraph';
-            const triplets = entryData.auto_extracted_triplets?.[currentSchema] || [];
-
-            const container = document.getElementById('auto-extracted-container');
-            if (!container) return;
-
-            if (triplets.length === 0) {
-                container.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">No auto-extracted annotations yet. Run extraction using the button above.</div>';
-                return;
+            // Use the new entity-first render functions
+            if (typeof renderAutoExtractedEntities === 'function') {
+                renderAutoExtractedEntities();
+                renderAutoExtractedRelations();
             }
-
-            let html = '<div style="background: white; border-radius: 6px; padding: 15px;">';
-            html += '<div style="font-weight: 500; color: #374151; margin-bottom: 12px; font-size: 0.95em;">Auto-Extracted Triplets (' + triplets.length + ')</div>';
-            html += '<div style="display: flex; flex-direction: column; gap: 8px;">';
-
-            triplets.forEach((triplet, index) => {
-                const entity1Color = getEntityTypeColor(triplet.entity1_type);
-                const entity2Color = getEntityTypeColor(triplet.entity2_type);
-
-                html += '<div style="display: flex; align-items: center; gap: 8px; padding: 10px; background: #f9fafb; border-radius: 4px; font-size: 0.9em;">';
-                html += '<span style="flex: 2; display: flex; flex-direction: column; gap: 2px;">';
-                html += '<span style="font-weight: 500; color: #1f2937;">' + escapeHtml(triplet.entity1_text) + '</span>';
-                html += '<span style="font-size: 0.75em; color: ' + entity1Color + ';">' + triplet.entity1_type + '</span>';
-                html += '</span>';
-                html += '<span style="flex: 1; text-align: center; background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: 500;">' + triplet.relation_type + '</span>';
-                html += '<span style="flex: 2; display: flex; flex-direction: column; gap: 2px;">';
-                html += '<span style="font-weight: 500; color: #1f2937;">' + escapeHtml(triplet.entity2_text) + '</span>';
-                html += '<span style="font-size: 0.75em; color: ' + entity2Color + ';">' + triplet.entity2_type + '</span>';
-                html += '</span>';
-                html += '</div>';
-            });
-
-            html += '</div></div>';
-            container.innerHTML = html;
         }
 
         // Calculate metrics
@@ -3603,24 +4139,58 @@
                 if (result.success) {
                     const metrics = result.metrics;
                     let html = '<div style="background: #f0f9ff; padding: 15px; border-radius: 6px; border: 1px solid #bae6fd;">';
-                    html += '<div style="font-weight: 500; color: #374151; margin-bottom: 10px;">Evaluation Metrics (vs Ground Truth)</div>';
-                    html += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">';
-                    html += '<div style="background: white; padding: 10px; border-radius: 4px; text-align: center;">';
-                    html += '<div style="font-size: 0.75em; color: #6b7280;">Precision</div>';
-                    html += '<div style="font-size: 1.5em; font-weight: 600; color: #3b82f6;">' + (metrics.precision * 100).toFixed(1) + '%</div>';
-                    html += '</div>';
-                    html += '<div style="background: white; padding: 10px; border-radius: 4px; text-align: center;">';
-                    html += '<div style="font-size: 0.75em; color: #6b7280;">Recall</div>';
-                    html += '<div style="font-size: 1.5em; font-weight: 600; color: #10b981;">' + (metrics.recall * 100).toFixed(1) + '%</div>';
-                    html += '</div>';
-                    html += '<div style="background: white; padding: 10px; border-radius: 4px; text-align: center;">';
-                    html += '<div style="font-size: 0.75em; color: #6b7280;">F1 Score</div>';
-                    html += '<div style="font-size: 1.5em; font-weight: 600; color: #f59e0b;">' + (metrics.f1_score * 100).toFixed(1) + '%</div>';
-                    html += '</div>';
-                    html += '</div>';
-                    html += '<div style="font-size: 0.75em; color: #6b7280; margin-top: 10px; text-align: center;">';
-                    html += 'TP: ' + metrics.true_positives + ' • FP: ' + metrics.false_positives + ' • FN: ' + metrics.false_negatives;
-                    html += '</div>';
+                    html += '<div style="font-weight: 500; color: #374151; margin-bottom: 12px;">Evaluation Metrics (vs Ground Truth)</div>';
+
+                    // Entity Metrics
+                    if (metrics.entity) {
+                        html += '<div style="margin-bottom: 15px;">';
+                        html += '<div style="font-weight: 500; color: #10b981; margin-bottom: 8px; font-size: 0.9em;">Entity Metrics</div>';
+                        html += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">';
+                        html += '<div style="background: white; padding: 8px; border-radius: 4px; text-align: center;">';
+                        html += '<div style="font-size: 0.7em; color: #6b7280;">Precision</div>';
+                        html += '<div style="font-size: 1.2em; font-weight: 600; color: #10b981;">' + (metrics.entity.precision * 100).toFixed(1) + '%</div>';
+                        html += '</div>';
+                        html += '<div style="background: white; padding: 8px; border-radius: 4px; text-align: center;">';
+                        html += '<div style="font-size: 0.7em; color: #6b7280;">Recall</div>';
+                        html += '<div style="font-size: 1.2em; font-weight: 600; color: #10b981;">' + (metrics.entity.recall * 100).toFixed(1) + '%</div>';
+                        html += '</div>';
+                        html += '<div style="background: white; padding: 8px; border-radius: 4px; text-align: center;">';
+                        html += '<div style="font-size: 0.7em; color: #6b7280;">F1</div>';
+                        html += '<div style="font-size: 1.2em; font-weight: 600; color: #10b981;">' + (metrics.entity.f1_score * 100).toFixed(1) + '%</div>';
+                        html += '</div>';
+                        html += '</div>';
+                        html += '<div style="font-size: 0.7em; color: #6b7280; margin-top: 4px; text-align: center;">';
+                        html += 'TP: ' + metrics.entity.true_positives + ' • FP: ' + metrics.entity.false_positives + ' • FN: ' + metrics.entity.false_negatives;
+                        html += ' (GT: ' + metrics.entity.ground_truth_count + ', Pred: ' + metrics.entity.predicted_count + ')';
+                        html += '</div>';
+                        html += '</div>';
+                    }
+
+                    // Triplet Metrics
+                    if (metrics.triplet) {
+                        html += '<div>';
+                        html += '<div style="font-weight: 500; color: #3b82f6; margin-bottom: 8px; font-size: 0.9em;">Triplet (Relation) Metrics</div>';
+                        html += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">';
+                        html += '<div style="background: white; padding: 8px; border-radius: 4px; text-align: center;">';
+                        html += '<div style="font-size: 0.7em; color: #6b7280;">Precision</div>';
+                        html += '<div style="font-size: 1.2em; font-weight: 600; color: #3b82f6;">' + (metrics.triplet.precision * 100).toFixed(1) + '%</div>';
+                        html += '</div>';
+                        html += '<div style="background: white; padding: 8px; border-radius: 4px; text-align: center;">';
+                        html += '<div style="font-size: 0.7em; color: #6b7280;">Recall</div>';
+                        html += '<div style="font-size: 1.2em; font-weight: 600; color: #3b82f6;">' + (metrics.triplet.recall * 100).toFixed(1) + '%</div>';
+                        html += '</div>';
+                        html += '<div style="background: white; padding: 8px; border-radius: 4px; text-align: center;">';
+                        html += '<div style="font-size: 0.7em; color: #6b7280;">F1</div>';
+                        html += '<div style="font-size: 1.2em; font-weight: 600; color: #3b82f6;">' + (metrics.triplet.f1_score * 100).toFixed(1) + '%</div>';
+                        html += '</div>';
+                        html += '</div>';
+                        html += '<div style="font-size: 0.7em; color: #6b7280; margin-top: 4px; text-align: center;">';
+                        html += 'TP: ' + metrics.triplet.true_positives + ' • FP: ' + metrics.triplet.false_positives + ' • FN: ' + metrics.triplet.false_negatives;
+                        html += ' (GT: ' + metrics.triplet.ground_truth_count + ', Pred: ' + metrics.triplet.predicted_count + ')';
+                        html += '</div>';
+                        html += '</div>';
+                    }
+
                     html += '</div>';
                     metricsContainer.innerHTML = html;
                 }
