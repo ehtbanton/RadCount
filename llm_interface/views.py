@@ -2207,54 +2207,28 @@ def extract_entities_llm(request):
 
         active_schema = schemas_data['schemas'][schema_name]
 
-        # Build entity extraction prompt - filter for findings/observations only (exclude Anatomy)
-        finding_types = [et for et in active_schema['entity_types'] if 'anatomy' not in et['name'].lower()]
+        # Load entity extraction prompt from extraction_prompts.json
+        prompts_file = PROJECT_ROOT / "extraction_prompts.json"
+        with open(prompts_file, 'r', encoding='utf-8') as f:
+            prompts_data = json.load(f)
 
+        # Get active entity extraction prompt
+        entity_prompts = prompts_data.get('entity_extraction', {})
+        active_prompt_key = entity_prompts.get('active_prompt', 'default_entity')
+        prompt_config = entity_prompts.get('prompts', {}).get(active_prompt_key, {})
+        prompt_template = prompt_config.get('template', '')
+
+        # Build entity types text - include ALL entity types
         entity_types_text = ""
-        for i, entity_type in enumerate(finding_types, 1):
+        for i, entity_type in enumerate(active_schema['entity_types'], 1):
             entity_types_text += f"{i}. **{entity_type['name']}**: {entity_type['description']}\n"
 
-        system_prompt = f"""You are a clinical information extraction system specialized in radiology reports. Extract ONLY clinical findings (not anatomical structures) from the provided radiology report.
-
-SCHEMA: {active_schema['name']}
-
-FINDING TYPES TO EXTRACT ({len(finding_types)} types):
-
-{entity_types_text}
-
-EXTRACTION INSTRUCTIONS:
-
-1. Read the radiology report carefully
-2. Extract ONLY clinical findings, observations, and abnormalities
-3. DO NOT extract anatomical structures (e.g., "lung", "heart", "liver") - only extract what is observed about them
-4. For each finding, determine its certainty level based on the report language:
-   - "Definitely Present": Confirmed findings stated with certainty
-   - "Uncertain": Findings described as possible, suspected, likely, may represent, etc.
-   - "Definitely Absent": Explicitly negated findings (no, without, absent, ruled out)
-5. Include measurements, sizes, and quantitative values as findings
-6. Extract modifiers and descriptors (e.g., "large", "mild", "stable", "new")
-
-EXAMPLES:
-- "No pneumothorax" → "pneumothorax" as Observation:Definitely Absent
-- "Possible consolidation" → "consolidation" as Observation:Uncertain
-- "2.3 cm nodule" → "nodule" as Observation:Definitely Present, "2.3 cm" as Observation:Definitely Present
-- "Stable cardiomegaly" → "cardiomegaly" as Observation:Definitely Present, "stable" as Observation:Definitely Present
-
-OUTPUT FORMAT:
-
-Return a JSON array of findings. Each finding must have this exact structure:
-{{
-  "id": "e1",  // Unique ID like e1, e2, e3, etc.
-  "text": "the finding text as it appears in the report",
-  "type": "one of the finding types listed above"
-}}
-
-IMPORTANT:
-- Return ONLY the JSON array, no additional text
-- DO NOT include anatomical structures - only findings/observations
-- Ensure all JSON is valid and properly formatted
-- Extract ALL clinical findings
-- Use sequential IDs starting from e1"""
+        # Format the prompt template with schema information
+        system_prompt = prompt_template.format(
+            schema_name=active_schema['name'],
+            entity_types=entity_types_text,
+            entity_count=len(active_schema['entity_types'])
+        )
 
         # Check if LLM server is running
         llm_service = LlamaService()
@@ -2429,7 +2403,18 @@ def extract_relations_llm(request):
 
         active_schema = schemas_data['schemas'][schema_name]
 
-        # Build relation extraction prompt with entities context
+        # Load relation extraction prompt from extraction_prompts.json
+        prompts_file = PROJECT_ROOT / "extraction_prompts.json"
+        with open(prompts_file, 'r', encoding='utf-8') as f:
+            prompts_data = json.load(f)
+
+        # Get active relation extraction prompt
+        relation_prompts = prompts_data.get('relation_extraction', {})
+        active_prompt_key = relation_prompts.get('active_prompt', 'default_relation')
+        prompt_config = relation_prompts.get('prompts', {}).get(active_prompt_key, {})
+        prompt_template = prompt_config.get('template', '')
+
+        # Build relation types text
         relation_types_text = ""
         for i, relation_type in enumerate(active_schema['relation_types'], 1):
             relation_types_text += f"{i}. **{relation_type['name']}**: {relation_type['description']}\n"
@@ -2440,44 +2425,17 @@ def extract_relations_llm(request):
                 relation_types_text += f"   Valid pairs: {pairs_str}\n"
 
         # Format entities for the prompt
-        entities_text = "EXTRACTED ENTITIES:\n"
+        entities_list = ""
         for entity in existing_entities:
-            entities_text += f"- {entity['id']}: \"{entity['text']}\" (Type: {entity['type']})\n"
+            entities_list += f"- {entity['id']}: \"{entity['text']}\" (Type: {entity['type']})\n"
 
-        system_prompt = f"""You are a clinical information extraction system specialized in radiology reports. Given a list of already-extracted entities, identify the RELATIONS between them using the {active_schema['name']} schema.
-
-SCHEMA: {active_schema['name']}
-{active_schema['description']}
-
-{entities_text}
-
-RELATION TYPES ({len(active_schema['relation_types'])} types):
-
-{relation_types_text}
-
-EXTRACTION INSTRUCTIONS:
-
-1. Review the radiology report and the extracted entities
-2. Identify relationships between the given entities using the relation types above
-3. Only create relations between entities that are listed above
-4. Use the entity IDs (e1, e2, etc.) to reference entities
-5. Be thorough - identify ALL valid relations between entities
-
-OUTPUT FORMAT:
-
-Return a JSON array of relations. Each relation must have this exact structure:
-{{
-  "entity1_id": "e1",  // ID of the first entity
-  "relation_type": "one of the relation types listed above",
-  "entity2_id": "e2"   // ID of the second entity
-}}
-
-IMPORTANT:
-- Return ONLY the JSON array, no additional text
-- Ensure all JSON is valid and properly formatted
-- Only use entity IDs from the provided list
-- Create ALL valid relations between entities
-- If no relations exist, return an empty array []"""
+        # Format the prompt template with schema and entities information
+        system_prompt = prompt_template.format(
+            schema_name=active_schema['name'],
+            entities_list=entities_list,
+            relation_types=relation_types_text,
+            relation_count=len(active_schema['relation_types'])
+        )
 
         # Check if LLM server is running
         llm_service = LlamaService()
@@ -2514,6 +2472,14 @@ IMPORTANT:
         result = response.json()
         generated_text = result['choices'][0]['message']['content']
 
+        # Check for empty response
+        if not generated_text or not generated_text.strip():
+            return JsonResponse({
+                'success': False,
+                'error': 'LLM returned empty response. The model may have timed out or the prompt may be too long.',
+                'raw_response': generated_text
+            }, status=500)
+
         # Parse JSON response
         try:
             import re
@@ -2521,7 +2487,11 @@ IMPORTANT:
             if json_match:
                 relations = json.loads(json_match.group())
             else:
-                relations = json.loads(generated_text)
+                # Handle case where LLM returns just "[]" or empty array
+                if generated_text.strip() == '[]':
+                    relations = []
+                else:
+                    relations = json.loads(generated_text)
 
             # Validate relation structure
             if not isinstance(relations, list):
@@ -3532,4 +3502,154 @@ def delete_prompt(request):
         return JsonResponse({
             'success': False,
             'error': f'Failed to delete prompt: {str(e)}'
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def get_entity_extraction_prompts(request):
+    """Get entity extraction prompts."""
+    try:
+        prompts_data = load_extraction_prompts()
+        entity_data = prompts_data.get('entity_extraction', {
+            'active_prompt': 'default_entity',
+            'prompts': {}
+        })
+
+        return JsonResponse({
+            'success': True,
+            'active_prompt': entity_data.get('active_prompt', 'default_entity'),
+            'prompts': entity_data.get('prompts', {})
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to load entity extraction prompts: {str(e)}'
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def get_relation_extraction_prompts(request):
+    """Get relation extraction prompts."""
+    try:
+        prompts_data = load_extraction_prompts()
+        relation_data = prompts_data.get('relation_extraction', {
+            'active_prompt': 'default_relation',
+            'prompts': {}
+        })
+
+        return JsonResponse({
+            'success': True,
+            'active_prompt': relation_data.get('active_prompt', 'default_relation'),
+            'prompts': relation_data.get('prompts', {})
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to load relation extraction prompts: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def save_entity_extraction_prompt(request):
+    """Save an entity extraction prompt."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+
+        # Support both simplified (name, description, template) and advanced (prompt_key, prompt_data) formats
+        prompt_key = data.get('prompt_key')
+        prompt_data = data.get('prompt_data')
+
+        # If simplified format, build prompt_data and use active key
+        if not prompt_key and 'name' in data:
+            prompts_data = load_extraction_prompts()
+            prompt_key = prompts_data.get('entity_extraction', {}).get('active_prompt', 'default_entity')
+            prompt_data = {
+                'name': data.get('name', ''),
+                'description': data.get('description', ''),
+                'template': data.get('template', '')
+            }
+
+        if not prompt_key or not prompt_data:
+            return JsonResponse({
+                'success': False,
+                'error': 'prompt_key and prompt_data (or name, description, template) are required'
+            }, status=400)
+
+        prompts_data = load_extraction_prompts()
+
+        if 'entity_extraction' not in prompts_data:
+            prompts_data['entity_extraction'] = {'active_prompt': 'default_entity', 'prompts': {}}
+
+        prompts_data['entity_extraction']['prompts'][prompt_key] = prompt_data
+
+        set_active = data.get('set_active', False)
+        if set_active:
+            prompts_data['entity_extraction']['active_prompt'] = prompt_key
+
+        save_extraction_prompts(prompts_data)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Entity extraction prompt "{prompt_key}" saved successfully'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to save entity extraction prompt: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def save_relation_extraction_prompt(request):
+    """Save a relation extraction prompt."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+
+        # Support both simplified (name, description, template) and advanced (prompt_key, prompt_data) formats
+        prompt_key = data.get('prompt_key')
+        prompt_data = data.get('prompt_data')
+
+        # If simplified format, build prompt_data and use active key
+        if not prompt_key and 'name' in data:
+            prompts_data = load_extraction_prompts()
+            prompt_key = prompts_data.get('relation_extraction', {}).get('active_prompt', 'default_relation')
+            prompt_data = {
+                'name': data.get('name', ''),
+                'description': data.get('description', ''),
+                'template': data.get('template', '')
+            }
+
+        if not prompt_key or not prompt_data:
+            return JsonResponse({
+                'success': False,
+                'error': 'prompt_key and prompt_data (or name, description, template) are required'
+            }, status=400)
+
+        prompts_data = load_extraction_prompts()
+
+        if 'relation_extraction' not in prompts_data:
+            prompts_data['relation_extraction'] = {'active_prompt': 'default_relation', 'prompts': {}}
+
+        prompts_data['relation_extraction']['prompts'][prompt_key] = prompt_data
+
+        set_active = data.get('set_active', False)
+        if set_active:
+            prompts_data['relation_extraction']['active_prompt'] = prompt_key
+
+        save_extraction_prompts(prompts_data)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Relation extraction prompt "{prompt_key}" saved successfully'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to save relation extraction prompt: {str(e)}'
         }, status=500)

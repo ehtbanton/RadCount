@@ -50,5 +50,10 @@ urlpatterns = [
     path('set-active-prompt/', views.set_active_prompt, name='set_active_prompt'),
     path('save-prompt/', views.save_prompt, name='save_prompt'),
     path('delete-prompt/', views.delete_prompt, name='delete_prompt'),
+    # Entity and Relation extraction prompts
+    path('entity-extraction-prompts/', views.get_entity_extraction_prompts, name='get_entity_extraction_prompts'),
+    path('relation-extraction-prompts/', views.get_relation_extraction_prompts, name='get_relation_extraction_prompts'),
+    path('save-entity-extraction-prompt/', views.save_entity_extraction_prompt, name='save_entity_extraction_prompt'),
+    path('save-relation-extraction-prompt/', views.save_relation_extraction_prompt, name='save_relation_extraction_prompt'),
     path('execute-extraction/', views.execute_extraction_function, name='execute_extraction_function'),
 ]

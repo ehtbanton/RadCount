@@ -681,6 +681,7 @@
                                     max="{{ csv_metadata.row_count }}"
                                     value="1"
                                     style="padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 0.9em; width: 100px;"
+                                    onkeypress="if(event.key === 'Enter') loadCsvEntry()"
                                 />
                                 <span style="color: #6b7280; font-size: 0.85em;">of {{ csv_metadata.row_count }}</span>
                                 <button
@@ -883,7 +884,7 @@
                             <!-- Auto-Extracted Tab Content -->
                             <div id="auto-extracted-tab" class="annotation-tab-content" style="display: none;">
                                 <!-- Two-step extraction buttons -->
-                                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
                                     <button
                                         id="extract-entities-btn"
                                         onclick="runEntityExtraction()"
@@ -901,6 +902,25 @@
                                         onmouseout="this.style.background='#3b82f6'"
                                     >
                                         Step 2: Extract Relations
+                                    </button>
+                                </div>
+                                <!-- Edit Prompt buttons -->
+                                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                                    <button
+                                        onclick="openPromptEditor('entity')"
+                                        style="flex: 1; padding: 6px 12px; background: white; color: #10b981; border: 1px solid #10b981; border-radius: 4px; cursor: pointer; font-size: 0.8em; transition: all 0.2s;"
+                                        onmouseover="this.style.background='#ecfdf5'"
+                                        onmouseout="this.style.background='white'"
+                                    >
+                                        Edit Entity Prompt
+                                    </button>
+                                    <button
+                                        onclick="openPromptEditor('relation')"
+                                        style="flex: 1; padding: 6px 12px; background: white; color: #3b82f6; border: 1px solid #3b82f6; border-radius: 4px; cursor: pointer; font-size: 0.8em; transition: all 0.2s;"
+                                        onmouseover="this.style.background='#eff6ff'"
+                                        onmouseout="this.style.background='white'"
+                                    >
+                                        Edit Relation Prompt
                                     </button>
                                 </div>
 
@@ -1693,6 +1713,12 @@
             textDisplayArea.textContent = 'Loading entry...';
             textDisplayArea.style.color = '#6b7280';
 
+            // Ensure entities are loaded before proceeding
+            if (!entitiesLoaded) {
+                console.log('Waiting for entities to load...');
+                await loadEntities();
+            }
+
             try {
                 const response = await fetch(`/llm/csv-entry/?entry=${entryNumber}`);
                 const data = await response.json();
@@ -1703,7 +1729,34 @@
 
                     // Update current entry for properties system
                     currentEntry = parseInt(entryNumber);
+                    console.log('Entry loaded successfully, currentEntry set to:', currentEntry);
                     renderEntities();
+
+                    // Restore activeMethodId from existing extraction methods
+                    const entryData = getEntityEntryData(currentEntry);
+                    console.log('Loading entry', currentEntry, 'entryData:', entryData);
+                    console.log('entitiesData length:', entitiesData.length);
+                    if (entryData?.extraction_methods) {
+                        const currentSchema = entryData.active_schema || activeSchemaName || 'radgraph';
+                        const methods = entryData.extraction_methods[currentSchema] || [];
+                        console.log('Schema:', currentSchema, 'Methods:', methods.length);
+                        if (methods.length > 0) {
+                            // Prefer method with entities, or most recent (last in array)
+                            let selectedMethod = methods[methods.length - 1]; // Default to most recent
+                            for (const m of methods) {
+                                if (m.entities && m.entities.length > 0) {
+                                    selectedMethod = m;
+                                    break;
+                                }
+                            }
+                            activeMethodId = selectedMethod.id;
+                            console.log('Set activeMethodId to:', activeMethodId, 'with', (selectedMethod.entities || []).length, 'entities');
+                        } else {
+                            activeMethodId = null;
+                        }
+                    } else {
+                        activeMethodId = null;
+                    }
 
                     // Format the JSON data nicely for JSON view
                     jsonDisplayArea.textContent = JSON.stringify(data.data, null, 2);
@@ -2305,6 +2358,7 @@
 
         // Global entities data storage
         let entitiesData = []; // Array of { entry: N, triplets: [{entity1_text, entity1_type, relation_type, entity2_text, entity2_type}, ...] }
+        let entitiesLoaded = false; // Flag to track if entities have been loaded
 
         // Legacy compatibility - stub variables and functions for old property code
         let propertiesData = []; // Empty array for legacy code compatibility
@@ -2454,10 +2508,13 @@
 
                 if (result.success) {
                     entitiesData = result.data || [];
+                    entitiesLoaded = true;
+                    console.log('Entities loaded:', entitiesData.length, 'entries');
                     renderEntities();
                 }
             } catch (error) {
                 console.error('Failed to load entities:', error);
+                entitiesLoaded = true; // Set to true even on error so we don't block forever
             }
         }
 
@@ -3290,8 +3347,9 @@
 
         // Run entity extraction (LLM)
         async function runEntityExtraction() {
+            console.log('runEntityExtraction called, currentEntry:', currentEntry);
             if (!currentEntry) {
-                alert('Please select a CSV entry first');
+                alert('Please select a CSV entry first. Click the "Load" button after entering an entry number.');
                 return;
             }
 
@@ -3416,12 +3474,120 @@
             }
         }
 
+        // Current prompt type being edited ('entity' or 'relation')
+        let currentPromptType = null;
+
+        // Open prompt editor modal
+        async function openPromptEditor(type) {
+            currentPromptType = type;
+            const modal = document.getElementById('entity-relation-prompt-modal');
+            const title = document.getElementById('prompt-modal-title');
+            const variablesHelp = document.getElementById('template-variables-help');
+
+            // Set title and variables help based on type
+            if (type === 'entity') {
+                title.textContent = 'Edit Entity Extraction Prompt';
+                variablesHelp.innerHTML = `
+                    <code>{schema_name}</code> - Name of the active schema<br>
+                    <code>{entity_types}</code> - Formatted list of entity types (excluding anatomy)<br>
+                    <code>{entity_count}</code> - Number of entity types
+                `;
+            } else {
+                title.textContent = 'Edit Relation Extraction Prompt';
+                variablesHelp.innerHTML = `
+                    <code>{schema_name}</code> - Name of the active schema<br>
+                    <code>{entities_list}</code> - List of extracted entities with IDs<br>
+                    <code>{relation_types}</code> - Formatted list of relation types<br>
+                    <code>{relation_count}</code> - Number of relation types
+                `;
+            }
+
+            // Fetch current prompt
+            try {
+                const endpoint = type === 'entity'
+                    ? '/llm/entity-extraction-prompts/'
+                    : '/llm/relation-extraction-prompts/';
+                const response = await fetch(endpoint);
+                const data = await response.json();
+
+                if (data.success) {
+                    const activeKey = data.active_prompt;
+                    const promptData = data.prompts[activeKey] || {};
+
+                    document.getElementById('er-prompt-name').value = promptData.name || '';
+                    document.getElementById('er-prompt-description').value = promptData.description || '';
+                    document.getElementById('er-prompt-template').value = promptData.template || '';
+                } else {
+                    alert('Failed to load prompt: ' + data.error);
+                    return;
+                }
+            } catch (error) {
+                alert('Error loading prompt: ' + error.message);
+                return;
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        // Close prompt editor modal
+        function closeEntityRelationPromptEditor() {
+            document.getElementById('entity-relation-prompt-modal').style.display = 'none';
+            currentPromptType = null;
+        }
+
+        // Save entity/relation prompt
+        async function saveEntityRelationPrompt() {
+            if (!currentPromptType) return;
+
+            const name = document.getElementById('er-prompt-name').value.trim();
+            const description = document.getElementById('er-prompt-description').value.trim();
+            const template = document.getElementById('er-prompt-template').value;
+
+            if (!name) {
+                alert('Please enter a prompt name');
+                return;
+            }
+
+            if (!template) {
+                alert('Please enter a prompt template');
+                return;
+            }
+
+            try {
+                const endpoint = currentPromptType === 'entity'
+                    ? '/llm/save-entity-extraction-prompt/'
+                    : '/llm/save-relation-extraction-prompt/';
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        description: description,
+                        template: template
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('Prompt saved successfully!');
+                    closeEntityRelationPromptEditor();
+                } else {
+                    alert('Error saving prompt: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error saving prompt: ' + error.message);
+            }
+        }
+
         // Render auto-extracted entities
         function renderAutoExtractedEntities() {
             const container = document.getElementById('auto-entities-container');
             const countSpan = document.getElementById('auto-entity-count');
             if (!container) return;
 
+            console.log('renderAutoExtractedEntities - currentEntry:', currentEntry, 'activeMethodId:', activeMethodId);
             const entryData = getEntityEntryData(currentEntry);
             let entities = [];
 
@@ -3430,9 +3596,12 @@
                     const method = entryData.extraction_methods[schema].find(m => m.id === activeMethodId);
                     if (method) {
                         entities = method.entities || [];
+                        console.log('Found method with', entities.length, 'entities');
                         break;
                     }
                 }
+            } else {
+                console.log('No entryData or activeMethodId');
             }
 
             if (countSpan) countSpan.textContent = entities.length;
@@ -5850,7 +6019,13 @@
             // Load schemas, prompts, and entities
             loadSchemas();
             loadExtractionPrompts();
-            loadEntities();
+            loadEntities().then(() => {
+                // Auto-load entry 1 after entities are loaded
+                const entryInput = document.getElementById('entry-number');
+                if (entryInput && entryInput.value) {
+                    loadCsvEntry();
+                }
+            });
 
             console.log('Initialization complete');
         });
@@ -6008,6 +6183,55 @@
                         Cancel
                     </button>
                     <button type="button" onclick="savePromptFromEditor()" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Save Prompt
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Entity/Relation Prompt Editor Modal -->
+    <div id="entity-relation-prompt-modal" class="modal">
+        <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3 id="prompt-modal-title">Edit Entity Extraction Prompt</h3>
+                <button class="close-modal" onclick="closeEntityRelationPromptEditor()">&times;</button>
+            </div>
+            <div style="padding: 20px;">
+                <!-- Prompt Info -->
+                <div style="margin-bottom: 20px; padding: 15px; background: #f3f4f6; border-radius: 6px;">
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <label for="er-prompt-name" style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 5px;">Prompt Name</label>
+                            <input type="text" id="er-prompt-name" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;" />
+                        </div>
+                        <div style="flex: 2; min-width: 300px;">
+                            <label for="er-prompt-description" style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 5px;">Description</label>
+                            <input type="text" id="er-prompt-description" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Template Variables Help -->
+                <div style="margin-bottom: 15px; padding: 12px; background: #fffbeb; border: 1px solid #fbbf24; border-radius: 6px;">
+                    <div style="font-weight: 500; color: #92400e; margin-bottom: 8px; font-size: 0.9em;">Available Template Variables:</div>
+                    <div id="template-variables-help" style="font-size: 0.85em; color: #78350f;">
+                        <!-- Populated dynamically based on prompt type -->
+                    </div>
+                </div>
+
+                <!-- Prompt Content -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 5px;">Prompt Template</label>
+                    <textarea id="er-prompt-template" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 4px; min-height: 400px; font-family: 'Courier New', monospace; font-size: 0.85em; line-height: 1.5;"></textarea>
+                </div>
+
+                <!-- Actions -->
+                <div style="display: flex; gap: 10px; justify-content: flex-end; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                    <button onclick="closeEntityRelationPromptEditor()" style="padding: 8px 16px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Cancel
+                    </button>
+                    <button onclick="saveEntityRelationPrompt()" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer;">
                         Save Prompt
                     </button>
                 </div>
