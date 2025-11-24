@@ -3993,87 +3993,127 @@
             };
         }
 
-        // Render metrics tab
-        function renderMetricsTab() {
+        // Render metrics tab - calls server API for proper calculation
+        async function renderMetricsTab() {
             const container = document.getElementById('metrics-container');
             if (!container) return;
 
-            const metrics = calculateMetrics();
-
-            if (!metrics) {
-                container.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">Add ground truth and auto-extracted annotations to see metrics.</div>';
+            if (!currentEntry || !activeMethodId) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">Load an entry and extract entities/relations to see metrics.</div>';
                 return;
             }
 
-            let html = '<div style="background: white; border-radius: 6px; padding: 20px;">';
-            html += '<h3 style="margin: 0 0 20px 0; color: #1f2937; font-size: 1.1em;">Annotation Comparison Metrics</h3>';
+            const entryData = getEntityEntryData(currentEntry);
+            if (!entryData) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">No data for this entry.</div>';
+                return;
+            }
 
-            // Summary cards
-            html += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 25px;">';
+            // Check if there's any ground truth data
+            const currentSchema = entryData.active_schema || activeSchemaName || 'radgraph';
+            const gtData = entryData.ground_truths?.[currentSchema] || {};
+            const gtEntities = gtData.entities || [];
+            const gtTriplets = gtData.triplets || [];
 
-            // Precision card
-            html += '<div style="background: #dbeafe; padding: 15px; border-radius: 6px; text-align: center;">';
-            html += '<div style="font-size: 0.85em; color: #1e40af; font-weight: 500; margin-bottom: 8px;">Precision</div>';
-            html += '<div style="font-size: 1.8em; color: #1e40af; font-weight: 600;">' + (metrics.precision * 100).toFixed(1) + '%</div>';
-            html += '</div>';
+            if (gtEntities.length === 0 && gtTriplets.length === 0) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">Add ground truth annotations first (entities and/or relations) to compare against extracted data.</div>';
+                return;
+            }
 
-            // Recall card
-            html += '<div style="background: #d1fae5; padding: 15px; border-radius: 6px; text-align: center;">';
-            html += '<div style="font-size: 0.85em; color: #059669; font-weight: 500; margin-bottom: 8px;">Recall</div>';
-            html += '<div style="font-size: 1.8em; color: #059669; font-weight: 600;">' + (metrics.recall * 100).toFixed(1) + '%</div>';
-            html += '</div>';
+            container.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">Calculating metrics...</div>';
 
-            // F1 card
-            html += '<div style="background: #e0e7ff; padding: 15px; border-radius: 6px; text-align: center;">';
-            html += '<div style="font-size: 0.85em; color: #4f46e5; font-weight: 500; margin-bottom: 8px;">F1 Score</div>';
-            html += '<div style="font-size: 1.8em; color: #4f46e5; font-weight: 600;">' + (metrics.f1 * 100).toFixed(1) + '%</div>';
-            html += '</div>';
+            try {
+                const response = await fetch('/llm/calculate-metrics/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        method_id: activeMethodId
+                    })
+                });
 
-            html += '</div>';
+                const result = await response.json();
 
-            // Detailed metrics
-            html += '<div style="background: #f9fafb; padding: 15px; border-radius: 6px;">';
-            html += '<div style="font-weight: 500; color: #374151; margin-bottom: 12px;">Detailed Breakdown</div>';
-            html += '<div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.9em;">';
+                if (!result.success) {
+                    container.innerHTML = '<div style="color: #ef4444; font-size: 0.9em; text-align: center; padding: 20px;">Error: ' + result.error + '</div>';
+                    return;
+                }
 
-            html += '<div style="display: flex; justify-content: space-between; padding: 8px; background: white; border-radius: 4px;">';
-            html += '<span style="color: #6b7280;">Ground Truth Triplets:</span>';
-            html += '<span style="font-weight: 500; color: #1f2937;">' + metrics.groundTruthCount + '</span>';
-            html += '</div>';
+                const metrics = result.metrics;
+                let html = '<div style="background: white; border-radius: 6px; padding: 20px;">';
+                html += '<h3 style="margin: 0 0 20px 0; color: #1f2937; font-size: 1.1em;">Annotation Comparison Metrics</h3>';
 
-            html += '<div style="display: flex; justify-content: space-between; padding: 8px; background: white; border-radius: 4px;">';
-            html += '<span style="color: #6b7280;">Auto-Extracted Triplets:</span>';
-            html += '<span style="font-weight: 500; color: #1f2937;">' + metrics.autoExtractedCount + '</span>';
-            html += '</div>';
+                // Entity Metrics Section
+                if (metrics.entity) {
+                    html += '<div style="margin-bottom: 25px;">';
+                    html += '<div style="font-weight: 600; color: #10b981; margin-bottom: 12px; font-size: 1em;">Entity Metrics</div>';
+                    html += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 10px;">';
 
-            html += '<div style="display: flex; justify-content: space-between; padding: 8px; background: white; border-radius: 4px;">';
-            html += '<span style="color: #6b7280;">True Positives:</span>';
-            html += '<span style="font-weight: 500; color: #10b981;">' + metrics.truePositives + '</span>';
-            html += '</div>';
+                    html += '<div style="background: #d1fae5; padding: 15px; border-radius: 6px; text-align: center;">';
+                    html += '<div style="font-size: 0.85em; color: #059669; font-weight: 500; margin-bottom: 8px;">Precision</div>';
+                    html += '<div style="font-size: 1.8em; color: #059669; font-weight: 600;">' + (metrics.entity.precision * 100).toFixed(1) + '%</div>';
+                    html += '</div>';
 
-            html += '<div style="display: flex; justify-content: space-between; padding: 8px; background: white; border-radius: 4px;">';
-            html += '<span style="color: #6b7280;">False Positives:</span>';
-            html += '<span style="font-weight: 500; color: #ef4444;">' + metrics.falsePositives + '</span>';
-            html += '</div>';
+                    html += '<div style="background: #d1fae5; padding: 15px; border-radius: 6px; text-align: center;">';
+                    html += '<div style="font-size: 0.85em; color: #059669; font-weight: 500; margin-bottom: 8px;">Recall</div>';
+                    html += '<div style="font-size: 1.8em; color: #059669; font-weight: 600;">' + (metrics.entity.recall * 100).toFixed(1) + '%</div>';
+                    html += '</div>';
 
-            html += '<div style="display: flex; justify-content: space-between; padding: 8px; background: white; border-radius: 4px;">';
-            html += '<span style="color: #6b7280;">False Negatives:</span>';
-            html += '<span style="font-weight: 500; color: #f59e0b;">' + metrics.falseNegatives + '</span>';
-            html += '</div>';
+                    html += '<div style="background: #d1fae5; padding: 15px; border-radius: 6px; text-align: center;">';
+                    html += '<div style="font-size: 0.85em; color: #059669; font-weight: 500; margin-bottom: 8px;">F1 Score</div>';
+                    html += '<div style="font-size: 1.8em; color: #059669; font-weight: 600;">' + (metrics.entity.f1_score * 100).toFixed(1) + '%</div>';
+                    html += '</div>';
 
-            html += '</div></div>';
+                    html += '</div>';
+                    html += '<div style="font-size: 0.8em; color: #6b7280; text-align: center;">';
+                    html += 'TP: ' + metrics.entity.true_positives + ' | FP: ' + metrics.entity.false_positives + ' | FN: ' + metrics.entity.false_negatives;
+                    html += ' (GT: ' + metrics.entity.ground_truth_count + ', Pred: ' + metrics.entity.predicted_count + ')';
+                    html += '</div></div>';
+                }
 
-            // Explanation
-            html += '<div style="margin-top: 20px; padding: 12px; background: #f3f4f6; border-radius: 6px; font-size: 0.85em; color: #6b7280;">';
-            html += '<strong>How metrics are calculated:</strong><br>';
-            html += '• <strong>Precision:</strong> Of the auto-extracted triplets, how many are correct (TP / (TP + FP))<br>';
-            html += '• <strong>Recall:</strong> Of the ground truth triplets, how many were found (TP / (TP + FN))<br>';
-            html += '• <strong>F1 Score:</strong> Harmonic mean of precision and recall (2 * P * R / (P + R))';
-            html += '</div>';
+                // Triplet/Relation Metrics Section
+                if (metrics.triplet) {
+                    html += '<div style="margin-bottom: 20px;">';
+                    html += '<div style="font-weight: 600; color: #3b82f6; margin-bottom: 12px; font-size: 1em;">Relation Metrics</div>';
+                    html += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 10px;">';
 
-            html += '</div>';
+                    html += '<div style="background: #dbeafe; padding: 15px; border-radius: 6px; text-align: center;">';
+                    html += '<div style="font-size: 0.85em; color: #1e40af; font-weight: 500; margin-bottom: 8px;">Precision</div>';
+                    html += '<div style="font-size: 1.8em; color: #1e40af; font-weight: 600;">' + (metrics.triplet.precision * 100).toFixed(1) + '%</div>';
+                    html += '</div>';
 
-            container.innerHTML = html;
+                    html += '<div style="background: #dbeafe; padding: 15px; border-radius: 6px; text-align: center;">';
+                    html += '<div style="font-size: 0.85em; color: #1e40af; font-weight: 500; margin-bottom: 8px;">Recall</div>';
+                    html += '<div style="font-size: 1.8em; color: #1e40af; font-weight: 600;">' + (metrics.triplet.recall * 100).toFixed(1) + '%</div>';
+                    html += '</div>';
+
+                    html += '<div style="background: #dbeafe; padding: 15px; border-radius: 6px; text-align: center;">';
+                    html += '<div style="font-size: 0.85em; color: #1e40af; font-weight: 500; margin-bottom: 8px;">F1 Score</div>';
+                    html += '<div style="font-size: 1.8em; color: #1e40af; font-weight: 600;">' + (metrics.triplet.f1_score * 100).toFixed(1) + '%</div>';
+                    html += '</div>';
+
+                    html += '</div>';
+                    html += '<div style="font-size: 0.8em; color: #6b7280; text-align: center;">';
+                    html += 'TP: ' + metrics.triplet.true_positives + ' | FP: ' + metrics.triplet.false_positives + ' | FN: ' + metrics.triplet.false_negatives;
+                    html += ' (GT: ' + metrics.triplet.ground_truth_count + ', Pred: ' + metrics.triplet.predicted_count + ')';
+                    html += '</div></div>';
+                }
+
+                // Explanation
+                html += '<div style="padding: 12px; background: #f3f4f6; border-radius: 6px; font-size: 0.85em; color: #6b7280;">';
+                html += '<strong>How metrics are calculated:</strong><br>';
+                html += '• <strong>Entity matching:</strong> Text + Type (case-insensitive)<br>';
+                html += '• <strong>Relation matching:</strong> Entity1 + Relation Type + Entity2<br>';
+                html += '• <strong>Precision:</strong> Correct predictions / All predictions<br>';
+                html += '• <strong>Recall:</strong> Found items / All ground truth items';
+                html += '</div>';
+
+                html += '</div>';
+                container.innerHTML = html;
+
+            } catch (error) {
+                container.innerHTML = '<div style="color: #ef4444; font-size: 0.9em; text-align: center; padding: 20px;">Error calculating metrics: ' + error.message + '</div>';
+            }
         }
 
         // Disabled - no longer used with new tab system
