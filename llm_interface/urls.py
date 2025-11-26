@@ -41,6 +41,8 @@ urlpatterns = [
     path('extract-relations-llm/', views.extract_relations_llm, name='extract_relations_llm'),
     # Metrics
     path('calculate-metrics/', views.calculate_metrics, name='calculate_metrics'),
+    # Migration
+    path('migrate-entity-ids/', views.migrate_entity_ids, name='migrate_entity_ids'),
     path('schemas/', views.get_schemas, name='get_schemas'),
     path('active-schema/', views.get_active_schema, name='get_active_schema'),
     path('set-active-schema/', views.set_active_schema, name='set_active_schema'),

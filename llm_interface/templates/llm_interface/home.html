@@ -1785,8 +1785,8 @@
                             renderGroundTruthEntities();
                             renderGroundTruthRelations();
                             updateEntityDropdowns();
-                            renderAutoExtractedEntities();
-                            renderAutoExtractedRelations();
+                            await renderAutoExtractedEntities();
+                            await renderAutoExtractedRelations();
                         }
                     } else {
                         textDisplayArea.textContent = 'No fields found';
@@ -2584,7 +2584,7 @@
         let activeMethodId = null;
 
         // Render entities and relations for current entry (routes to tab-specific renderers)
-        function renderEntities() {
+        async function renderEntities() {
             if (!currentEntry) {
                 return;
             }
@@ -2599,7 +2599,7 @@
             if (activeAnnotationTab === 'ground-truth') {
                 renderGroundTruthTab();
             } else if (activeAnnotationTab === 'auto-extracted') {
-                renderAutoExtractedTab();
+                await renderAutoExtractedTab();
             } else if (activeAnnotationTab === 'metrics') {
                 renderMetricsTab();
             }
@@ -2727,7 +2727,7 @@
         // ===== New Tab and Annotation Functions =====
 
         // Switch between annotation tabs
-        function switchAnnotationTab(tabName) {
+        async function switchAnnotationTab(tabName) {
             activeAnnotationTab = tabName;
 
             // Update all tab button styles
@@ -2762,7 +2762,7 @@
             if (tabName === 'ground-truth') {
                 renderGroundTruthTab();
             } else if (tabName === 'auto-extracted') {
-                renderAutoExtractedTab();
+                await renderAutoExtractedTab();
             } else if (tabName === 'metrics') {
                 renderMetricsTab();
             }
@@ -3290,6 +3290,7 @@
                 const color2 = getEntityTypeColor(e2.type);
 
                 html += `<div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f9fafb; border-radius: 4px; font-size: 0.85em;">
+                    <span style="font-weight: 500; color: #6b7280;">[${rel.id}]</span>
                     <span style="flex: 2; color: ${color1};">[${rel.entity1_id}] ${escapeHtml(e1.text)}</span>
                     <span style="flex-shrink: 0; background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 4px; font-size: 0.9em;">${rel.relation_type}</span>
                     <span style="flex: 2; color: ${color2};">[${rel.entity2_id}] ${escapeHtml(e2.text)}</span>
@@ -3397,8 +3398,8 @@
                     }
 
                     // Re-render
-                    renderAutoExtractedEntities();
-                    renderAutoExtractedRelations();
+                    await renderAutoExtractedEntities();
+                    await renderAutoExtractedRelations();
                     alert(`Extracted ${result.count} entities`);
                 } else {
                     alert('Error: ' + result.error);
@@ -3461,7 +3462,7 @@
                     }
 
                     // Re-render
-                    renderAutoExtractedRelations();
+                    await renderAutoExtractedRelations();
                     alert(`Extracted ${result.count} relations`);
                 } else {
                     alert('Error: ' + result.error);
@@ -3581,8 +3582,47 @@
             }
         }
 
+        // Cache matching data to avoid duplicate API calls
+        let cachedMatchingData = null;
+        let cachedMatchingDataTimestamp = null;
+        const CACHE_DURATION = 5000; // 5 seconds
+
+        async function getMatchingData(forceRefresh = false) {
+            const now = Date.now();
+
+            // Return cached data if valid
+            if (!forceRefresh && cachedMatchingData &&
+                cachedMatchingDataTimestamp &&
+                (now - cachedMatchingDataTimestamp) < CACHE_DURATION) {
+                return cachedMatchingData;
+            }
+
+            if (!activeMethodId) return null;
+
+            try {
+                const response = await fetch('/llm/calculate-metrics/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        method_id: activeMethodId
+                    })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    cachedMatchingData = result.metrics;
+                    cachedMatchingDataTimestamp = now;
+                    return cachedMatchingData;
+                }
+            } catch (error) {
+                console.error('Error fetching matching data:', error);
+            }
+
+            return null;
+        }
+
         // Render auto-extracted entities
-        function renderAutoExtractedEntities() {
+        async function renderAutoExtractedEntities() {
             const container = document.getElementById('auto-entities-container');
             const countSpan = document.getElementById('auto-entity-count');
             if (!container) return;
@@ -3611,10 +3651,17 @@
                 return;
             }
 
+            // Fetch matching data
+            const matchingData = await getMatchingData();
+            const matchedEntityIds = new Set(matchingData?.entity?.matched_pred_entities || []);
+
             let html = '';
             entities.forEach(e => {
                 const color = getEntityTypeColor(e.type);
-                html += `<div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: white; border: 1px solid ${color}; border-radius: 16px; font-size: 0.85em;">
+                const isMatched = matchedEntityIds.has(e.id);
+                const borderColor = isMatched ? '#10b981' : '#ef4444';  // green : red
+
+                html += `<div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: white; border: 2px solid ${borderColor}; border-radius: 16px; font-size: 0.85em;">
                     <span style="font-weight: 500; color: ${color};">[${e.id}]</span>
                     <span style="color: #374151;">${escapeHtml(e.text)}</span>
                     <span style="color: ${color}; font-size: 0.8em;">(${e.type})</span>
@@ -3624,7 +3671,7 @@
         }
 
         // Render auto-extracted relations
-        function renderAutoExtractedRelations() {
+        async function renderAutoExtractedRelations() {
             const container = document.getElementById('auto-relations-container');
             const countSpan = document.getElementById('auto-relation-count');
             if (!container) return;
@@ -3651,6 +3698,10 @@
                 return;
             }
 
+            // Fetch matching data
+            const matchingData = await getMatchingData();
+            const matchedTripletIds = new Set(matchingData?.triplet?.matched_pred_triplets || []);
+
             // Build entity lookup
             const entityLookup = {};
             entities.forEach(e => { entityLookup[e.id] = e; });
@@ -3662,7 +3713,11 @@
                 const color1 = getEntityTypeColor(e1.type);
                 const color2 = getEntityTypeColor(e2.type);
 
-                html += `<div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f9fafb; border-radius: 4px; font-size: 0.85em;">
+                const isMatched = matchedTripletIds.has(rel.id);
+                const borderColor = isMatched ? '#10b981' : '#ef4444';  // green : red
+
+                html += `<div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f9fafb; border: 2px solid ${borderColor}; border-radius: 4px; font-size: 0.85em;">
+                    <span style="font-weight: 500; color: #6b7280;">[${rel.id}]</span>
                     <span style="flex: 2; color: ${color1};">[${rel.entity1_id}] ${escapeHtml(e1.text)}</span>
                     <span style="flex-shrink: 0; background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 4px; font-size: 0.9em;">${rel.relation_type}</span>
                     <span style="flex: 2; color: ${color2};">[${rel.entity2_id}] ${escapeHtml(e2.text)}</span>
@@ -3885,7 +3940,7 @@
                     entryData.auto_extracted_triplets[currentSchema] = result.triplets;
 
                     await saveEntitiesToServer();
-                    renderAutoExtractedTab();
+                    await renderAutoExtractedTab();
 
                     alert('Successfully extracted ' + result.count + ' entity-relation triplets');
                 } else {
@@ -3898,11 +3953,11 @@
         }
 
         // Render auto-extracted tab
-        function renderAutoExtractedTab() {
+        async function renderAutoExtractedTab() {
             // Use the new entity-first render functions
             if (typeof renderAutoExtractedEntities === 'function') {
-                renderAutoExtractedEntities();
-                renderAutoExtractedRelations();
+                await renderAutoExtractedEntities();
+                await renderAutoExtractedRelations();
             }
         }
 

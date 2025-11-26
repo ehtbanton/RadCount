@@ -1929,9 +1929,9 @@ def add_ground_truth_entity(request):
                 # Generate entity ID
                 existing_ids = [e.get('id', '') for e in entry['ground_truths'][active_schema]['entities']]
                 entity_num = 1
-                while f"e{entity_num}" in existing_ids:
+                while f"eg{entity_num}" in existing_ids:
                     entity_num += 1
-                new_entity_id = f"e{entity_num}"
+                new_entity_id = f"eg{entity_num}"
 
                 entity['id'] = new_entity_id
                 entry['ground_truths'][active_schema]['entities'].append(entity)
@@ -2066,6 +2066,13 @@ def add_ground_truth_relation(request):
                     return JsonResponse({'success': False, 'error': f"Entity {relation['entity1_id']} not found"}, status=400)
                 if relation['entity2_id'] not in entity_ids:
                     return JsonResponse({'success': False, 'error': f"Entity {relation['entity2_id']} not found"}, status=400)
+
+                # Generate triplet ID
+                existing_triplet_ids = [t.get('id', '') for t in entry['ground_truths'][active_schema]['triplets']]
+                triplet_num = 1
+                while f"tg{triplet_num}" in existing_triplet_ids:
+                    triplet_num += 1
+                relation['id'] = f"tg{triplet_num}"
 
                 entry['ground_truths'][active_schema]['triplets'].append(relation)
                 entry_found = True
@@ -2301,9 +2308,9 @@ def extract_entities_llm(request):
                         }, status=500)
                 # Ensure ID exists and is unique
                 if 'id' not in entity:
-                    entity['id'] = f"e{i+1}"
+                    entity['id'] = f"ea{i+1}"
                 if entity['id'] in seen_ids:
-                    entity['id'] = f"e{len(seen_ids)+1}"
+                    entity['id'] = f"ea{len(seen_ids)+1}"
                 seen_ids.add(entity['id'])
 
             # Save entities to method
@@ -2532,6 +2539,11 @@ def extract_relations_llm(request):
                 if relation['entity2_id'] not in valid_entity_ids:
                     continue
                 valid_relations.append(relation)
+
+            # Assign triplet IDs
+            for i, triplet in enumerate(valid_relations):
+                if 'id' not in triplet:
+                    triplet['id'] = f"ta{i+1}"
 
             # Save relations to method
             target_method['triplets'] = valid_relations
@@ -2779,6 +2791,11 @@ def run_extraction_method(request):
                             'raw_response': generated_text
                         }, status=500)
 
+            # Assign triplet IDs
+            for i, triplet in enumerate(triplets):
+                if 'id' not in triplet:
+                    triplet['id'] = f"ta{i+1}"
+
             # Save triplets to method
             target_method['triplets'] = triplets
             target_method['timestamp'] = datetime.now().isoformat()
@@ -2942,8 +2959,18 @@ def calculate_metrics(request):
                 entity.get('type', '').lower().strip()
             )
 
-        gt_entity_set = {entity_signature(e) for e in ground_truth_entities}
-        pred_entity_set = {entity_signature(e) for e in predicted_entities}
+        # Build signature-to-ID mappings
+        gt_entity_map = {entity_signature(e): e.get('id') for e in ground_truth_entities}
+        pred_entity_map = {entity_signature(e): e.get('id') for e in predicted_entities}
+
+        gt_entity_set = set(gt_entity_map.keys())
+        pred_entity_set = set(pred_entity_map.keys())
+
+        # Track matched/unmatched IDs
+        matched_gt_entity_ids = [gt_entity_map[sig] for sig in (gt_entity_set & pred_entity_set)]
+        matched_pred_entity_ids = [pred_entity_map[sig] for sig in (gt_entity_set & pred_entity_set)]
+        unmatched_gt_entity_ids = [gt_entity_map[sig] for sig in (gt_entity_set - pred_entity_set)]
+        unmatched_pred_entity_ids = [pred_entity_map[sig] for sig in (pred_entity_set - gt_entity_set)]
 
         entity_tp = len(gt_entity_set & pred_entity_set)
         entity_fp = len(pred_entity_set - gt_entity_set)
@@ -2983,21 +3010,32 @@ def calculate_metrics(request):
                 triplet.get('entity2_type', '').lower().strip()
             )
 
-        # Determine format and create triplet sets
-        def create_triplet_set(triplets, entity_lookup):
-            result = set()
-            for t in triplets:
-                # Check if new format (has entity IDs)
-                if 'entity1_id' in t and 'entity2_id' in t:
-                    sig = triplet_signature_new(t, entity_lookup)
-                else:
-                    # Legacy format
-                    sig = triplet_signature_legacy(t)
-                result.add(sig)
-            return result
+        # Build signature-to-ID mappings for triplets
+        gt_triplet_map = {}
+        pred_triplet_map = {}
 
-        gt_triplet_set = create_triplet_set(ground_truth_triplets, gt_entity_lookup)
-        pred_triplet_set = create_triplet_set(predicted_triplets, pred_entity_lookup)
+        for t in ground_truth_triplets:
+            if 'entity1_id' in t and 'entity2_id' in t:
+                sig = triplet_signature_new(t, gt_entity_lookup)
+            else:
+                sig = triplet_signature_legacy(t)
+            gt_triplet_map[sig] = t.get('id', '')
+
+        for t in predicted_triplets:
+            if 'entity1_id' in t and 'entity2_id' in t:
+                sig = triplet_signature_new(t, pred_entity_lookup)
+            else:
+                sig = triplet_signature_legacy(t)
+            pred_triplet_map[sig] = t.get('id', '')
+
+        gt_triplet_set = set(gt_triplet_map.keys())
+        pred_triplet_set = set(pred_triplet_map.keys())
+
+        # Track matched/unmatched triplet IDs
+        matched_gt_triplet_ids = [gt_triplet_map[sig] for sig in (gt_triplet_set & pred_triplet_set) if gt_triplet_map[sig]]
+        matched_pred_triplet_ids = [pred_triplet_map[sig] for sig in (gt_triplet_set & pred_triplet_set) if pred_triplet_map[sig]]
+        unmatched_gt_triplet_ids = [gt_triplet_map[sig] for sig in (gt_triplet_set - pred_triplet_set) if gt_triplet_map[sig]]
+        unmatched_pred_triplet_ids = [pred_triplet_map[sig] for sig in (pred_triplet_set - gt_triplet_set) if pred_triplet_map[sig]]
 
         triplet_tp = len(gt_triplet_set & pred_triplet_set)
         triplet_fp = len(pred_triplet_set - gt_triplet_set)
@@ -3018,7 +3056,11 @@ def calculate_metrics(request):
                     'false_positives': entity_fp,
                     'false_negatives': entity_fn,
                     'ground_truth_count': len(ground_truth_entities),
-                    'predicted_count': len(predicted_entities)
+                    'predicted_count': len(predicted_entities),
+                    'matched_gt_entities': matched_gt_entity_ids,
+                    'matched_pred_entities': matched_pred_entity_ids,
+                    'unmatched_gt_entities': unmatched_gt_entity_ids,
+                    'unmatched_pred_entities': unmatched_pred_entity_ids
                 },
                 'triplet': {
                     'precision': round(triplet_precision, 4),
@@ -3028,7 +3070,11 @@ def calculate_metrics(request):
                     'false_positives': triplet_fp,
                     'false_negatives': triplet_fn,
                     'ground_truth_count': len(ground_truth_triplets),
-                    'predicted_count': len(predicted_triplets)
+                    'predicted_count': len(predicted_triplets),
+                    'matched_gt_triplets': matched_gt_triplet_ids,
+                    'matched_pred_triplets': matched_pred_triplet_ids,
+                    'unmatched_gt_triplets': unmatched_gt_triplet_ids,
+                    'unmatched_pred_triplets': unmatched_pred_triplet_ids
                 }
             }
         })
@@ -3670,4 +3716,85 @@ def save_relation_extraction_prompt(request):
         return JsonResponse({
             'success': False,
             'error': f'Failed to save relation extraction prompt: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def migrate_entity_ids(request):
+    """One-time migration: Convert entity IDs to new format and add triplet IDs."""
+    try:
+        entities_file = str(PROJECT_ROOT / "entities.json")
+
+        # Create backup
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        backup_file = str(PROJECT_ROOT / f"entities_backup_{timestamp}.json")
+        with open(entities_file, 'r', encoding='utf-8') as f:
+            entities_data = json.load(f)
+        with open(backup_file, 'w', encoding='utf-8') as f:
+            json.dump(entities_data, f, indent=2, ensure_ascii=False)
+
+        # Migrate each entry
+        for entry in entities_data:
+            # Migrate ground truth
+            if 'ground_truths' in entry:
+                for schema_name, gt_data in entry['ground_truths'].items():
+                    entity_id_map = {}
+
+                    # Migrate entity IDs: e1 -> eg1
+                    if 'entities' in gt_data:
+                        for entity in gt_data['entities']:
+                            old_id = entity.get('id', '')
+                            if old_id.startswith('e') and not old_id.startswith('eg'):
+                                new_id = f"eg{old_id[1:]}"
+                                entity['id'] = new_id
+                                entity_id_map[old_id] = new_id
+
+                    # Add triplet IDs and update entity references
+                    if 'triplets' in gt_data:
+                        for i, triplet in enumerate(gt_data['triplets']):
+                            triplet['id'] = f"tg{i+1}"
+                            if triplet.get('entity1_id') in entity_id_map:
+                                triplet['entity1_id'] = entity_id_map[triplet['entity1_id']]
+                            if triplet.get('entity2_id') in entity_id_map:
+                                triplet['entity2_id'] = entity_id_map[triplet['entity2_id']]
+
+            # Migrate auto-extracted
+            if 'extraction_methods' in entry:
+                for schema_name, methods in entry['extraction_methods'].items():
+                    for method in methods:
+                        entity_id_map = {}
+
+                        # Migrate entity IDs: e1 -> ea1
+                        if 'entities' in method:
+                            for entity in method['entities']:
+                                old_id = entity.get('id', '')
+                                if old_id.startswith('e') and not old_id.startswith('ea'):
+                                    new_id = f"ea{old_id[1:]}"
+                                    entity['id'] = new_id
+                                    entity_id_map[old_id] = new_id
+
+                        # Add triplet IDs and update entity references
+                        if 'triplets' in method:
+                            for i, triplet in enumerate(method['triplets']):
+                                triplet['id'] = f"ta{i+1}"
+                                # Only update refs if using new format (has entity IDs)
+                                if 'entity1_id' in triplet and triplet.get('entity1_id') in entity_id_map:
+                                    triplet['entity1_id'] = entity_id_map[triplet['entity1_id']]
+                                if 'entity2_id' in triplet and triplet.get('entity2_id') in entity_id_map:
+                                    triplet['entity2_id'] = entity_id_map[triplet['entity2_id']]
+
+        # Save migrated data
+        with open(entities_file, 'w', encoding='utf-8') as f:
+            json.dump(entities_data, f, indent=2, ensure_ascii=False)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Migration completed. Backup saved to: {Path(backup_file).name}'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
         }, status=500)
