@@ -1929,9 +1929,9 @@ def add_ground_truth_entity(request):
                 # Generate entity ID
                 existing_ids = [e.get('id', '') for e in entry['ground_truths'][active_schema]['entities']]
                 entity_num = 1
-                while f"eg{entity_num}" in existing_ids:
+                while f"ge{entity_num}" in existing_ids:
                     entity_num += 1
-                new_entity_id = f"eg{entity_num}"
+                new_entity_id = f"ge{entity_num}"
 
                 entity['id'] = new_entity_id
                 entry['ground_truths'][active_schema]['entities'].append(entity)
@@ -2070,9 +2070,9 @@ def add_ground_truth_relation(request):
                 # Generate triplet ID
                 existing_triplet_ids = [t.get('id', '') for t in entry['ground_truths'][active_schema]['triplets']]
                 triplet_num = 1
-                while f"tg{triplet_num}" in existing_triplet_ids:
+                while f"gt{triplet_num}" in existing_triplet_ids:
                     triplet_num += 1
-                relation['id'] = f"tg{triplet_num}"
+                relation['id'] = f"gt{triplet_num}"
 
                 entry['ground_truths'][active_schema]['triplets'].append(relation)
                 entry_found = True
@@ -2181,15 +2181,17 @@ def extract_entities_llm(request):
         # Find the entry and method
         target_entry = None
         target_method = None
+        method_index = 0
 
         for entry in entities_data:
             if entry.get('entry') == entry_number:
                 target_entry = entry
                 if 'extraction_methods' in entry:
                     for schema_name, methods in entry['extraction_methods'].items():
-                        for method in methods:
+                        for idx, method in enumerate(methods):
                             if method.get('id') == method_id:
                                 target_method = method
+                                method_index = idx + 1  # 1-based index
                                 break
                         if target_method:
                             break
@@ -2308,9 +2310,9 @@ def extract_entities_llm(request):
                         }, status=500)
                 # Ensure ID exists and is unique
                 if 'id' not in entity:
-                    entity['id'] = f"ea{i+1}"
+                    entity['id'] = f"a{method_index}e{i+1}"
                 if entity['id'] in seen_ids:
-                    entity['id'] = f"ea{len(seen_ids)+1}"
+                    entity['id'] = f"a{method_index}e{len(seen_ids)+1}"
                 seen_ids.add(entity['id'])
 
             # Save entities to method
@@ -2372,15 +2374,17 @@ def extract_relations_llm(request):
         # Find the entry and method
         target_entry = None
         target_method = None
+        method_index = 0
 
         for entry in entities_data:
             if entry.get('entry') == entry_number:
                 target_entry = entry
                 if 'extraction_methods' in entry:
                     for schema_name, methods in entry['extraction_methods'].items():
-                        for method in methods:
+                        for idx, method in enumerate(methods):
                             if method.get('id') == method_id:
                                 target_method = method
+                                method_index = idx + 1  # 1-based index
                                 break
                         if target_method:
                             break
@@ -2543,7 +2547,7 @@ def extract_relations_llm(request):
             # Assign triplet IDs
             for i, triplet in enumerate(valid_relations):
                 if 'id' not in triplet:
-                    triplet['id'] = f"ta{i+1}"
+                    triplet['id'] = f"a{method_index}t{i+1}"
 
             # Save relations to method
             target_method['triplets'] = valid_relations
