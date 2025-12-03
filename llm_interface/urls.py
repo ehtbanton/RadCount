@@ -39,6 +39,8 @@ urlpatterns = [
     # Two-step LLM extraction
     path('extract-entities-llm/', views.extract_entities_llm, name='extract_entities_llm'),
     path('extract-relations-llm/', views.extract_relations_llm, name='extract_relations_llm'),
+    # One-shot extraction
+    path('extract-oneshot/', views.extract_oneshot, name='extract_oneshot'),
     # Metrics
     path('calculate-metrics/', views.calculate_metrics, name='calculate_metrics'),
     # Migration

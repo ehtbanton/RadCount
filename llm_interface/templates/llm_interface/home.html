@@ -765,6 +765,14 @@
                                 >
                                     A1
                                 </button>
+                                <button
+                                    id="auto-extracted-2-tab-btn"
+                                    class="annotation-tab-btn"
+                                    onclick="switchAnnotationTab('auto-extracted-2')"
+                                    style="padding: 10px 20px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; cursor: pointer; font-size: 0.95em; font-weight: 400; margin-bottom: -2px;"
+                                >
+                                    A2
+                                </button>
                             </div>
 
                             <!-- Ground Truth Tab Content -->
@@ -938,6 +946,47 @@
 
                                 <!-- Metrics Display -->
                                 <div id="auto-extracted-metrics-container" style="display: none;">
+                                    <!-- Metrics will be populated here by JavaScript -->
+                                </div>
+                            </div>
+
+                            <!-- A2 Tab Content (One-shot extraction) -->
+                            <div id="auto-extracted-2-tab" class="annotation-tab-content" style="display: none;">
+                                <!-- One-shot extraction button -->
+                                <div style="margin-bottom: 15px;">
+                                    <button
+                                        id="extract-oneshot-btn"
+                                        onclick="runOneShotExtraction()"
+                                        style="width: 100%; padding: 12px 16px; background: #8b5cf6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.95em; font-weight: 500; transition: background 0.2s;"
+                                        onmouseover="this.style.background='#7c3aed'"
+                                        onmouseout="this.style.background='#8b5cf6'"
+                                    >
+                                        Extract Entities & Relations (One-Shot)
+                                    </button>
+                                </div>
+
+                                <!-- Extracted Entities Display -->
+                                <div style="margin-bottom: 15px;">
+                                    <div style="font-weight: 500; color: #374151; margin-bottom: 8px; font-size: 0.9em;">
+                                        Extracted Entities (<span id="auto-2-entity-count">0</span>)
+                                    </div>
+                                    <div id="auto-2-entities-container" style="display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; background: #f9fafb; border-radius: 6px; min-height: 40px; max-height: 150px; overflow-y: auto;">
+                                        <div style="color: #6b7280; font-size: 0.85em;">No entities extracted yet. Click "Extract Entities & Relations" to start.</div>
+                                    </div>
+                                </div>
+
+                                <!-- Extracted Relations Display -->
+                                <div style="margin-bottom: 15px;">
+                                    <div style="font-weight: 500; color: #374151; margin-bottom: 8px; font-size: 0.9em;">
+                                        Extracted Relations (<span id="auto-2-relation-count">0</span>)
+                                    </div>
+                                    <div id="auto-2-relations-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto;">
+                                        <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">No relations extracted yet. Click "Extract Entities & Relations" to start.</div>
+                                    </div>
+                                </div>
+
+                                <!-- Metrics Display -->
+                                <div id="auto-extracted-2-metrics-container" style="display: none;">
                                     <!-- Metrics will be populated here by JavaScript -->
                                 </div>
                             </div>
@@ -2588,6 +2637,8 @@
                 renderGroundTruthTab();
             } else if (activeAnnotationTab === 'auto-extracted') {
                 await renderAutoExtractedTab();
+            } else if (activeAnnotationTab === 'auto-extracted-2') {
+                await renderAutoExtracted2Tab();
             }
         }
 
@@ -2729,6 +2780,8 @@
                 activeBtn = document.getElementById('ground-truth-tab-btn');
             } else if (tabName === 'auto-extracted') {
                 activeBtn = document.getElementById('auto-extracted-tab-btn');
+            } else if (tabName === 'auto-extracted-2') {
+                activeBtn = document.getElementById('auto-extracted-2-tab-btn');
             }
 
             if (activeBtn) {
@@ -2740,12 +2793,15 @@
             // Show/hide tab content
             document.getElementById('ground-truth-tab').style.display = tabName === 'ground-truth' ? 'block' : 'none';
             document.getElementById('auto-extracted-tab').style.display = tabName === 'auto-extracted' ? 'block' : 'none';
+            document.getElementById('auto-extracted-2-tab').style.display = tabName === 'auto-extracted-2' ? 'block' : 'none';
 
             // Render content for active tab
             if (tabName === 'ground-truth') {
                 renderGroundTruthTab();
             } else if (tabName === 'auto-extracted') {
                 await renderAutoExtractedTab();
+            } else if (tabName === 'auto-extracted-2') {
+                await renderAutoExtracted2Tab();
             }
         }
 
@@ -3757,6 +3813,406 @@
                 const metrics = result.metrics;
                 let html = '<div style="background: white; border-radius: 6px; padding: 20px; margin-top: 15px; border: 1px solid #e5e7eb;">';
                 html += '<h3 style="margin: 0 0 20px 0; color: #1f2937; font-size: 1.1em;">Auto-Annotation Metrics</h3>';
+
+                // Entity Metrics Section
+                if (metrics.entity) {
+                    html += '<div style="margin-bottom: 25px;">';
+                    html += '<div style="font-weight: 600; color: #10b981; margin-bottom: 12px; font-size: 1em;">Entity Metrics</div>';
+                    html += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 10px;">';
+
+                    html += '<div style="background: #d1fae5; padding: 15px; border-radius: 6px; text-align: center;">';
+                    html += '<div style="font-size: 0.85em; color: #059669; font-weight: 500; margin-bottom: 8px;">Precision</div>';
+                    html += '<div style="font-size: 1.8em; color: #059669; font-weight: 600;">' + (metrics.entity.precision * 100).toFixed(1) + '%</div>';
+                    html += '</div>';
+
+                    html += '<div style="background: #d1fae5; padding: 15px; border-radius: 6px; text-align: center;">';
+                    html += '<div style="font-size: 0.85em; color: #059669; font-weight: 500; margin-bottom: 8px;">Recall</div>';
+                    html += '<div style="font-size: 1.8em; color: #059669; font-weight: 600;">' + (metrics.entity.recall * 100).toFixed(1) + '%</div>';
+                    html += '</div>';
+
+                    html += '<div style="background: #d1fae5; padding: 15px; border-radius: 6px; text-align: center;">';
+                    html += '<div style="font-size: 0.85em; color: #059669; font-weight: 500; margin-bottom: 8px;">F1 Score</div>';
+                    html += '<div style="font-size: 1.8em; color: #059669; font-weight: 600;">' + (metrics.entity.f1_score * 100).toFixed(1) + '%</div>';
+                    html += '</div>';
+
+                    html += '</div>';
+                    html += '<div style="font-size: 0.8em; color: #6b7280; text-align: center;">';
+                    html += 'TP: ' + metrics.entity.true_positives + ' | FP: ' + metrics.entity.false_positives + ' | FN: ' + metrics.entity.false_negatives;
+                    html += ' (GT: ' + metrics.entity.ground_truth_count + ', Pred: ' + metrics.entity.predicted_count + ')';
+                    html += '</div></div>';
+                }
+
+                // Triplet/Relation Metrics Section
+                if (metrics.triplet) {
+                    html += '<div style="margin-bottom: 20px;">';
+                    html += '<div style="font-weight: 600; color: #3b82f6; margin-bottom: 12px; font-size: 1em;">Relation Metrics</div>';
+                    html += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 10px;">';
+
+                    html += '<div style="background: #dbeafe; padding: 15px; border-radius: 6px; text-align: center;">';
+                    html += '<div style="font-size: 0.85em; color: #1e40af; font-weight: 500; margin-bottom: 8px;">Precision</div>';
+                    html += '<div style="font-size: 1.8em; color: #1e40af; font-weight: 600;">' + (metrics.triplet.precision * 100).toFixed(1) + '%</div>';
+                    html += '</div>';
+
+                    html += '<div style="background: #dbeafe; padding: 15px; border-radius: 6px; text-align: center;">';
+                    html += '<div style="font-size: 0.85em; color: #1e40af; font-weight: 500; margin-bottom: 8px;">Recall</div>';
+                    html += '<div style="font-size: 1.8em; color: #1e40af; font-weight: 600;">' + (metrics.triplet.recall * 100).toFixed(1) + '%</div>';
+                    html += '</div>';
+
+                    html += '<div style="background: #dbeafe; padding: 15px; border-radius: 6px; text-align: center;">';
+                    html += '<div style="font-size: 0.85em; color: #1e40af; font-weight: 500; margin-bottom: 8px;">F1 Score</div>';
+                    html += '<div style="font-size: 1.8em; color: #1e40af; font-weight: 600;">' + (metrics.triplet.f1_score * 100).toFixed(1) + '%</div>';
+                    html += '</div>';
+
+                    html += '</div>';
+                    html += '<div style="font-size: 0.8em; color: #6b7280; text-align: center;">';
+                    html += 'TP: ' + metrics.triplet.true_positives + ' | FP: ' + metrics.triplet.false_positives + ' | FN: ' + metrics.triplet.false_negatives;
+                    html += ' (GT: ' + metrics.triplet.ground_truth_count + ', Pred: ' + metrics.triplet.predicted_count + ')';
+                    html += '</div></div>';
+                }
+
+                // Explanation
+                html += '<div style="padding: 12px; background: #f3f4f6; border-radius: 6px; font-size: 0.85em; color: #6b7280;">';
+                html += '<strong>How metrics are calculated:</strong><br>';
+                html += '• <strong>Entity matching:</strong> Text + Type (case-insensitive)<br>';
+                html += '• <strong>Relation matching:</strong> Entity1 + Relation Type + Entity2<br>';
+                html += '• <strong>Precision:</strong> Correct predictions / All predictions<br>';
+                html += '• <strong>Recall:</strong> Found items / All ground truth items';
+                html += '</div>';
+
+                html += '</div>';
+                container.innerHTML = html;
+
+            } catch (error) {
+                container.innerHTML = '<div style="color: #ef4444; font-size: 0.9em; text-align: center; padding: 20px;">Error calculating metrics: ' + error.message + '</div>';
+            }
+        }
+
+        // ===== A2 (One-shot extraction) Functions =====
+
+        // Render A2 tab (one-shot extraction)
+        async function renderAutoExtracted2Tab() {
+            await renderAutoExtracted2Entities();
+            await renderAutoExtracted2Relations();
+            await renderAutoExtracted2Metrics();
+        }
+
+        // Run one-shot extraction for A2
+        async function runOneShotExtraction() {
+            if (!currentEntry) {
+                alert('Please select a CSV entry first');
+                return;
+            }
+
+            const entryData = getEntityEntryData(currentEntry);
+            if (!entryData) {
+                alert('No entry data found');
+                return;
+            }
+
+            // Check if LLM server is running
+            try {
+                const statusResponse = await fetch('/llm/status/');
+                const statusData = await statusResponse.json();
+                if (!statusData.running) {
+                    alert('LLM server is not running. Please start it first.');
+                    return;
+                }
+            } catch (error) {
+                alert('Failed to check LLM server status');
+                return;
+            }
+
+            // Get report text from current entry (last field)
+            const lastKey = Object.keys(currentEntryData)[Object.keys(currentEntryData).length - 1];
+            const reportText = currentEntryData[lastKey];
+
+            if (!reportText) {
+                alert('No report text found in current entry');
+                return;
+            }
+
+            const currentSchema = entryData.active_schema || activeSchemaName || 'radgraph';
+
+            // Create or get method 2 for A2
+            if (!entryData.extraction_methods) {
+                entryData.extraction_methods = {};
+            }
+            if (!entryData.extraction_methods[currentSchema]) {
+                entryData.extraction_methods[currentSchema] = [];
+            }
+
+            // Find or create method 2 (A2)
+            let method2 = entryData.extraction_methods[currentSchema].find((m, idx) => idx === 1);
+            if (!method2) {
+                // Create method 2
+                const methodId = `method_${currentEntry}_${currentSchema}_${Date.now()}_oneshot`;
+                method2 = {
+                    id: methodId,
+                    name: 'One-Shot Extraction',
+                    schema: currentSchema,
+                    timestamp: new Date().toISOString(),
+                    entities: [],
+                    triplets: []
+                };
+
+                // Ensure method 2 is at index 1
+                if (entryData.extraction_methods[currentSchema].length < 2) {
+                    entryData.extraction_methods[currentSchema].push(method2);
+                } else {
+                    entryData.extraction_methods[currentSchema][1] = method2;
+                }
+
+                // Save to server
+                try {
+                    const response = await fetch('/llm/create-extraction-method/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            entry_number: currentEntry,
+                            method_name: method2.name,
+                            schema: currentSchema,
+                            prompt: 'oneshot'
+                        })
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        method2.id = result.method_id;
+                    }
+                } catch (error) {
+                    console.error('Failed to create method on server:', error);
+                }
+            }
+
+            const button = document.getElementById('extract-oneshot-btn');
+            button.disabled = true;
+            button.textContent = 'Extracting...';
+
+            try {
+                const response = await fetch('/llm/extract-oneshot/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        method_id: method2.id,
+                        report_text: reportText
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Update local data
+                    method2.entities = result.entities || [];
+                    method2.triplets = result.relations || [];
+                    method2.timestamp = new Date().toISOString();
+
+                    // Re-render A2 tab
+                    await renderAutoExtracted2Tab();
+
+                    alert(`Extracted ${result.entities.length} entities and ${result.relations.length} relations`);
+                } else {
+                    alert('Extraction failed: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Extraction failed: ' + error.message);
+                console.error('Extraction error:', error);
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Extract Entities & Relations (One-Shot)';
+            }
+        }
+
+        // Render A2 entities
+        async function renderAutoExtracted2Entities() {
+            const container = document.getElementById('auto-2-entities-container');
+            const countSpan = document.getElementById('auto-2-entity-count');
+            if (!container) return;
+
+            const entryData = getEntityEntryData(currentEntry);
+            let entities = [];
+
+            if (entryData?.extraction_methods) {
+                const currentSchema = entryData.active_schema || activeSchemaName || 'radgraph';
+                const methods = entryData.extraction_methods[currentSchema] || [];
+                const method2 = methods[1]; // A2 is always index 1
+                if (method2) {
+                    entities = method2.entities || [];
+                }
+            }
+
+            if (countSpan) countSpan.textContent = entities.length;
+
+            if (entities.length === 0) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.85em;">No entities extracted yet. Click "Extract Entities & Relations" to start.</div>';
+                return;
+            }
+
+            // Fetch matching data for A2
+            const matchingData = await getMatchingDataForMethod2();
+            const matchedEntityIds = new Set(matchingData?.entity?.matched_pred_entities || []);
+
+            let html = '';
+            entities.forEach(e => {
+                const color = getEntityTypeColor(e.type);
+                const isMatched = matchedEntityIds.has(e.id);
+                const borderColor = isMatched ? '#10b981' : '#ef4444';  // green : red
+
+                html += `<div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: white; border: 2px solid ${borderColor}; border-radius: 16px; font-size: 0.85em;">
+                    <span style="font-weight: 500; color: ${color};">[${e.id}]</span>
+                    <span style="color: #374151;">${escapeHtml(e.text)}</span>
+                    <span style="color: ${color}; font-size: 0.8em;">(${e.type})</span>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        // Render A2 relations
+        async function renderAutoExtracted2Relations() {
+            const container = document.getElementById('auto-2-relations-container');
+            const countSpan = document.getElementById('auto-2-relation-count');
+            if (!container) return;
+
+            const entryData = getEntityEntryData(currentEntry);
+            let relations = [];
+            let entities = [];
+
+            if (entryData?.extraction_methods) {
+                const currentSchema = entryData.active_schema || activeSchemaName || 'radgraph';
+                const methods = entryData.extraction_methods[currentSchema] || [];
+                const method2 = methods[1]; // A2 is always index 1
+                if (method2) {
+                    relations = method2.triplets || [];
+                    entities = method2.entities || [];
+                }
+            }
+
+            if (countSpan) countSpan.textContent = relations.length;
+
+            if (relations.length === 0) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">No relations extracted yet. Click "Extract Entities & Relations" to start.</div>';
+                return;
+            }
+
+            // Fetch matching data for A2
+            const matchingData = await getMatchingDataForMethod2();
+            const matchedTripletIds = new Set(matchingData?.triplet?.matched_pred_triplets || []);
+
+            // Build entity lookup
+            const entityLookup = {};
+            entities.forEach(e => { entityLookup[e.id] = e; });
+
+            let html = '';
+            relations.forEach((rel, index) => {
+                const e1 = entityLookup[rel.entity1_id] || { text: rel.entity1_id, type: '?' };
+                const e2 = entityLookup[rel.entity2_id] || { text: rel.entity2_id, type: '?' };
+                const color1 = getEntityTypeColor(e1.type);
+                const color2 = getEntityTypeColor(e2.type);
+
+                const isMatched = matchedTripletIds.has(rel.id);
+                const borderColor = isMatched ? '#10b981' : '#ef4444';  // green : red
+
+                html += `<div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f9fafb; border: 2px solid ${borderColor}; border-radius: 4px; font-size: 0.85em;">
+                    <span style="font-weight: 500; color: #6b7280;">[${rel.id}]</span>
+                    <span style="flex: 2; color: ${color1};">[${rel.entity1_id}] ${escapeHtml(e1.text)}</span>
+                    <span style="flex-shrink: 0; background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 4px; font-size: 0.9em;">${rel.relation_type}</span>
+                    <span style="flex: 2; color: ${color2};">[${rel.entity2_id}] ${escapeHtml(e2.text)}</span>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        // Get matching data for method 2 (A2)
+        async function getMatchingDataForMethod2() {
+            if (!currentEntry) return null;
+
+            const entryData = getEntityEntryData(currentEntry);
+            if (!entryData) return null;
+
+            const currentSchema = entryData.active_schema || activeSchemaName || 'radgraph';
+            const methods = entryData.extraction_methods?.[currentSchema] || [];
+            const method2 = methods[1]; // A2 is always index 1
+
+            if (!method2) return null;
+
+            try {
+                const response = await fetch('/llm/calculate-metrics/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        method_id: method2.id
+                    })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    return result.metrics;
+                }
+            } catch (error) {
+                console.error('Error fetching matching data for A2:', error);
+            }
+
+            return null;
+        }
+
+        // Render A2 metrics
+        async function renderAutoExtracted2Metrics() {
+            const container = document.getElementById('auto-extracted-2-metrics-container');
+            if (!container) return;
+
+            if (!currentEntry) {
+                container.style.display = 'none';
+                return;
+            }
+
+            const entryData = getEntityEntryData(currentEntry);
+            if (!entryData) {
+                container.style.display = 'none';
+                return;
+            }
+
+            // Check if there's any ground truth data
+            const currentSchema = entryData.active_schema || activeSchemaName || 'radgraph';
+            const gtData = entryData.ground_truths?.[currentSchema] || {};
+            const gtEntities = gtData.entities || [];
+            const gtTriplets = gtData.triplets || [];
+
+            if (gtEntities.length === 0 && gtTriplets.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+
+            // Check if method 2 exists
+            const methods = entryData.extraction_methods?.[currentSchema] || [];
+            const method2 = methods[1];
+            if (!method2) {
+                container.style.display = 'none';
+                return;
+            }
+
+            container.style.display = 'block';
+            container.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">Calculating metrics...</div>';
+
+            try {
+                const response = await fetch('/llm/calculate-metrics/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        method_id: method2.id
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    container.innerHTML = '<div style="color: #ef4444; font-size: 0.9em; text-align: center; padding: 20px;">Error: ' + result.error + '</div>';
+                    return;
+                }
+
+                const metrics = result.metrics;
+                let html = '<div style="background: white; border-radius: 6px; padding: 20px; margin-top: 15px; border: 1px solid #e5e7eb;">';
+                html += '<h3 style="margin: 0 0 20px 0; color: #1f2937; font-size: 1.1em;">A2 Auto-Annotation Metrics</h3>';
 
                 // Entity Metrics Section
                 if (metrics.entity) {

@@ -2583,6 +2583,247 @@ def extract_relations_llm(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+def extract_oneshot(request):
+    """Extract both entities and relations in a single LLM call (one-shot extraction)."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        entry_number = data.get('entry_number')
+        method_id = data.get('method_id')
+        report_text = data.get('report_text', '')
+
+        if entry_number is None:
+            return JsonResponse({'success': False, 'error': 'entry_number is required'}, status=400)
+
+        if not method_id:
+            return JsonResponse({'success': False, 'error': 'method_id is required'}, status=400)
+
+        if not report_text:
+            return JsonResponse({'success': False, 'error': 'report_text is required'}, status=400)
+
+        entities_file = PROJECT_ROOT / "entities.json"
+
+        if not entities_file.exists():
+            return JsonResponse({'success': False, 'error': 'entities.json not found'}, status=404)
+
+        # Load entities
+        with open(entities_file, 'r', encoding='utf-8') as f:
+            entities_data = json.load(f)
+
+        # Find the entry and method
+        target_entry = None
+        target_method = None
+        method_index = 0
+
+        for entry in entities_data:
+            if entry.get('entry') == entry_number:
+                target_entry = entry
+                if 'extraction_methods' in entry:
+                    for schema_name, methods in entry['extraction_methods'].items():
+                        for idx, method in enumerate(methods):
+                            if method.get('id') == method_id:
+                                target_method = method
+                                method_index = idx + 1  # 1-based index
+                                break
+                        if target_method:
+                            break
+                break
+
+        if not target_entry:
+            return JsonResponse({'success': False, 'error': f'Entry {entry_number} not found'}, status=404)
+
+        if not target_method:
+            return JsonResponse({'success': False, 'error': f'Method {method_id} not found'}, status=404)
+
+        # Get schema
+        schema_name = target_method.get('schema', 'radgraph')
+
+        # Load schema
+        schemas_file = PROJECT_ROOT / "schemas.json"
+        with open(schemas_file, 'r', encoding='utf-8') as f:
+            schemas_data = json.load(f)
+
+        if schema_name not in schemas_data['schemas']:
+            return JsonResponse({'success': False, 'error': f'Schema {schema_name} not found'}, status=404)
+
+        active_schema = schemas_data['schemas'][schema_name]
+
+        # Build entity types text
+        entity_types_text = ""
+        for i, entity_type in enumerate(active_schema['entity_types'], 1):
+            entity_types_text += f"{i}. **{entity_type['name']}**: {entity_type['description']}\n"
+
+        # Build relation types text
+        relation_types_text = ""
+        for i, relation_type in enumerate(active_schema['relation_types'], 1):
+            relation_types_text += f"{i}. **{relation_type['name']}**: {relation_type['description']}\n"
+            if relation_type.get('valid_pairs'):
+                pairs_str = ", ".join([f"({pair[0]} → {pair[1]})" for pair in relation_type['valid_pairs'][:3]])
+                if len(relation_type['valid_pairs']) > 3:
+                    pairs_str += f" (and {len(relation_type['valid_pairs']) - 3} more)"
+                relation_types_text += f"   Valid pairs: {pairs_str}\n"
+
+        # Create one-shot prompt
+        system_prompt = f"""You are an expert medical entity and relation extraction system using the {active_schema['name']} schema.
+
+Your task is to extract BOTH entities and relations from radiology reports in a single response.
+
+## Entity Types
+{entity_types_text}
+
+## Relation Types
+{relation_types_text}
+
+## Output Format
+Respond with a JSON object containing two arrays:
+{{
+  "entities": [
+    {{"text": "entity text", "type": "entity_type"}},
+    ...
+  ],
+  "relations": [
+    {{"entity1_id": "a{method_index}e1", "relation_type": "relation_name", "entity2_id": "a{method_index}e2"}},
+    ...
+  ]
+}}
+
+Important:
+- Use entity IDs like "a{method_index}e1", "a{method_index}e2", "a{method_index}e3" etc. for entities
+- In relations, reference entities by their IDs (e.g., "a{method_index}e1", "a{method_index}e2")
+- Only extract entities and relations that are clearly stated in the report
+- Ensure all entity IDs in relations exist in the entities array
+"""
+
+        # Check if LLM server is running
+        llm_service = LlamaService()
+        if not llm_service.is_server_running():
+            return JsonResponse({'success': False, 'error': 'LLM server is not running'}, status=503)
+
+        # Build messages
+        messages = [
+            {
+                'role': 'system',
+                'content': system_prompt
+            },
+            {
+                'role': 'user',
+                'content': f"Extract all entities and relations from this radiology report:\n\n{report_text}"
+            }
+        ]
+
+        # Call LLM
+        response = requests.post(
+            f"{llm_service.base_url}/v1/chat/completions",
+            headers={'Content-Type': 'application/json'},
+            json={
+                'messages': messages,
+                'temperature': 0.1,
+                'max_tokens': 4000
+            },
+            timeout=180
+        )
+
+        if response.status_code != 200:
+            return JsonResponse({'success': False, 'error': f'LLM request failed: {response.text}'}, status=500)
+
+        result = response.json()
+        generated_text = result['choices'][0]['message']['content']
+
+        # Parse JSON response
+        try:
+            import re
+            json_match = re.search(r'\{.*\}', generated_text, re.DOTALL)
+            if json_match:
+                extraction_result = json.loads(json_match.group())
+            else:
+                extraction_result = json.loads(generated_text)
+
+            # Validate structure
+            if not isinstance(extraction_result, dict):
+                return JsonResponse({
+                    'success': False,
+                    'error': 'LLM response is not a valid JSON object',
+                    'raw_response': generated_text[:1000]
+                }, status=500)
+
+            if 'entities' not in extraction_result or 'relations' not in extraction_result:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'LLM response missing entities or relations',
+                    'raw_response': generated_text[:1000]
+                }, status=500)
+
+            entities = extraction_result['entities']
+            relations = extraction_result['relations']
+
+            # Validate and assign entity IDs
+            required_entity_fields = ['text', 'type']
+            seen_ids = set()
+            for i, entity in enumerate(entities):
+                if not isinstance(entity, dict):
+                    continue
+                if not all(field in entity for field in required_entity_fields):
+                    continue
+                # Ensure ID exists and is unique
+                if 'id' not in entity:
+                    entity['id'] = f"a{method_index}e{i+1}"
+                if entity['id'] in seen_ids:
+                    entity['id'] = f"a{method_index}e{len(seen_ids)+1}"
+                seen_ids.add(entity['id'])
+
+            # Validate relations
+            valid_entity_ids = {e['id'] for e in entities if 'id' in e}
+            valid_relations = []
+            required_relation_fields = ['entity1_id', 'relation_type', 'entity2_id']
+
+            for i, relation in enumerate(relations):
+                if not isinstance(relation, dict):
+                    continue
+                if not all(field in relation for field in required_relation_fields):
+                    continue
+                # Check entity IDs are valid
+                if relation['entity1_id'] not in valid_entity_ids:
+                    continue
+                if relation['entity2_id'] not in valid_entity_ids:
+                    continue
+
+                # Assign triplet ID
+                if 'id' not in relation:
+                    relation['id'] = f"a{method_index}t{i+1}"
+
+                valid_relations.append(relation)
+
+            # Save to method
+            target_method['entities'] = entities
+            target_method['triplets'] = valid_relations
+            target_method['timestamp'] = datetime.now().isoformat()
+
+            # Save updated data
+            with open(entities_file, 'w', encoding='utf-8') as f:
+                json.dump(entities_data, f, indent=2, ensure_ascii=False)
+
+            return JsonResponse({
+                'success': True,
+                'entities': entities,
+                'relations': valid_relations,
+                'entity_count': len(entities),
+                'relation_count': len(valid_relations)
+            })
+
+        except json.JSONDecodeError as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Failed to parse LLM response as JSON: {str(e)}',
+                'raw_response': generated_text[:1000]
+            }, status=500)
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON in request body'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Failed to extract: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
 def create_extraction_method(request):
     """Create a new extraction method for a specific entry."""
     try:
