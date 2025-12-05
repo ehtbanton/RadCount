@@ -714,6 +714,8 @@
                                 <label style="display: flex; align-items: center; gap: 6px; margin-left: 15px; cursor: pointer; font-size: 0.85em; color: #6b7280;">
                                     <input type="checkbox" id="show-word-indices" onchange="toggleWordIndices()" style="cursor: pointer;">
                                     Show Word Indices
+                                    <button onclick="clearWordSelection()" style="margin-left: 10px; padding: 2px 8px; font-size: 0.85em; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer;">Clear Selection</button>
+                                    <span id="selection-info" style="margin-left: 10px; color: #6b7280; font-size: 0.85em;"></span>
                                 </label>
                             </div>
 
@@ -1754,6 +1756,7 @@
         let currentReportText = '';
         let currentReportWords = []; // Array of words for word-based indexing
         let showWordIndices = false;
+        let selectedWordIndices = new Set(); // Track selected word indices for annotation
 
         // Create word-span version of report text (always creates spans for hover highlighting)
         // If showIndices is true, also shows subscript word indices
@@ -1811,6 +1814,62 @@
             });
         }
 
+        // Update selected words display and form inputs
+        function updateSelectedWords() {
+            const textDisplayArea = document.getElementById('csv-entry-text-display');
+            if (!textDisplayArea) return;
+
+            // Clear all selection highlighting
+            textDisplayArea.querySelectorAll('.word-span').forEach(span => {
+                span.classList.remove('word-selected');
+                if (!span.style.backgroundColor || span.style.backgroundColor === 'rgb(254, 240, 138)') {
+                    span.style.backgroundColor = '';
+                }
+            });
+
+            // Highlight selected words
+            selectedWordIndices.forEach(idx => {
+                const span = textDisplayArea.querySelector(`.word-span[data-word-index="${idx}"]`);
+                if (span) {
+                    span.classList.add('word-selected');
+                    span.style.backgroundColor = '#93c5fd';  // blue highlight for selection
+                    span.style.borderRadius = '2px';
+                }
+            });
+
+            // Update selection info display
+            const selectionInfo = document.getElementById('selection-info');
+            if (selectionInfo) {
+                if (selectedWordIndices.size > 0) {
+                    selectionInfo.textContent = `(${selectedWordIndices.size} word${selectedWordIndices.size > 1 ? 's' : ''} selected)`;
+                } else {
+                    selectionInfo.textContent = '';
+                }
+            }
+
+            // Update form inputs
+            if (selectedWordIndices.size > 0) {
+                const indices = Array.from(selectedWordIndices).sort((a, b) => a - b);
+                const startWord = indices[0];
+                const endWord = indices[indices.length - 1];
+                const selectedWords = indices.map(i => currentReportWords[i]).join(' ');
+
+                const startInput = document.getElementById('gt-entity-start-word');
+                const endInput = document.getElementById('gt-entity-end-word');
+                const textInput = document.getElementById('gt-entity-text');
+
+                if (startInput) startInput.value = startWord;
+                if (endInput) endInput.value = endWord;
+                if (textInput) textInput.value = selectedWords;
+            }
+        }
+
+        // Clear word selection
+        function clearWordSelection() {
+            selectedWordIndices.clear();
+            updateSelectedWords();
+        }
+
         // Toggle word indices display
         function toggleWordIndices() {
             showWordIndices = document.getElementById('show-word-indices').checked;
@@ -1825,29 +1884,30 @@
             // Always use word spans (for hover highlighting), optionally show indices
             textDisplayArea.innerHTML = createWordSpanReportText(currentReportText, showWordIndices);
 
-            // Add click handlers to word spans for selecting words
+            // Add click handlers to word spans for word selection
             textDisplayArea.querySelectorAll('.word-span').forEach(span => {
                 span.addEventListener('click', (e) => {
                     const wordIndex = parseInt(span.dataset.wordIndex, 10);
-                    const startInput = document.getElementById('gt-entity-start-word');
-                    const endInput = document.getElementById('gt-entity-end-word');
-                    const entityTextInput = document.getElementById('gt-entity-text');
 
-                    if (!startInput || !endInput || !entityTextInput) return;
-
-                    // If start is empty or clicking a new word before current start, set start
-                    if (startInput.value === '' || parseInt(startInput.value, 10) > wordIndex) {
-                        startInput.value = wordIndex;
-                        endInput.value = wordIndex;
-                        entityTextInput.value = currentReportWords[wordIndex];
+                    if (e.ctrlKey || e.metaKey) {
+                        // Ctrl+click: toggle word in selection
+                        if (selectedWordIndices.has(wordIndex)) {
+                            selectedWordIndices.delete(wordIndex);
+                        } else {
+                            selectedWordIndices.add(wordIndex);
+                        }
                     } else {
-                        // Extend selection to this word
-                        endInput.value = wordIndex;
-                        const startIdx = parseInt(startInput.value, 10);
-                        entityTextInput.value = currentReportWords.slice(startIdx, wordIndex + 1).join(' ');
+                        // Regular click: select only this word
+                        selectedWordIndices.clear();
+                        selectedWordIndices.add(wordIndex);
                     }
+
+                    updateSelectedWords();
                 });
             });
+
+            // Restore selection highlighting if any
+            updateSelectedWords();
         }
 
         // Handle text selection in the report display
@@ -3305,6 +3365,9 @@
                     document.getElementById('gt-entity-type').value = '';
                     document.getElementById('gt-entity-start-word').value = '';
                     document.getElementById('gt-entity-end-word').value = '';
+
+                    // Clear word selection
+                    clearWordSelection();
 
                     // Re-render
                     renderGroundTruthEntities();
@@ -6798,6 +6861,14 @@
             initSchemaEditorListeners();
             initPromptEditorListeners();
             initPropertyModalListeners();
+
+            // Add keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                // Escape key clears word selection
+                if (e.key === 'Escape') {
+                    clearWordSelection();
+                }
+            });
 
             // Load schemas, prompts, and entities
             loadSchemas();
