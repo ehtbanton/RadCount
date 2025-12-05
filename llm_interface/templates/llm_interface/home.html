@@ -711,14 +711,18 @@
                                 >
                                     Report View
                                 </button>
+                                <label style="display: flex; align-items: center; gap: 6px; margin-left: 15px; cursor: pointer; font-size: 0.85em; color: #6b7280;">
+                                    <input type="checkbox" id="show-word-indices" onchange="toggleWordIndices()" style="cursor: pointer;">
+                                    Show Word Indices
+                                </label>
                             </div>
 
                             <div id="json-view-label" style="font-size: 0.85em; color: #6b7280; margin-bottom: 10px; display: none;">Entry Data (JSON):</div>
-                            <div id="text-view-label" style="font-size: 0.85em; color: #6b7280; margin-bottom: 10px;">Entry Data (Report):</div>
+                            <div id="text-view-label" style="font-size: 0.85em; color: #6b7280; margin-bottom: 10px;">Entry Data (Report): <span id="word-selection-hint" style="color: #3b82f6; font-size: 0.9em;"></span></div>
 
                             <pre id="csv-entry-display" style="display: none; background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 0.85em; line-height: 1.5; height: 400px; overflow-y: scroll; overflow-x: hidden; color: #1f2937; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;">No entry loaded</pre>
 
-                            <div id="csv-entry-text-display" style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 1.02em; line-height: 1.6; height: 400px; overflow-y: scroll; overflow-x: hidden; color: #1f2937; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;">No entry loaded</div>
+                            <div id="csv-entry-text-display" onmouseup="handleTextSelection()" style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 1.02em; line-height: 1.6; height: 400px; overflow-y: scroll; overflow-x: hidden; color: #1f2937; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;">No entry loaded</div>
                         </div>
 
                         <!-- Annotation & Extraction Section -->
@@ -784,8 +788,8 @@
                                         Step 1: Add Entities
                                     </div>
 
-                                    <div style="display: flex; gap: 10px; align-items: end;">
-                                        <div style="flex: 2;">
+                                    <div style="display: flex; gap: 10px; align-items: end; flex-wrap: wrap;">
+                                        <div style="flex: 2; min-width: 150px;">
                                             <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Entity Text</label>
                                             <input
                                                 id="gt-entity-text"
@@ -794,7 +798,7 @@
                                                 style="width: 100%; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9em;"
                                             />
                                         </div>
-                                        <div style="flex: 1;">
+                                        <div style="flex: 1; min-width: 120px;">
                                             <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Entity Type</label>
                                             <select
                                                 id="gt-entity-type"
@@ -802,6 +806,26 @@
                                             >
                                                 <option value="">Select type...</option>
                                             </select>
+                                        </div>
+                                        <div style="flex: 0 0 70px;">
+                                            <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Start</label>
+                                            <input
+                                                id="gt-entity-start-word"
+                                                type="number"
+                                                min="0"
+                                                placeholder="0"
+                                                style="width: 100%; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em;"
+                                            />
+                                        </div>
+                                        <div style="flex: 0 0 70px;">
+                                            <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">End</label>
+                                            <input
+                                                id="gt-entity-end-word"
+                                                type="number"
+                                                min="0"
+                                                placeholder="0"
+                                                style="width: 100%; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em;"
+                                            />
                                         </div>
                                         <button
                                             onclick="addGroundTruthEntity()"
@@ -811,6 +835,9 @@
                                         >
                                             Add Entity
                                         </button>
+                                    </div>
+                                    <div style="margin-top: 8px; font-size: 0.75em; color: #9ca3af;">
+                                        Word indices are 0-based. Select text in the report to auto-fill indices.
                                     </div>
                                 </div>
 
@@ -1725,6 +1752,117 @@
         let currentEntry = null;
         let extractionPromptsData = null;
         let currentReportText = '';
+        let currentReportWords = []; // Array of words for word-based indexing
+        let showWordIndices = false;
+
+        // Create indexed version of report text
+        function createIndexedReportText(text) {
+            const lines = text.split('\n');
+            const indexedLines = [];
+            let wordIndex = 0;
+            currentReportWords = [];
+
+            for (const line of lines) {
+                const words = line.split(/\s+/).filter(w => w.length > 0);
+                const indexedWords = [];
+                for (const word of words) {
+                    indexedWords.push(`<span class="word-indexed" data-word-index="${wordIndex}" style="cursor: pointer;">${escapeHtml(word)}<sub style="color: #9ca3af; font-size: 0.7em;">${wordIndex}</sub></span>`);
+                    currentReportWords.push(word);
+                    wordIndex++;
+                }
+                indexedLines.push(indexedWords.join(' '));
+            }
+            return indexedLines.join('\n');
+        }
+
+        // Toggle word indices display
+        function toggleWordIndices() {
+            showWordIndices = document.getElementById('show-word-indices').checked;
+            updateReportTextDisplay();
+        }
+
+        // Update the report text display based on showWordIndices flag
+        function updateReportTextDisplay() {
+            const textDisplayArea = document.getElementById('csv-entry-text-display');
+            if (!textDisplayArea || !currentReportText) return;
+
+            if (showWordIndices) {
+                textDisplayArea.innerHTML = createIndexedReportText(currentReportText);
+                // Add click handlers to indexed words
+                textDisplayArea.querySelectorAll('.word-indexed').forEach(span => {
+                    span.addEventListener('click', (e) => {
+                        const wordIndex = parseInt(span.dataset.wordIndex, 10);
+                        const startInput = document.getElementById('gt-entity-start-word');
+                        const endInput = document.getElementById('gt-entity-end-word');
+                        const entityTextInput = document.getElementById('gt-entity-text');
+
+                        // If start is empty or clicking a new word, set start
+                        if (startInput.value === '' || parseInt(startInput.value, 10) > wordIndex) {
+                            startInput.value = wordIndex;
+                            endInput.value = wordIndex;
+                            entityTextInput.value = currentReportWords[wordIndex];
+                        } else {
+                            // Extend selection to this word
+                            endInput.value = wordIndex;
+                            const startIdx = parseInt(startInput.value, 10);
+                            entityTextInput.value = currentReportWords.slice(startIdx, wordIndex + 1).join(' ');
+                        }
+                    });
+                });
+            } else {
+                textDisplayArea.textContent = currentReportText;
+            }
+        }
+
+        // Handle text selection in the report display
+        function handleTextSelection() {
+            if (showWordIndices) return; // Use click-based selection when indices are shown
+
+            const selection = window.getSelection();
+            const selectedText = selection.toString().trim();
+
+            if (!selectedText || !currentReportText) return;
+
+            // Find word indices for the selection
+            const fullText = currentReportText;
+            const words = fullText.split(/\s+/).filter(w => w.length > 0);
+            const selectionWords = selectedText.split(/\s+/).filter(w => w.length > 0);
+
+            if (selectionWords.length === 0) return;
+
+            // Find the first and last word of selection in the text
+            const firstWord = selectionWords[0];
+            const lastWord = selectionWords[selectionWords.length - 1];
+
+            // Simple search - find first occurrence that matches the selection pattern
+            let startWordIndex = -1;
+            let endWordIndex = -1;
+
+            for (let i = 0; i <= words.length - selectionWords.length; i++) {
+                let match = true;
+                for (let j = 0; j < selectionWords.length; j++) {
+                    // Compare words, removing punctuation for flexibility
+                    const w1 = words[i + j].replace(/[^\w]/g, '').toLowerCase();
+                    const w2 = selectionWords[j].replace(/[^\w]/g, '').toLowerCase();
+                    if (w1 !== w2) {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match) {
+                    startWordIndex = i;
+                    endWordIndex = i + selectionWords.length - 1;
+                    break;
+                }
+            }
+
+            if (startWordIndex >= 0) {
+                document.getElementById('gt-entity-text').value = selectedText;
+                document.getElementById('gt-entity-start-word').value = startWordIndex;
+                document.getElementById('gt-entity-end-word').value = endWordIndex;
+                document.getElementById('word-selection-hint').textContent = `(Selected words ${startWordIndex}-${endWordIndex})`;
+            }
+        }
 
         async function loadCsvEntry() {
             const entryNumberInput = document.getElementById('entry-number');
@@ -1813,9 +1951,14 @@
                             textContent = textContent.replace(/\n\n+/g, '\n\n'); // Normalize multiple newlines
                         }
 
-                        textDisplayArea.textContent = textContent || 'No content';
-                        textDisplayArea.style.color = '#1f2937';
                         currentReportText = textContent || '';
+                        // Populate word array for indexing
+                        currentReportWords = currentReportText.split(/\s+/).filter(w => w.length > 0);
+                        // Update display based on showWordIndices setting
+                        updateReportTextDisplay();
+                        textDisplayArea.style.color = '#1f2937';
+                        // Clear selection hint
+                        document.getElementById('word-selection-hint').textContent = '';
 
                         // Render ground truth UI (check if functions exist first)
                         if (typeof renderGroundTruthEntities === 'function') {
@@ -3077,15 +3220,23 @@
 
             const entityText = document.getElementById('gt-entity-text').value.trim();
             const entityType = document.getElementById('gt-entity-type').value;
+            const startWordInput = document.getElementById('gt-entity-start-word').value;
+            const endWordInput = document.getElementById('gt-entity-end-word').value;
 
             if (!entityText || !entityType) {
                 alert('Please fill in both entity text and type');
                 return;
             }
 
+            // Parse word indices (optional)
+            const startWord = startWordInput !== '' ? parseInt(startWordInput, 10) : null;
+            const endWord = endWordInput !== '' ? parseInt(endWordInput, 10) : null;
+
             const entity = {
                 text: entityText,
-                type: entityType
+                type: entityType,
+                start_word: startWord,
+                end_word: endWord
             };
 
             try {
@@ -3116,6 +3267,8 @@
                     // Clear form
                     document.getElementById('gt-entity-text').value = '';
                     document.getElementById('gt-entity-type').value = '';
+                    document.getElementById('gt-entity-start-word').value = '';
+                    document.getElementById('gt-entity-end-word').value = '';
 
                     // Re-render
                     renderGroundTruthEntities();
@@ -3287,9 +3440,18 @@
             let html = '';
             entities.forEach(e => {
                 const color = getEntityTypeColor(e.type);
+                // Format word indices if present
+                let indexDisplay = '';
+                if (e.start_word !== null && e.start_word !== undefined) {
+                    if (e.end_word !== null && e.end_word !== undefined && e.end_word !== e.start_word) {
+                        indexDisplay = `<span style="color: #9ca3af; font-size: 0.75em; margin-left: 2px;">[${e.start_word}-${e.end_word}]</span>`;
+                    } else {
+                        indexDisplay = `<span style="color: #9ca3af; font-size: 0.75em; margin-left: 2px;">[${e.start_word}]</span>`;
+                    }
+                }
                 html += `<div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: white; border: 1px solid ${color}; border-radius: 16px; font-size: 0.85em;">
                     <span style="font-weight: 500; color: ${color};">[${e.id}]</span>
-                    <span style="color: #374151;">${escapeHtml(e.text)}</span>
+                    <span style="color: #374151;">${escapeHtml(e.text)}${indexDisplay}</span>
                     <span style="color: ${color}; font-size: 0.8em;">(${e.type})</span>
                     <button onclick="deleteGroundTruthEntity('${e.id}')" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0 2px; font-size: 1em;">&times;</button>
                 </div>`;

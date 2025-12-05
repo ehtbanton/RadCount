@@ -10,8 +10,154 @@ import platform
 import csv
 from datetime import datetime
 import requests
+import re
 
 from .llm_service import LlamaService
+
+
+def extract_json_array(text):
+    """
+    Robustly extract a JSON array from LLM response text.
+    Handles cases where the LLM includes extra text around the JSON,
+    markdown code blocks, and brackets within string values.
+    """
+    # Strip markdown code blocks first (common LLM pattern)
+    text = re.sub(r'```json\s*', '', text)
+    text = re.sub(r'```\s*$', '', text)
+    text = re.sub(r'^```\s*', '', text, flags=re.MULTILINE)
+    text = text.strip()
+
+    # Find the first '[' - this is our array start
+    start_idx = text.find('[')
+    if start_idx == -1:
+        return None, "No JSON array found in response"
+
+    # Find matching closing bracket, being aware of string contexts
+    # This handles brackets inside JSON string values
+    bracket_count = 0
+    in_string = False
+    escape_next = False
+    end_idx = -1
+
+    for i in range(start_idx, len(text)):
+        char = text[i]
+
+        if escape_next:
+            escape_next = False
+            continue
+
+        if char == '\\' and in_string:
+            escape_next = True
+            continue
+
+        if char == '"' and not escape_next:
+            in_string = not in_string
+            continue
+
+        if not in_string:
+            if char == '[':
+                bracket_count += 1
+            elif char == ']':
+                bracket_count -= 1
+                if bracket_count == 0:
+                    end_idx = i
+                    break
+
+    if end_idx == -1:
+        return None, "Unbalanced brackets in JSON array"
+
+    json_str = text[start_idx:end_idx + 1]
+
+    try:
+        return json.loads(json_str), None
+    except json.JSONDecodeError as e:
+        return None, f"JSON parse error: {str(e)}"
+
+
+def extract_json_object(text):
+    """
+    Robustly extract a JSON object from LLM response text.
+    Handles cases where the LLM includes extra text around the JSON,
+    markdown code blocks, and braces within string values.
+    """
+    # Strip markdown code blocks first (common LLM pattern)
+    text = re.sub(r'```json\s*', '', text)
+    text = re.sub(r'```\s*$', '', text)
+    text = re.sub(r'^```\s*', '', text, flags=re.MULTILINE)
+    text = text.strip()
+
+    start_idx = text.find('{')
+    if start_idx == -1:
+        return None, "No JSON object found in response"
+
+    # Find matching closing brace, being aware of string contexts
+    brace_count = 0
+    in_string = False
+    escape_next = False
+    end_idx = -1
+
+    for i in range(start_idx, len(text)):
+        char = text[i]
+
+        if escape_next:
+            escape_next = False
+            continue
+
+        if char == '\\' and in_string:
+            escape_next = True
+            continue
+
+        if char == '"' and not escape_next:
+            in_string = not in_string
+            continue
+
+        if not in_string:
+            if char == '{':
+                brace_count += 1
+            elif char == '}':
+                brace_count -= 1
+                if brace_count == 0:
+                    end_idx = i
+                    break
+
+    if end_idx == -1:
+        return None, "Unbalanced braces in JSON object"
+
+    json_str = text[start_idx:end_idx + 1]
+
+    try:
+        return json.loads(json_str), None
+    except json.JSONDecodeError as e:
+        return None, f"JSON parse error: {str(e)}"
+
+
+def create_indexed_report_text(report_text):
+    """
+    Create an indexed version of the report text where each word is preceded
+    by its 0-based index in brackets.
+
+    Example: "The patient has a tumour" -> "[0]The [1]patient [2]has [3]a [4]tumour"
+
+    Returns:
+        tuple: (indexed_text, word_list) where word_list is the list of original words
+    """
+    # Split by whitespace while preserving newlines for readability
+    lines = report_text.split('\n')
+    indexed_lines = []
+    word_index = 0
+    all_words = []
+
+    for line in lines:
+        words = line.split()
+        indexed_words = []
+        for word in words:
+            indexed_words.append(f"[{word_index}]{word}")
+            all_words.append(word)
+            word_index += 1
+        indexed_lines.append(' '.join(indexed_words))
+
+    return '\n'.join(indexed_lines), all_words
+
 
 # Get project root
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -1714,14 +1860,13 @@ def extract_entities_relations(request):
 
         # Parse JSON response
         try:
-            # Try to extract JSON array from response
-            # Sometimes LLM might add extra text, so we look for the array
-            import re
-            json_match = re.search(r'\[.*\]', generated_text, re.DOTALL)
-            if json_match:
-                triplets = json.loads(json_match.group())
-            else:
-                triplets = json.loads(generated_text)
+            triplets, parse_error = extract_json_array(generated_text)
+            if triplets is None:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Failed to parse LLM response: {parse_error}',
+                    'raw_response': generated_text
+                }, status=500)
 
             # Validate triplet structure
             if not isinstance(triplets, list):
@@ -1904,6 +2049,27 @@ def add_ground_truth_entity(request):
         for field in required_fields:
             if field not in entity:
                 return JsonResponse({'success': False, 'error': f'Entity missing required field: {field}'}, status=400)
+
+        # Handle optional word indices
+        if 'start_word' in entity:
+            try:
+                entity['start_word'] = int(entity['start_word'])
+                if entity['start_word'] < 0:
+                    entity['start_word'] = None
+            except (ValueError, TypeError):
+                entity['start_word'] = None
+        else:
+            entity['start_word'] = None
+
+        if 'end_word' in entity:
+            try:
+                entity['end_word'] = int(entity['end_word'])
+                if entity['end_word'] < 0:
+                    entity['end_word'] = None
+            except (ValueError, TypeError):
+                entity['end_word'] = None
+        else:
+            entity['end_word'] = None
 
         entities_file = PROJECT_ROOT / "entities.json"
 
@@ -2232,19 +2398,30 @@ def extract_entities_llm(request):
         for i, entity_type in enumerate(active_schema['entity_types'], 1):
             entity_types_text += f"{i}. **{entity_type['name']}**: {entity_type['description']}\n"
 
+        # Create indexed report text for word-based indexing
+        indexed_report, word_list = create_indexed_report_text(report_text)
+
+        # Check if prompt uses indexed_report (new style) or not (legacy)
+        uses_word_indexing = '{indexed_report}' in prompt_template
+
         # Format the prompt template with schema information
-        system_prompt = prompt_template.format(
-            schema_name=active_schema['name'],
-            entity_types=entity_types_text,
-            entity_count=len(active_schema['entity_types'])
-        )
+        format_args = {
+            'schema_name': active_schema['name'],
+            'entity_types': entity_types_text,
+            'entity_count': len(active_schema['entity_types'])
+        }
+        if uses_word_indexing:
+            format_args['indexed_report'] = indexed_report
+
+        system_prompt = prompt_template.format(**format_args)
 
         # Check if LLM server is running
         llm_service = LlamaService()
         if not llm_service.is_server_running():
             return JsonResponse({'success': False, 'error': 'LLM server is not running'}, status=503)
 
-        # Build messages
+        # Build messages - use indexed report if word indexing is enabled
+        user_content = f"Extract all entities from this radiology report:\n\n{indexed_report if uses_word_indexing else report_text}"
         messages = [
             {
                 'role': 'system',
@@ -2252,7 +2429,7 @@ def extract_entities_llm(request):
             },
             {
                 'role': 'user',
-                'content': f"Extract all entities from this radiology report:\n\n{report_text}"
+                'content': user_content
             }
         ]
 
@@ -2276,12 +2453,13 @@ def extract_entities_llm(request):
 
         # Parse JSON response
         try:
-            import re
-            json_match = re.search(r'\[.*\]', generated_text, re.DOTALL)
-            if json_match:
-                entities = json.loads(json_match.group())
-            else:
-                entities = json.loads(generated_text)
+            entities, parse_error = extract_json_array(generated_text)
+            if entities is None:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Failed to parse LLM response: {parse_error}',
+                    'raw_response': generated_text
+                }, status=500)
 
             # Validate entity structure
             if not isinstance(entities, list):
@@ -2294,6 +2472,8 @@ def extract_entities_llm(request):
             # Validate each entity and ensure IDs are unique
             required_fields = ['text', 'type']
             seen_ids = set()
+            max_word_index = len(word_list) - 1 if word_list else -1
+
             for i, entity in enumerate(entities):
                 if not isinstance(entity, dict):
                     return JsonResponse({
@@ -2314,6 +2494,29 @@ def extract_entities_llm(request):
                 if entity['id'] in seen_ids:
                     entity['id'] = f"a{method_index}e{len(seen_ids)+1}"
                 seen_ids.add(entity['id'])
+
+                # Handle word indices (optional, defaults to None if not present)
+                if 'start_word' in entity:
+                    try:
+                        entity['start_word'] = int(entity['start_word'])
+                        # Validate range
+                        if entity['start_word'] < 0 or (max_word_index >= 0 and entity['start_word'] > max_word_index):
+                            entity['start_word'] = None
+                    except (ValueError, TypeError):
+                        entity['start_word'] = None
+                else:
+                    entity['start_word'] = None
+
+                if 'end_word' in entity:
+                    try:
+                        entity['end_word'] = int(entity['end_word'])
+                        # Validate range
+                        if entity['end_word'] < 0 or (max_word_index >= 0 and entity['end_word'] > max_word_index):
+                            entity['end_word'] = None
+                    except (ValueError, TypeError):
+                        entity['end_word'] = None
+                else:
+                    entity['end_word'] = None
 
             # Save entities to method
             target_method['entities'] = entities
@@ -2340,7 +2543,12 @@ def extract_entities_llm(request):
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'error': 'Invalid JSON in request body'}, status=400)
     except Exception as e:
-        return JsonResponse({'success': False, 'error': f'Failed to extract entities: {str(e)}'}, status=500)
+        import traceback
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to extract entities: {str(e)}',
+            'traceback': traceback.format_exc()
+        }, status=500)
 
 
 @csrf_exempt
@@ -2445,7 +2653,8 @@ def extract_relations_llm(request):
             schema_name=active_schema['name'],
             entities_list=entities_list,
             relation_types=relation_types_text,
-            relation_count=len(active_schema['relation_types'])
+            relation_count=len(active_schema['relation_types']),
+            report_text=report_text
         )
 
         # Check if LLM server is running
@@ -2493,29 +2702,17 @@ def extract_relations_llm(request):
 
         # Parse JSON response
         try:
-            import re
-            # Try to find a complete JSON array
-            json_match = re.search(r'\[.*\]', generated_text, re.DOTALL)
-            if json_match:
-                json_str = json_match.group()
-                # Check if JSON appears truncated (doesn't end properly)
-                json_str = json_str.strip()
-                try:
-                    relations = json.loads(json_str)
-                except json.JSONDecodeError:
-                    # Try to fix truncated JSON by finding last complete object
-                    last_complete = json_str.rfind('},')
-                    if last_complete > 0:
-                        json_str = json_str[:last_complete+1] + ']'
-                        relations = json.loads(json_str)
-                    else:
-                        raise
+            # Handle empty array case
+            if generated_text.strip() == '[]':
+                relations = []
             else:
-                # Handle case where LLM returns just "[]" or empty array
-                if generated_text.strip() == '[]':
-                    relations = []
-                else:
-                    relations = json.loads(generated_text)
+                relations, parse_error = extract_json_array(generated_text)
+                if relations is None:
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Failed to parse LLM response: {parse_error}',
+                        'raw_response': generated_text[:1000]
+                    }, status=500)
 
             # Validate relation structure
             if not isinstance(relations, list):
@@ -2730,12 +2927,13 @@ Important:
 
         # Parse JSON response
         try:
-            import re
-            json_match = re.search(r'\{.*\}', generated_text, re.DOTALL)
-            if json_match:
-                extraction_result = json.loads(json_match.group())
-            else:
-                extraction_result = json.loads(generated_text)
+            extraction_result, parse_error = extract_json_object(generated_text)
+            if extraction_result is None:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Failed to parse LLM response: {parse_error}',
+                    'raw_response': generated_text[:1000]
+                }, status=500)
 
             # Validate structure
             if not isinstance(extraction_result, dict):
@@ -3004,12 +3202,13 @@ def run_extraction_method(request):
 
         # Parse JSON response
         try:
-            import re
-            json_match = re.search(r'\[.*\]', generated_text, re.DOTALL)
-            if json_match:
-                triplets = json.loads(json_match.group())
-            else:
-                triplets = json.loads(generated_text)
+            triplets, parse_error = extract_json_array(generated_text)
+            if triplets is None:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Failed to parse LLM response: {parse_error}',
+                    'raw_response': generated_text
+                }, status=500)
 
             # Validate triplet structure
             if not isinstance(triplets, list):
