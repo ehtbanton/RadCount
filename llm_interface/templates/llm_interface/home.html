@@ -1755,8 +1755,9 @@
         let currentReportWords = []; // Array of words for word-based indexing
         let showWordIndices = false;
 
-        // Create indexed version of report text
-        function createIndexedReportText(text) {
+        // Create word-span version of report text (always creates spans for hover highlighting)
+        // If showIndices is true, also shows subscript word indices
+        function createWordSpanReportText(text, showIndices = false) {
             const lines = text.split('\n');
             const indexedLines = [];
             let wordIndex = 0;
@@ -1766,7 +1767,8 @@
                 const words = line.split(/\s+/).filter(w => w.length > 0);
                 const indexedWords = [];
                 for (const word of words) {
-                    indexedWords.push(`<span class="word-indexed" data-word-index="${wordIndex}" style="cursor: pointer;">${escapeHtml(word)}<sub style="color: #9ca3af; font-size: 0.7em;">${wordIndex}</sub></span>`);
+                    const indexSub = showIndices ? `<sub style="color: #9ca3af; font-size: 0.7em;">${wordIndex}</sub>` : '';
+                    indexedWords.push(`<span class="word-span" data-word-index="${wordIndex}" style="cursor: pointer; transition: background-color 0.15s;">${escapeHtml(word)}${indexSub}</span>`);
                     currentReportWords.push(word);
                     wordIndex++;
                 }
@@ -1775,43 +1777,77 @@
             return indexedLines.join('\n');
         }
 
+        // Legacy alias for compatibility
+        function createIndexedReportText(text) {
+            return createWordSpanReportText(text, true);
+        }
+
+        // Highlight words in the report text by their indices
+        function highlightWordRange(startWord, endWord) {
+            if (startWord === null || startWord === undefined) return;
+            if (endWord === null || endWord === undefined) endWord = startWord;
+
+            const textDisplayArea = document.getElementById('csv-entry-text-display');
+            if (!textDisplayArea) return;
+
+            // Highlight all words in range
+            for (let i = startWord; i <= endWord; i++) {
+                const span = textDisplayArea.querySelector(`.word-span[data-word-index="${i}"]`);
+                if (span) {
+                    span.style.backgroundColor = '#fef08a';  // yellow highlight
+                    span.style.borderRadius = '2px';
+                }
+            }
+        }
+
+        // Clear all word highlights
+        function clearWordHighlights() {
+            const textDisplayArea = document.getElementById('csv-entry-text-display');
+            if (!textDisplayArea) return;
+
+            textDisplayArea.querySelectorAll('.word-span').forEach(span => {
+                span.style.backgroundColor = '';
+                span.style.borderRadius = '';
+            });
+        }
+
         // Toggle word indices display
         function toggleWordIndices() {
             showWordIndices = document.getElementById('show-word-indices').checked;
             updateReportTextDisplay();
         }
 
-        // Update the report text display based on showWordIndices flag
+        // Update the report text display - always uses word spans for hover highlighting
         function updateReportTextDisplay() {
             const textDisplayArea = document.getElementById('csv-entry-text-display');
             if (!textDisplayArea || !currentReportText) return;
 
-            if (showWordIndices) {
-                textDisplayArea.innerHTML = createIndexedReportText(currentReportText);
-                // Add click handlers to indexed words
-                textDisplayArea.querySelectorAll('.word-indexed').forEach(span => {
-                    span.addEventListener('click', (e) => {
-                        const wordIndex = parseInt(span.dataset.wordIndex, 10);
-                        const startInput = document.getElementById('gt-entity-start-word');
-                        const endInput = document.getElementById('gt-entity-end-word');
-                        const entityTextInput = document.getElementById('gt-entity-text');
+            // Always use word spans (for hover highlighting), optionally show indices
+            textDisplayArea.innerHTML = createWordSpanReportText(currentReportText, showWordIndices);
 
-                        // If start is empty or clicking a new word, set start
-                        if (startInput.value === '' || parseInt(startInput.value, 10) > wordIndex) {
-                            startInput.value = wordIndex;
-                            endInput.value = wordIndex;
-                            entityTextInput.value = currentReportWords[wordIndex];
-                        } else {
-                            // Extend selection to this word
-                            endInput.value = wordIndex;
-                            const startIdx = parseInt(startInput.value, 10);
-                            entityTextInput.value = currentReportWords.slice(startIdx, wordIndex + 1).join(' ');
-                        }
-                    });
+            // Add click handlers to word spans for selecting words
+            textDisplayArea.querySelectorAll('.word-span').forEach(span => {
+                span.addEventListener('click', (e) => {
+                    const wordIndex = parseInt(span.dataset.wordIndex, 10);
+                    const startInput = document.getElementById('gt-entity-start-word');
+                    const endInput = document.getElementById('gt-entity-end-word');
+                    const entityTextInput = document.getElementById('gt-entity-text');
+
+                    if (!startInput || !endInput || !entityTextInput) return;
+
+                    // If start is empty or clicking a new word before current start, set start
+                    if (startInput.value === '' || parseInt(startInput.value, 10) > wordIndex) {
+                        startInput.value = wordIndex;
+                        endInput.value = wordIndex;
+                        entityTextInput.value = currentReportWords[wordIndex];
+                    } else {
+                        // Extend selection to this word
+                        endInput.value = wordIndex;
+                        const startIdx = parseInt(startInput.value, 10);
+                        entityTextInput.value = currentReportWords.slice(startIdx, wordIndex + 1).join(' ');
+                    }
                 });
-            } else {
-                textDisplayArea.textContent = currentReportText;
-            }
+            });
         }
 
         // Handle text selection in the report display
@@ -3420,7 +3456,7 @@
             }
         }
 
-        // Render ground truth entities
+        // Render ground truth entities with hover highlighting support
         function renderGroundTruthEntities() {
             const container = document.getElementById('gt-entities-container');
             const countSpan = document.getElementById('gt-entity-count');
@@ -3442,21 +3478,41 @@
                 const color = getEntityTypeColor(e.type);
                 // Format word indices if present
                 let indexDisplay = '';
-                if (e.start_word !== null && e.start_word !== undefined) {
+                const hasWordIndices = e.start_word !== null && e.start_word !== undefined;
+                if (hasWordIndices) {
                     if (e.end_word !== null && e.end_word !== undefined && e.end_word !== e.start_word) {
                         indexDisplay = `<span style="color: #9ca3af; font-size: 0.75em; margin-left: 2px;">[${e.start_word}-${e.end_word}]</span>`;
                     } else {
                         indexDisplay = `<span style="color: #9ca3af; font-size: 0.75em; margin-left: 2px;">[${e.start_word}]</span>`;
                     }
                 }
-                html += `<div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: white; border: 1px solid ${color}; border-radius: 16px; font-size: 0.85em;">
+                // Add data attributes for hover highlighting
+                const startWord = hasWordIndices ? e.start_word : '';
+                const endWord = hasWordIndices ? (e.end_word !== null && e.end_word !== undefined ? e.end_word : e.start_word) : '';
+                html += `<div class="entity-chip" data-start-word="${startWord}" data-end-word="${endWord}" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: white; border: 1px solid ${color}; border-radius: 16px; font-size: 0.85em; cursor: pointer; transition: box-shadow 0.15s;">
                     <span style="font-weight: 500; color: ${color};">[${e.id}]</span>
                     <span style="color: #374151;">${escapeHtml(e.text)}${indexDisplay}</span>
                     <span style="color: ${color}; font-size: 0.8em;">(${e.type})</span>
-                    <button onclick="deleteGroundTruthEntity('${e.id}')" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0 2px; font-size: 1em;">&times;</button>
+                    <button onclick="event.stopPropagation(); deleteGroundTruthEntity('${e.id}')" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0 2px; font-size: 1em;">&times;</button>
                 </div>`;
             });
             container.innerHTML = html;
+
+            // Add hover handlers for highlighting
+            container.querySelectorAll('.entity-chip').forEach(chip => {
+                chip.addEventListener('mouseenter', () => {
+                    const startWord = chip.dataset.startWord;
+                    const endWord = chip.dataset.endWord;
+                    if (startWord !== '') {
+                        highlightWordRange(parseInt(startWord, 10), parseInt(endWord, 10));
+                        chip.style.boxShadow = '0 0 0 2px #fef08a';
+                    }
+                });
+                chip.addEventListener('mouseleave', () => {
+                    clearWordHighlights();
+                    chip.style.boxShadow = '';
+                });
+            });
         }
 
         // Render ground truth relations
@@ -3820,7 +3876,7 @@
             return null;
         }
 
-        // Render auto-extracted entities
+        // Render auto-extracted entities with hover highlighting support
         async function renderAutoExtractedEntities() {
             const container = document.getElementById('auto-entities-container');
             const countSpan = document.getElementById('auto-entity-count');
@@ -3860,13 +3916,44 @@
                 const isMatched = matchedEntityIds.has(e.id);
                 const borderColor = isMatched ? '#10b981' : '#ef4444';  // green : red
 
-                html += `<div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: white; border: 2px solid ${borderColor}; border-radius: 16px; font-size: 0.85em;">
+                // Format word indices if present
+                let indexDisplay = '';
+                const hasWordIndices = e.start_word !== null && e.start_word !== undefined;
+                if (hasWordIndices) {
+                    if (e.end_word !== null && e.end_word !== undefined && e.end_word !== e.start_word) {
+                        indexDisplay = `<span style="color: #9ca3af; font-size: 0.75em; margin-left: 2px;">[${e.start_word}-${e.end_word}]</span>`;
+                    } else {
+                        indexDisplay = `<span style="color: #9ca3af; font-size: 0.75em; margin-left: 2px;">[${e.start_word}]</span>`;
+                    }
+                }
+
+                // Add data attributes for hover highlighting
+                const startWord = hasWordIndices ? e.start_word : '';
+                const endWord = hasWordIndices ? (e.end_word !== null && e.end_word !== undefined ? e.end_word : e.start_word) : '';
+
+                html += `<div class="entity-chip" data-start-word="${startWord}" data-end-word="${endWord}" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: white; border: 2px solid ${borderColor}; border-radius: 16px; font-size: 0.85em; cursor: pointer; transition: box-shadow 0.15s;">
                     <span style="font-weight: 500; color: ${color};">[${e.id}]</span>
-                    <span style="color: #374151;">${escapeHtml(e.text)}</span>
+                    <span style="color: #374151;">${escapeHtml(e.text)}${indexDisplay}</span>
                     <span style="color: ${color}; font-size: 0.8em;">(${e.type})</span>
                 </div>`;
             });
             container.innerHTML = html;
+
+            // Add hover handlers for highlighting
+            container.querySelectorAll('.entity-chip').forEach(chip => {
+                chip.addEventListener('mouseenter', () => {
+                    const startWord = chip.dataset.startWord;
+                    const endWord = chip.dataset.endWord;
+                    if (startWord !== '') {
+                        highlightWordRange(parseInt(startWord, 10), parseInt(endWord, 10));
+                        chip.style.boxShadow = '0 0 0 2px #fef08a';
+                    }
+                });
+                chip.addEventListener('mouseleave', () => {
+                    clearWordHighlights();
+                    chip.style.boxShadow = '';
+                });
+            });
         }
 
         // Render auto-extracted relations

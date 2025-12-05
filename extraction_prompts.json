@@ -8,7 +8,7 @@
     }
   },
   "entity_extraction": {
-    "active_prompt": "radgraph_entity",
+    "active_prompt": "radgraph_entity_indexed",
     "prompts": {
       "radgraph_entity": {
         "name": "RadGraph Entity Extraction",

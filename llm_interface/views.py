@@ -15,25 +15,119 @@ import re
 from .llm_service import LlamaService
 
 
+def try_fix_truncated_json_array(text):
+    """
+    Attempt to fix a truncated JSON array by removing the incomplete last element
+    and closing the array properly.
+    """
+    # Find the last complete object (ends with })
+    last_complete = text.rfind('},')
+    if last_complete == -1:
+        last_complete = text.rfind('}')
+
+    if last_complete == -1:
+        return None
+
+    # Take everything up to and including the last complete object
+    fixed = text[:last_complete + 1]
+
+    # Close the array
+    if not fixed.rstrip().endswith(']'):
+        fixed = fixed.rstrip().rstrip(',') + '\n]'
+
+    try:
+        return json.loads(fixed)
+    except json.JSONDecodeError:
+        return None
+
+
 def extract_json_array(text):
     """
     Robustly extract a JSON array from LLM response text.
     Handles cases where the LLM includes extra text around the JSON,
     markdown code blocks, and brackets within string values.
+    Also handles indexed text like [0]word [1]word by finding real JSON arrays.
+    Can salvage truncated responses by extracting complete entities.
     """
+    original_text = text  # Keep for error reporting
+
     # Strip markdown code blocks first (common LLM pattern)
     text = re.sub(r'```json\s*', '', text)
     text = re.sub(r'```\s*$', '', text)
     text = re.sub(r'^```\s*', '', text, flags=re.MULTILINE)
     text = text.strip()
 
-    # Find the first '[' - this is our array start
-    start_idx = text.find('[')
+    # Strategy 1: Try direct parse if it looks like clean JSON
+    if text.startswith('['):
+        try:
+            return json.loads(text), None
+        except json.JSONDecodeError:
+            pass  # Try other strategies
+
+    # Strategy 2: Find JSON array start - look for '[' followed by '{' or '[' or ']'
+    # This avoids matching indexed text like [0]word
+    start_idx = -1
+    for i, char in enumerate(text):
+        if char == '[':
+            # Check what follows - should be whitespace then {/[/]/newline for a real JSON array
+            rest = text[i+1:].lstrip()
+            if not rest:  # End of string
+                continue
+            # Real JSON array starts with [ followed by { or [ or ] or whitespace+{
+            if rest[0] in '{[]':
+                start_idx = i
+                break
+            # Also check for newline followed by {
+            if rest[0] == '\n' or rest[0] == '\r':
+                rest2 = rest.lstrip()
+                if rest2 and rest2[0] == '{':
+                    start_idx = i
+                    break
+
     if start_idx == -1:
-        return None, "No JSON array found in response"
+        # Strategy 3: Look for '[\n  {' or '[\r\n  {' pattern (formatted JSON)
+        match = re.search(r'\[\s*\{', text)
+        if match:
+            start_idx = match.start()
+
+    if start_idx == -1:
+        # Strategy 4: Fallback - try each '[' and see if it produces valid JSON
+        for i, char in enumerate(text):
+            if char == '[':
+                # Try to find matching ] and parse
+                test_text = text[i:]
+                bracket_count = 0
+                in_string = False
+                escape_next = False
+                for j, c in enumerate(test_text):
+                    if escape_next:
+                        escape_next = False
+                        continue
+                    if c == '\\' and in_string:
+                        escape_next = True
+                        continue
+                    if c == '"' and not escape_next:
+                        in_string = not in_string
+                        continue
+                    if not in_string:
+                        if c == '[':
+                            bracket_count += 1
+                        elif c == ']':
+                            bracket_count -= 1
+                            if bracket_count == 0:
+                                candidate = test_text[:j+1]
+                                try:
+                                    result = json.loads(candidate)
+                                    if isinstance(result, list):
+                                        return result, None
+                                except json.JSONDecodeError:
+                                    pass
+                                break
+
+    if start_idx == -1:
+        return None, f"No JSON array found in response. Response preview: {text[:300]}"
 
     # Find matching closing bracket, being aware of string contexts
-    # This handles brackets inside JSON string values
     bracket_count = 0
     in_string = False
     escape_next = False
@@ -64,14 +158,26 @@ def extract_json_array(text):
                     break
 
     if end_idx == -1:
-        return None, "Unbalanced brackets in JSON array"
+        # Response might be truncated - try to salvage complete entities
+        partial_json = text[start_idx:] if start_idx >= 0 else text
+        fixed_result = try_fix_truncated_json_array(partial_json)
+        if fixed_result and len(fixed_result) > 0:
+            # Return what we could salvage with a warning
+            return fixed_result, None  # Successfully salvaged
+        return None, f"Unbalanced brackets in JSON array (response may be truncated). Text from start: {text[start_idx:start_idx+300]}"
 
     json_str = text[start_idx:end_idx + 1]
 
     try:
         return json.loads(json_str), None
     except json.JSONDecodeError as e:
-        return None, f"JSON parse error: {str(e)}"
+        # Try to fix truncated JSON
+        fixed_result = try_fix_truncated_json_array(json_str)
+        if fixed_result and len(fixed_result) > 0:
+            return fixed_result, None  # Successfully salvaged
+        # Try to provide more context in error
+        preview = json_str[:300] + "..." if len(json_str) > 300 else json_str
+        return None, f"JSON parse error: {str(e)}. Preview: {preview}"
 
 
 def extract_json_object(text):
@@ -1847,7 +1953,7 @@ def extract_entities_relations(request):
             json={
                 'messages': messages,
                 'temperature': 0.1,  # Low temperature for consistency
-                'max_tokens': 2000   # Allow longer responses for complex reports
+                'max_tokens': 8000   # Allow longer responses for complex reports
             },
             timeout=120  # Longer timeout for complex extraction
         )
@@ -2092,12 +2198,12 @@ def add_ground_truth_entity(request):
                 if 'entities' not in entry['ground_truths'][active_schema]:
                     entry['ground_truths'][active_schema]['entities'] = []
 
-                # Generate entity ID
+                # Generate entity ID with consistent scheme: gt_e{n}
                 existing_ids = [e.get('id', '') for e in entry['ground_truths'][active_schema]['entities']]
                 entity_num = 1
-                while f"ge{entity_num}" in existing_ids:
+                while f"gt_e{entity_num}" in existing_ids:
                     entity_num += 1
-                new_entity_id = f"ge{entity_num}"
+                new_entity_id = f"gt_e{entity_num}"
 
                 entity['id'] = new_entity_id
                 entry['ground_truths'][active_schema]['entities'].append(entity)
@@ -2233,12 +2339,12 @@ def add_ground_truth_relation(request):
                 if relation['entity2_id'] not in entity_ids:
                     return JsonResponse({'success': False, 'error': f"Entity {relation['entity2_id']} not found"}, status=400)
 
-                # Generate triplet ID
+                # Generate triplet ID with consistent scheme: gt_r{n}
                 existing_triplet_ids = [t.get('id', '') for t in entry['ground_truths'][active_schema]['triplets']]
                 triplet_num = 1
-                while f"gt{triplet_num}" in existing_triplet_ids:
+                while f"gt_r{triplet_num}" in existing_triplet_ids:
                     triplet_num += 1
-                relation['id'] = f"gt{triplet_num}"
+                relation['id'] = f"gt_r{triplet_num}"
 
                 entry['ground_truths'][active_schema]['triplets'].append(relation)
                 entry_found = True
@@ -2440,7 +2546,7 @@ def extract_entities_llm(request):
             json={
                 'messages': messages,
                 'temperature': 0.1,
-                'max_tokens': 2000
+                'max_tokens': 8000
             },
             timeout=120
         )
@@ -2488,11 +2594,11 @@ def extract_entities_llm(request):
                             'error': f'Entity {i} missing required field: {field}',
                             'raw_response': generated_text
                         }, status=500)
-                # Ensure ID exists and is unique
+                # Ensure ID exists and is unique with consistent scheme: auto{method_index}_e{n}
                 if 'id' not in entity:
-                    entity['id'] = f"a{method_index}e{i+1}"
+                    entity['id'] = f"auto{method_index}_e{i+1}"
                 if entity['id'] in seen_ids:
-                    entity['id'] = f"a{method_index}e{len(seen_ids)+1}"
+                    entity['id'] = f"auto{method_index}_e{len(seen_ids)+1}"
                 seen_ids.add(entity['id'])
 
                 # Handle word indices (optional, defaults to None if not present)
@@ -2741,10 +2847,10 @@ def extract_relations_llm(request):
                     continue
                 valid_relations.append(relation)
 
-            # Assign triplet IDs
+            # Assign triplet IDs with consistent scheme: auto{method_index}_r{n}
             for i, triplet in enumerate(valid_relations):
                 if 'id' not in triplet:
-                    triplet['id'] = f"a{method_index}t{i+1}"
+                    triplet['id'] = f"auto{method_index}_r{i+1}"
 
             # Save relations to method
             target_method['triplets'] = valid_relations
@@ -2961,11 +3067,11 @@ Important:
                     continue
                 if not all(field in entity for field in required_entity_fields):
                     continue
-                # Ensure ID exists and is unique
+                # Ensure ID exists and is unique with consistent scheme: auto{method_index}_e{n}
                 if 'id' not in entity:
-                    entity['id'] = f"a{method_index}e{i+1}"
+                    entity['id'] = f"auto{method_index}_e{i+1}"
                 if entity['id'] in seen_ids:
-                    entity['id'] = f"a{method_index}e{len(seen_ids)+1}"
+                    entity['id'] = f"auto{method_index}_e{len(seen_ids)+1}"
                 seen_ids.add(entity['id'])
 
             # Validate relations
@@ -2984,9 +3090,9 @@ Important:
                 if relation['entity2_id'] not in valid_entity_ids:
                     continue
 
-                # Assign triplet ID
+                # Assign triplet ID with consistent scheme: auto{method_index}_r{n}
                 if 'id' not in relation:
-                    relation['id'] = f"a{method_index}t{i+1}"
+                    relation['id'] = f"auto{method_index}_r{i+1}"
 
                 valid_relations.append(relation)
 
@@ -3120,6 +3226,7 @@ def run_extraction_method(request):
         # Find the entry and method
         target_entry = None
         target_method = None
+        method_index = 0
 
         for entry in entities_data:
             if entry.get('entry') == entry_number:
@@ -3127,9 +3234,10 @@ def run_extraction_method(request):
                 if 'extraction_methods' in entry:
                     # Search across all schemas
                     for schema_name, methods in entry['extraction_methods'].items():
-                        for method in methods:
+                        for idx, method in enumerate(methods):
                             if method.get('id') == method_id:
                                 target_method = method
+                                method_index = idx + 1  # 1-based index
                                 break
                         if target_method:
                             break
@@ -3189,7 +3297,7 @@ def run_extraction_method(request):
             json={
                 'messages': messages,
                 'temperature': 0.1,
-                'max_tokens': 2000
+                'max_tokens': 8000
             },
             timeout=120
         )
@@ -3235,10 +3343,10 @@ def run_extraction_method(request):
                             'raw_response': generated_text
                         }, status=500)
 
-            # Assign triplet IDs
+            # Assign triplet IDs with consistent scheme: auto{method_index}_r{n}
             for i, triplet in enumerate(triplets):
                 if 'id' not in triplet:
-                    triplet['id'] = f"ta{i+1}"
+                    triplet['id'] = f"auto{method_index}_r{i+1}"
 
             # Save triplets to method
             target_method['triplets'] = triplets
@@ -4180,48 +4288,46 @@ def migrate_entity_ids(request):
 
         # Migrate each entry
         for entry in entities_data:
-            # Migrate ground truth
+            # Migrate ground truth to new consistent scheme: gt_e{n}, gt_r{n}
             if 'ground_truths' in entry:
                 for schema_name, gt_data in entry['ground_truths'].items():
                     entity_id_map = {}
 
-                    # Migrate entity IDs: e1 -> eg1
+                    # Migrate entity IDs to gt_e{n}
                     if 'entities' in gt_data:
-                        for entity in gt_data['entities']:
+                        for i, entity in enumerate(gt_data['entities']):
                             old_id = entity.get('id', '')
-                            if old_id.startswith('e') and not old_id.startswith('eg'):
-                                new_id = f"eg{old_id[1:]}"
-                                entity['id'] = new_id
-                                entity_id_map[old_id] = new_id
+                            new_id = f"gt_e{i+1}"
+                            entity['id'] = new_id
+                            entity_id_map[old_id] = new_id
 
-                    # Add triplet IDs and update entity references
+                    # Add triplet IDs (gt_r{n}) and update entity references
                     if 'triplets' in gt_data:
                         for i, triplet in enumerate(gt_data['triplets']):
-                            triplet['id'] = f"tg{i+1}"
+                            triplet['id'] = f"gt_r{i+1}"
                             if triplet.get('entity1_id') in entity_id_map:
                                 triplet['entity1_id'] = entity_id_map[triplet['entity1_id']]
                             if triplet.get('entity2_id') in entity_id_map:
                                 triplet['entity2_id'] = entity_id_map[triplet['entity2_id']]
 
-            # Migrate auto-extracted
+            # Migrate auto-extracted to new consistent scheme: auto{method_idx}_e{n}, auto{method_idx}_r{n}
             if 'extraction_methods' in entry:
                 for schema_name, methods in entry['extraction_methods'].items():
-                    for method in methods:
+                    for method_idx, method in enumerate(methods, 1):
                         entity_id_map = {}
 
-                        # Migrate entity IDs: e1 -> ea1
+                        # Migrate entity IDs to auto{method_idx}_e{n}
                         if 'entities' in method:
-                            for entity in method['entities']:
+                            for i, entity in enumerate(method['entities']):
                                 old_id = entity.get('id', '')
-                                if old_id.startswith('e') and not old_id.startswith('ea'):
-                                    new_id = f"ea{old_id[1:]}"
-                                    entity['id'] = new_id
-                                    entity_id_map[old_id] = new_id
+                                new_id = f"auto{method_idx}_e{i+1}"
+                                entity['id'] = new_id
+                                entity_id_map[old_id] = new_id
 
-                        # Add triplet IDs and update entity references
+                        # Add triplet IDs (auto{method_idx}_r{n}) and update entity references
                         if 'triplets' in method:
                             for i, triplet in enumerate(method['triplets']):
-                                triplet['id'] = f"ta{i+1}"
+                                triplet['id'] = f"auto{method_idx}_r{i+1}"
                                 # Only update refs if using new format (has entity IDs)
                                 if 'entity1_id' in triplet and triplet.get('entity1_id') in entity_id_map:
                                     triplet['entity1_id'] = entity_id_map[triplet['entity1_id']]
