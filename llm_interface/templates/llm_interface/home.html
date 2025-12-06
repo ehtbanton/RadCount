@@ -1757,6 +1757,9 @@
         let currentReportWords = []; // Array of words for word-based indexing
         let showWordIndices = false;
         let selectedWordIndices = new Set(); // Track selected word indices for annotation
+        let isDraggingSelection = false; // Track if user is dragging to select
+        let dragStartIndex = null; // Starting index of drag selection
+        let wasDragging = false; // Track if user actually dragged (vs just clicked)
 
         // Create word-span version of report text (always creates spans for hover highlighting)
         // If showIndices is true, also shows subscript word indices
@@ -1819,11 +1822,15 @@
             const textDisplayArea = document.getElementById('csv-entry-text-display');
             if (!textDisplayArea) return;
 
-            // Clear all selection highlighting
+            // Clear ALL word highlighting first (including selection)
             textDisplayArea.querySelectorAll('.word-span').forEach(span => {
+                const wordIdx = parseInt(span.dataset.wordIndex, 10);
                 span.classList.remove('word-selected');
-                if (!span.style.backgroundColor || span.style.backgroundColor === 'rgb(254, 240, 138)') {
+
+                // Only clear if this word is not selected
+                if (!selectedWordIndices.has(wordIdx)) {
                     span.style.backgroundColor = '';
+                    span.style.borderRadius = '';
                 }
             });
 
@@ -1876,6 +1883,24 @@
             updateReportTextDisplay();
         }
 
+        // Handle word selection - called when mouse is down/dragging
+        function handleWordRangeSelection(currentIndex) {
+            if (dragStartIndex === null) return;
+
+            // Only mark as dragging if we moved to a different word
+            if (currentIndex !== dragStartIndex) {
+                wasDragging = true;
+            }
+
+            selectedWordIndices.clear();
+            const start = Math.min(dragStartIndex, currentIndex);
+            const end = Math.max(dragStartIndex, currentIndex);
+            for (let i = start; i <= end; i++) {
+                selectedWordIndices.add(i);
+            }
+            updateSelectedWords();
+        }
+
         // Update the report text display - always uses word spans for hover highlighting
         function updateReportTextDisplay() {
             const textDisplayArea = document.getElementById('csv-entry-text-display');
@@ -1884,31 +1909,50 @@
             // Always use word spans (for hover highlighting), optionally show indices
             textDisplayArea.innerHTML = createWordSpanReportText(currentReportText, showWordIndices);
 
-            // Add click handlers to word spans for word selection
+            // Add drag-to-select handlers to word spans
             textDisplayArea.querySelectorAll('.word-span').forEach(span => {
-                span.addEventListener('click', (e) => {
+                span.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
                     const wordIndex = parseInt(span.dataset.wordIndex, 10);
 
-                    if (e.ctrlKey || e.metaKey) {
-                        // Ctrl+click: toggle word in selection
-                        if (selectedWordIndices.has(wordIndex)) {
-                            selectedWordIndices.delete(wordIndex);
-                        } else {
-                            selectedWordIndices.add(wordIndex);
-                        }
-                    } else {
-                        // Regular click: select only this word
-                        selectedWordIndices.clear();
-                        selectedWordIndices.add(wordIndex);
-                    }
+                    isDraggingSelection = true;
+                    dragStartIndex = wordIndex;
+                    wasDragging = false;
 
-                    updateSelectedWords();
+                    // Start with just this word selected
+                    handleWordRangeSelection(wordIndex);
+                });
+
+                span.addEventListener('mouseenter', (e) => {
+                    if (!isDraggingSelection) return;
+                    const wordIndex = parseInt(span.dataset.wordIndex, 10);
+                    handleWordRangeSelection(wordIndex);
                 });
             });
 
             // Restore selection highlighting if any
             updateSelectedWords();
         }
+
+        // Global mouseup handler for ending selection
+        document.addEventListener('mouseup', (e) => {
+            if (!isDraggingSelection) return;
+
+            // If we didn't drag (just clicked), toggle the single word
+            if (!wasDragging && dragStartIndex !== null) {
+                if (selectedWordIndices.has(dragStartIndex)) {
+                    selectedWordIndices.delete(dragStartIndex);
+                } else {
+                    selectedWordIndices.clear();
+                    selectedWordIndices.add(dragStartIndex);
+                }
+                updateSelectedWords();
+            }
+
+            isDraggingSelection = false;
+            dragStartIndex = null;
+            wasDragging = false;
+        });
 
         // Handle text selection in the report display
         function handleTextSelection() {
