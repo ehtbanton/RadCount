@@ -1938,14 +1938,10 @@
         document.addEventListener('mouseup', (e) => {
             if (!isDraggingSelection) return;
 
-            // If we didn't drag (just clicked), toggle the single word
+            // If we didn't drag (just clicked), select just that single word
             if (!wasDragging && dragStartIndex !== null) {
-                if (selectedWordIndices.has(dragStartIndex)) {
-                    selectedWordIndices.delete(dragStartIndex);
-                } else {
-                    selectedWordIndices.clear();
-                    selectedWordIndices.add(dragStartIndex);
-                }
+                selectedWordIndices.clear();
+                selectedWordIndices.add(dragStartIndex);
                 updateSelectedWords();
             }
 
