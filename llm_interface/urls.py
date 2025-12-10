@@ -60,4 +60,6 @@ urlpatterns = [
     path('save-entity-extraction-prompt/', views.save_entity_extraction_prompt, name='save_entity_extraction_prompt'),
     path('save-relation-extraction-prompt/', views.save_relation_extraction_prompt, name='save_relation_extraction_prompt'),
     path('execute-extraction/', views.execute_extraction_function, name='execute_extraction_function'),
+    # Clinical Findings View
+    path('clinical-findings/', views.get_clinical_findings, name='get_clinical_findings'),
 ]

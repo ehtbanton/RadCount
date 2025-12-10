@@ -724,7 +724,7 @@
 
                             <pre id="csv-entry-display" style="display: none; background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 0.85em; line-height: 1.5; height: 400px; overflow-y: scroll; overflow-x: hidden; color: #1f2937; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;">No entry loaded</pre>
 
-                            <div id="csv-entry-text-display" onmouseup="handleTextSelection()" style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 1.02em; line-height: 1.6; height: 400px; overflow-y: scroll; overflow-x: hidden; color: #1f2937; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;">No entry loaded</div>
+                            <div id="csv-entry-text-display" onmouseup="handleTextSelection()" style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 1.02em; line-height: 1.6; height: 400px; overflow-y: scroll; overflow-x: hidden; color: #1f2937; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word; user-select: none;">No entry loaded</div>
                         </div>
 
                         <!-- Annotation & Extraction Section -->
@@ -778,6 +778,14 @@
                                     style="padding: 10px 20px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; cursor: pointer; font-size: 0.95em; font-weight: 400; margin-bottom: -2px;"
                                 >
                                     A2
+                                </button>
+                                <button
+                                    id="findings-view-tab-btn"
+                                    class="annotation-tab-btn"
+                                    onclick="switchAnnotationTab('findings-view')"
+                                    style="padding: 10px 20px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; cursor: pointer; font-size: 0.95em; font-weight: 400; margin-bottom: -2px;"
+                                >
+                                    Clinical Findings
                                 </button>
                             </div>
 
@@ -1017,6 +1025,75 @@
                                 <!-- Metrics Display -->
                                 <div id="auto-extracted-2-metrics-container" style="display: none;">
                                     <!-- Metrics will be populated here by JavaScript -->
+                                </div>
+                            </div>
+
+                            <!-- Clinical Findings Tab Content -->
+                            <div id="findings-view-tab" class="annotation-tab-content" style="display: none;">
+                                <!-- Source Selector -->
+                                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px;">
+                                    <label style="font-size: 0.85em; color: #6b7280;">Data Source:</label>
+                                    <select
+                                        id="findings-source-selector"
+                                        onchange="loadClinicalFindings()"
+                                        style="padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em; background: white;"
+                                    >
+                                        <option value="ground_truth">Ground Truth</option>
+                                    </select>
+                                    <button
+                                        onclick="loadClinicalFindings()"
+                                        style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;"
+                                    >
+                                        Refresh
+                                    </button>
+                                </div>
+
+                                <!-- Assertion Status Filter -->
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 15px; flex-wrap: wrap;">
+                                    <span style="font-size: 0.85em; color: #6b7280;">Filter:</span>
+                                    <label style="display: flex; align-items: center; gap: 4px; font-size: 0.85em; cursor: pointer;">
+                                        <input type="checkbox" id="filter-present" checked onchange="filterFindings()">
+                                        <span style="color: #10b981;">Present</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 4px; font-size: 0.85em; cursor: pointer;">
+                                        <input type="checkbox" id="filter-uncertain" checked onchange="filterFindings()">
+                                        <span style="color: #f59e0b;">Uncertain</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 4px; font-size: 0.85em; cursor: pointer;">
+                                        <input type="checkbox" id="filter-absent" checked onchange="filterFindings()">
+                                        <span style="color: #ef4444;">Absent</span>
+                                    </label>
+                                </div>
+
+                                <!-- Metrics Summary -->
+                                <div id="findings-metrics" style="background: #f0f9ff; padding: 12px; border-radius: 6px; margin-bottom: 15px; display: none;">
+                                    <div style="font-weight: 500; color: #1e40af; margin-bottom: 8px; font-size: 0.9em;">Extraction Metrics</div>
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; font-size: 0.85em;">
+                                        <div>
+                                            <span style="color: #6b7280;">Total Findings:</span>
+                                            <span id="metric-total" style="font-weight: 500; color: #374151;">0</span>
+                                        </div>
+                                        <div>
+                                            <span style="color: #6b7280;">With Location:</span>
+                                            <span id="metric-location" style="font-weight: 500; color: #374151;">0%</span>
+                                        </div>
+                                        <div>
+                                            <span style="color: #6b7280;">With Attributes:</span>
+                                            <span id="metric-attributes" style="font-weight: 500; color: #374151;">0%</span>
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; gap: 12px; margin-top: 8px; font-size: 0.8em;">
+                                        <span style="color: #10b981;">Present: <span id="metric-present">0</span></span>
+                                        <span style="color: #f59e0b;">Uncertain: <span id="metric-uncertain">0</span></span>
+                                        <span style="color: #ef4444;">Absent: <span id="metric-absent">0</span></span>
+                                    </div>
+                                </div>
+
+                                <!-- Findings List -->
+                                <div id="findings-container" style="max-height: 400px; overflow-y: auto;">
+                                    <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 40px;">
+                                        Select a data source and click Refresh to view clinical findings.
+                                    </div>
                                 </div>
                             </div>
 
@@ -1774,7 +1851,7 @@
                 const indexedWords = [];
                 for (const word of words) {
                     const indexSub = showIndices ? `<sub style="color: #9ca3af; font-size: 0.7em;">${wordIndex}</sub>` : '';
-                    indexedWords.push(`<span class="word-span" data-word-index="${wordIndex}" style="cursor: pointer; transition: background-color 0.15s;">${escapeHtml(word)}${indexSub}</span>`);
+                    indexedWords.push(`<span class="word-span" data-word-index="${wordIndex}" style="cursor: pointer; transition: background-color 0.15s; user-select: none;">${escapeHtml(word)}${indexSub}</span>`);
                     currentReportWords.push(word);
                     wordIndex++;
                 }
@@ -3040,6 +3117,184 @@
             event.target.value = '';
         }
 
+        // ===== Clinical Findings Functions =====
+
+        let currentFindings = [];  // Store loaded findings for filtering
+
+        async function loadClinicalFindings() {
+            const container = document.getElementById('findings-container');
+            const metricsDiv = document.getElementById('findings-metrics');
+            const sourceSelector = document.getElementById('findings-source-selector');
+
+            if (!currentEntry) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 40px;">No entry selected. Navigate to an entry first.</div>';
+                metricsDiv.style.display = 'none';
+                return;
+            }
+
+            container.innerHTML = '<div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 40px;">Loading clinical findings...</div>';
+
+            try {
+                const source = sourceSelector.value;
+                // Get current schema from entry data or fall back to active schema
+                const entryData = getEntityEntryData(currentEntry);
+                const schemaToUse = entryData?.active_schema || activeSchemaName || 'radgraph';
+                const response = await fetch(`/llm/clinical-findings/?entry=${currentEntry}&source=${source}&schema=${schemaToUse}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    currentFindings = result.findings;
+
+                    // Update metrics display
+                    if (result.metrics) {
+                        metricsDiv.style.display = 'block';
+                        document.getElementById('metric-total').textContent = result.metrics.total_findings;
+                        document.getElementById('metric-location').textContent = result.metrics.location_rate + '%';
+                        document.getElementById('metric-attributes').textContent = result.metrics.attribute_rate + '%';
+
+                        const byStatus = result.metrics.by_assertion_status || {};
+                        document.getElementById('metric-present').textContent = byStatus.present || 0;
+                        document.getElementById('metric-uncertain').textContent = byStatus.uncertain || 0;
+                        document.getElementById('metric-absent').textContent = byStatus.absent || 0;
+                    }
+
+                    // Render findings
+                    renderFindings(currentFindings);
+
+                    // Update source selector with available methods
+                    updateFindingsSourceSelector();
+                } else {
+                    container.innerHTML = `<div style="color: #ef4444; font-size: 0.85em; text-align: center; padding: 40px;">Error: ${result.error}</div>`;
+                    metricsDiv.style.display = 'none';
+                }
+            } catch (error) {
+                container.innerHTML = `<div style="color: #ef4444; font-size: 0.85em; text-align: center; padding: 40px;">Error loading findings: ${error.message}</div>`;
+                metricsDiv.style.display = 'none';
+            }
+        }
+
+        function updateFindingsSourceSelector() {
+            const selector = document.getElementById('findings-source-selector');
+            const currentValue = selector.value;
+
+            // Clear existing options except ground truth
+            selector.innerHTML = '<option value="ground_truth">Ground Truth</option>';
+
+            // Add extraction methods if available
+            const entryData = getEntityEntryData(currentEntry);
+            const schemaToUse = entryData?.active_schema || activeSchemaName || 'radgraph';
+            if (entryData && entryData.extraction_methods && entryData.extraction_methods[schemaToUse]) {
+                const methods = entryData.extraction_methods[schemaToUse];
+                methods.forEach(method => {
+                    const option = document.createElement('option');
+                    option.value = method.id;
+                    option.textContent = method.name || method.id;
+                    selector.appendChild(option);
+                });
+            }
+
+            // Restore selection if possible
+            selector.value = currentValue || 'ground_truth';
+        }
+
+        function filterFindings() {
+            const showPresent = document.getElementById('filter-present').checked;
+            const showUncertain = document.getElementById('filter-uncertain').checked;
+            const showAbsent = document.getElementById('filter-absent').checked;
+
+            const filtered = currentFindings.filter(f => {
+                if (f.assertion_status === 'present' && showPresent) return true;
+                if (f.assertion_status === 'uncertain' && showUncertain) return true;
+                if (f.assertion_status === 'absent' && showAbsent) return true;
+                if (f.assertion_status === 'unknown') return true;  // Always show unknown
+                return false;
+            });
+
+            renderFindings(filtered);
+        }
+
+        function renderFindings(findings) {
+            const container = document.getElementById('findings-container');
+
+            if (!findings || findings.length === 0) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 40px;">No findings to display. Extract entities and relations first.</div>';
+                return;
+            }
+
+            const statusColors = {
+                'present': '#10b981',
+                'uncertain': '#f59e0b',
+                'absent': '#ef4444',
+                'unknown': '#6b7280'
+            };
+
+            const statusLabels = {
+                'present': 'Present',
+                'uncertain': 'Uncertain',
+                'absent': 'Absent',
+                'unknown': 'Unknown'
+            };
+
+            let html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
+
+            findings.forEach((finding, index) => {
+                const statusColor = statusColors[finding.assertion_status] || '#6b7280';
+                const statusLabel = statusLabels[finding.assertion_status] || 'Unknown';
+
+                html += `<div style="background: white; border: 1px solid #e5e7eb; border-left: 4px solid ${statusColor}; border-radius: 6px; padding: 12px;">`;
+
+                // Header: Observation + Status Badge
+                html += '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">';
+                html += `<div style="font-weight: 600; color: #1f2937; font-size: 1em;">${escapeHtml(finding.observation.text)}</div>`;
+                html += `<span style="background: ${statusColor}20; color: ${statusColor}; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: 500;">${statusLabel}</span>`;
+                html += '</div>';
+
+                // Anatomical Location(s)
+                if (finding.anatomical_locations && finding.anatomical_locations.length > 0) {
+                    html += '<div style="margin-bottom: 6px;">';
+                    html += '<span style="color: #6b7280; font-size: 0.8em;">Location: </span>';
+                    const locations = finding.anatomical_locations.map(loc => {
+                        let locText = escapeHtml(loc.text);
+                        if (loc.modifiers && loc.modifiers.length > 0) {
+                            const mods = loc.modifiers.map(m => escapeHtml(m.text)).join(' ');
+                            locText = mods + ' ' + locText;
+                        }
+                        return `<span style="background: #dbeafe; color: #1e40af; padding: 2px 6px; border-radius: 4px; font-size: 0.85em;">${locText}</span>`;
+                    }).join(' ');
+                    html += locations;
+                    html += '</div>';
+                }
+
+                // Attributes/Modifiers
+                if (finding.attributes && finding.attributes.length > 0) {
+                    html += '<div style="margin-bottom: 6px;">';
+                    html += '<span style="color: #6b7280; font-size: 0.8em;">Attributes: </span>';
+                    const attrs = finding.attributes.map(attr =>
+                        `<span style="background: #f3e8ff; color: #7c3aed; padding: 2px 6px; border-radius: 4px; font-size: 0.85em;">${escapeHtml(attr.text)}</span>`
+                    ).join(' ');
+                    html += attrs;
+                    html += '</div>';
+                }
+
+                // Suggested Diagnoses
+                if (finding.suggested_diagnoses && finding.suggested_diagnoses.length > 0) {
+                    html += '<div>';
+                    html += '<span style="color: #6b7280; font-size: 0.8em;">Suggests: </span>';
+                    const diagnoses = finding.suggested_diagnoses.map(diag => {
+                        const diagStatusColor = statusColors[diag.assertion_status] || '#6b7280';
+                        return `<span style="background: ${diagStatusColor}15; color: ${diagStatusColor}; padding: 2px 6px; border-radius: 4px; font-size: 0.85em; border: 1px solid ${diagStatusColor}40;">${escapeHtml(diag.text)}</span>`;
+                    }).join(' ');
+                    html += diagnoses;
+                    html += '</div>';
+                }
+
+                html += '</div>';
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
         // ===== New Tab and Annotation Functions =====
 
         // Switch between annotation tabs
@@ -3061,6 +3316,8 @@
                 activeBtn = document.getElementById('auto-extracted-tab-btn');
             } else if (tabName === 'auto-extracted-2') {
                 activeBtn = document.getElementById('auto-extracted-2-tab-btn');
+            } else if (tabName === 'findings-view') {
+                activeBtn = document.getElementById('findings-view-tab-btn');
             }
 
             if (activeBtn) {
@@ -3073,6 +3330,7 @@
             document.getElementById('ground-truth-tab').style.display = tabName === 'ground-truth' ? 'block' : 'none';
             document.getElementById('auto-extracted-tab').style.display = tabName === 'auto-extracted' ? 'block' : 'none';
             document.getElementById('auto-extracted-2-tab').style.display = tabName === 'auto-extracted-2' ? 'block' : 'none';
+            document.getElementById('findings-view-tab').style.display = tabName === 'findings-view' ? 'block' : 'none';
 
             // Render content for active tab
             if (tabName === 'ground-truth') {
@@ -3081,6 +3339,8 @@
                 await renderAutoExtractedTab();
             } else if (tabName === 'auto-extracted-2') {
                 await renderAutoExtracted2Tab();
+            } else if (tabName === 'findings-view') {
+                await loadClinicalFindings();
             }
         }
 

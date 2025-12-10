@@ -4348,3 +4348,354 @@ def migrate_entity_ids(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# =============================================================================
+# Clinical Findings View - Transform entity-relation graph to structured findings
+# =============================================================================
+
+def derive_assertion_status(entity_type):
+    """Derive assertion status from RadGraph entity type."""
+    if 'Definitely Present' in entity_type:
+        return 'present'
+    elif 'Uncertain' in entity_type:
+        return 'uncertain'
+    elif 'Definitely Absent' in entity_type:
+        return 'absent'
+    else:
+        return 'unknown'
+
+
+def transform_to_clinical_findings(entities, triplets):
+    """
+    Transform entity-relation graph into structured clinical findings.
+
+    Each finding has:
+    - observation: The core finding (text, type, assertion status)
+    - anatomical_locations: Where the finding is located
+    - attributes: Modifying entities (size, severity, etc.)
+    - suggested_diagnoses: What the finding suggests
+
+    Algorithm:
+    1. Build graph from entities and triplets
+    2. Identify "anchor" observations (those with locations or that are targets of modify)
+    3. For each anchor, collect related information via graph traversal
+    """
+    if not entities:
+        return []
+
+    # Build entity lookup
+    entity_map = {e['id']: e for e in entities}
+
+    # Build relation indexes
+    # located_at: observation -> anatomy
+    # modify: source -> target (source modifies target)
+    # suggestive_of: observation -> observation
+    located_at_relations = []  # (obs_id, anat_id)
+    modify_relations = []  # (source_id, target_id)
+    suggestive_of_relations = []  # (source_id, target_id)
+
+    for triplet in triplets:
+        e1_id = triplet.get('entity1_id')
+        e2_id = triplet.get('entity2_id')
+        rel_type = triplet.get('relation_type', '')
+
+        if rel_type == 'located_at':
+            located_at_relations.append((e1_id, e2_id))
+        elif rel_type == 'modify':
+            modify_relations.append((e1_id, e2_id))
+        elif rel_type == 'suggestive_of':
+            suggestive_of_relations.append((e1_id, e2_id))
+
+    # Build indexes for quick lookup
+    # What modifies this entity?
+    modifiers_of = {}  # target_id -> [source_ids]
+    for src, tgt in modify_relations:
+        if tgt not in modifiers_of:
+            modifiers_of[tgt] = []
+        modifiers_of[tgt].append(src)
+
+    # What locations does this entity have?
+    locations_of = {}  # obs_id -> [anat_ids]
+    for obs_id, anat_id in located_at_relations:
+        if obs_id not in locations_of:
+            locations_of[obs_id] = []
+        locations_of[obs_id].append(anat_id)
+
+    # What does this entity suggest?
+    suggests = {}  # obs_id -> [suggested_ids]
+    for src, tgt in suggestive_of_relations:
+        if src not in suggests:
+            suggests[src] = []
+        suggests[src].append(tgt)
+
+    # Identify anchor observations
+    # An anchor is an Observation that:
+    # 1. Has a location (located_at relation), OR
+    # 2. Is the target of modify relations, OR
+    # 3. Has suggestive_of relations
+    # But we want to avoid creating findings for pure modifiers
+
+    # First pass: find all observations that are modified by something
+    modified_entities = set(modifiers_of.keys())
+
+    # Find entities that are pure modifiers (only appear as sources of modify, never have locations)
+    pure_modifiers = set()
+    for src, tgt in modify_relations:
+        src_entity = entity_map.get(src)
+        if src_entity and 'Observation' in src_entity.get('type', ''):
+            # Check if this entity has any locations or is itself modified
+            if src not in locations_of and src not in modified_entities:
+                pure_modifiers.add(src)
+
+    # Anchor entities are Observations that:
+    # - Have locations, OR
+    # - Are targets of modify AND have locations OR are terminal (not modifying anything else), OR
+    # - Have suggestive_of relations
+    anchor_ids = set()
+
+    for entity in entities:
+        eid = entity['id']
+        etype = entity.get('type', '')
+
+        if 'Observation' not in etype:
+            continue  # Skip anatomy entities as anchors
+
+        # Has location -> anchor
+        if eid in locations_of:
+            anchor_ids.add(eid)
+        # Has suggestive_of -> anchor
+        elif eid in suggests:
+            anchor_ids.add(eid)
+        # Is modified and not a pure modifier -> anchor
+        elif eid in modified_entities and eid not in pure_modifiers:
+            anchor_ids.add(eid)
+
+    # If no anchors found, use all observations that aren't pure modifiers
+    if not anchor_ids:
+        for entity in entities:
+            eid = entity['id']
+            etype = entity.get('type', '')
+            if 'Observation' in etype and eid not in pure_modifiers:
+                anchor_ids.add(eid)
+
+    # Build findings from anchors
+    findings = []
+    finding_id = 1
+
+    for anchor_id in anchor_ids:
+        anchor = entity_map.get(anchor_id)
+        if not anchor:
+            continue
+
+        assertion_status = derive_assertion_status(anchor.get('type', ''))
+
+        # Collect modifiers recursively
+        def collect_modifiers(eid, visited=None):
+            if visited is None:
+                visited = set()
+            if eid in visited:
+                return []
+            visited.add(eid)
+
+            result = []
+            for mod_id in modifiers_of.get(eid, []):
+                mod_entity = entity_map.get(mod_id)
+                if mod_entity:
+                    result.append({
+                        'text': mod_entity.get('text', ''),
+                        'type': mod_entity.get('type', ''),
+                        'entity_id': mod_id
+                    })
+                    # Recursively get modifiers of modifiers
+                    result.extend(collect_modifiers(mod_id, visited))
+            return result
+
+        attributes = collect_modifiers(anchor_id)
+
+        # Collect locations
+        anatomical_locations = []
+        for loc_id in locations_of.get(anchor_id, []):
+            loc_entity = entity_map.get(loc_id)
+            if loc_entity:
+                # Also collect modifiers of the location (e.g., "right" modifying "lung")
+                loc_modifiers = collect_modifiers(loc_id)
+                anatomical_locations.append({
+                    'text': loc_entity.get('text', ''),
+                    'type': loc_entity.get('type', ''),
+                    'entity_id': loc_id,
+                    'modifiers': loc_modifiers
+                })
+
+        # Collect suggested diagnoses
+        suggested_diagnoses = []
+        for sug_id in suggests.get(anchor_id, []):
+            sug_entity = entity_map.get(sug_id)
+            if sug_entity:
+                suggested_diagnoses.append({
+                    'text': sug_entity.get('text', ''),
+                    'type': sug_entity.get('type', ''),
+                    'entity_id': sug_id,
+                    'assertion_status': derive_assertion_status(sug_entity.get('type', ''))
+                })
+
+        finding = {
+            'id': f'finding_{finding_id}',
+            'observation': {
+                'text': anchor.get('text', ''),
+                'type': anchor.get('type', ''),
+                'entity_id': anchor_id
+            },
+            'assertion_status': assertion_status,
+            'anatomical_locations': anatomical_locations,
+            'attributes': attributes,
+            'suggested_diagnoses': suggested_diagnoses
+        }
+
+        findings.append(finding)
+        finding_id += 1
+
+    # Sort findings by assertion status priority: present > uncertain > absent > unknown
+    status_order = {'present': 0, 'uncertain': 1, 'absent': 2, 'unknown': 3}
+    findings.sort(key=lambda f: status_order.get(f['assertion_status'], 4))
+
+    return findings
+
+
+def calculate_findings_metrics(findings):
+    """Calculate benchmarking metrics for findings extraction."""
+    if not findings:
+        return {
+            'total_findings': 0,
+            'by_assertion_status': {},
+            'with_location': 0,
+            'with_attributes': 0,
+            'with_diagnoses': 0,
+            'location_rate': 0,
+            'attribute_rate': 0
+        }
+
+    total = len(findings)
+    by_status = {}
+    with_location = 0
+    with_attributes = 0
+    with_diagnoses = 0
+
+    for f in findings:
+        status = f.get('assertion_status', 'unknown')
+        by_status[status] = by_status.get(status, 0) + 1
+
+        if f.get('anatomical_locations'):
+            with_location += 1
+        if f.get('attributes'):
+            with_attributes += 1
+        if f.get('suggested_diagnoses'):
+            with_diagnoses += 1
+
+    return {
+        'total_findings': total,
+        'by_assertion_status': by_status,
+        'with_location': with_location,
+        'with_attributes': with_attributes,
+        'with_diagnoses': with_diagnoses,
+        'location_rate': round(with_location / total * 100, 1) if total > 0 else 0,
+        'attribute_rate': round(with_attributes / total * 100, 1) if total > 0 else 0
+    }
+
+
+@require_http_methods(["GET"])
+def get_clinical_findings(request):
+    """
+    Get clinical findings for an entry - transforms entity-relation graph
+    into structured findings format for clinical use.
+
+    Query params:
+    - entry: entry number (required)
+    - source: 'ground_truth' or method_id (default: ground_truth)
+    - schema: schema name (default: current active schema)
+    """
+    try:
+        entry_number = request.GET.get('entry')
+        source = request.GET.get('source', 'ground_truth')
+        schema_name = request.GET.get('schema')
+
+        if not entry_number:
+            return JsonResponse({
+                'success': False,
+                'error': 'Entry number is required'
+            }, status=400)
+
+        entry_number = int(entry_number)
+
+        # Load entities data
+        entities_file = PROJECT_ROOT / "entities.json"
+        if not entities_file.exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'Entities file not found'
+            }, status=404)
+
+        with open(entities_file, 'r', encoding='utf-8') as f:
+            entities_data = json.load(f)
+
+        # Find the entry
+        entry_data = None
+        for entry in entities_data:
+            if entry.get('entry') == entry_number:
+                entry_data = entry
+                break
+
+        if not entry_data:
+            return JsonResponse({
+                'success': False,
+                'error': f'Entry {entry_number} not found'
+            }, status=404)
+
+        # Determine schema
+        if not schema_name:
+            schema_name = entry_data.get('active_schema', 'radgraph')
+
+        # Get entities and triplets based on source
+        entities = []
+        triplets = []
+
+        if source == 'ground_truth':
+            gt_data = entry_data.get('ground_truths', {}).get(schema_name, {})
+            entities = gt_data.get('entities', [])
+            triplets = gt_data.get('triplets', [])
+        else:
+            # Look for extraction method with matching ID
+            methods = entry_data.get('extraction_methods', {}).get(schema_name, [])
+            for method in methods:
+                if method.get('id') == source:
+                    entities = method.get('entities', [])
+                    triplets = method.get('triplets', [])
+                    break
+
+        # Transform to clinical findings
+        findings = transform_to_clinical_findings(entities, triplets)
+        metrics = calculate_findings_metrics(findings)
+
+        return JsonResponse({
+            'success': True,
+            'entry': entry_number,
+            'schema': schema_name,
+            'source': source,
+            'findings': findings,
+            'metrics': metrics,
+            'raw_counts': {
+                'entities': len(entities),
+                'relations': len(triplets)
+            }
+        })
+
+    except ValueError as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Invalid entry number: {str(e)}'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to get clinical findings: {str(e)}'
+        }, status=500)
