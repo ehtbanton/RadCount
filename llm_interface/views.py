@@ -1770,11 +1770,11 @@ def generate_with_prompt(request):
         return JsonResponse({'success': False, 'error': f'Failed to generate response: {str(e)}'}, status=500)
 
 
-# Entity-Relation Management Endpoints
+# Annotation Management Endpoints (simplified observation-location pairs)
 
 @require_http_methods(["GET"])
 def get_entities(request):
-    """Get all entity-relation data as array of entry objects with triplets."""
+    """Get all annotation data as array of entry objects."""
     try:
         entities_file = PROJECT_ROOT / "entities.json"
 
@@ -1786,15 +1786,7 @@ def get_entities(request):
             # Initialize entities file with entries for all CSV rows
             data = [{
                 "entry": i,
-                "active_schema": "radgraph",
-                "ground_truths": {
-                    "radgraph": {"triplets": []},
-                    "pet_ct_oncology": {"triplets": []}
-                },
-                "extraction_methods": {
-                    "radgraph": [],
-                    "pet_ct_oncology": []
-                }
+                "annotations": []
             } for i in range(1, row_count + 1)]
 
             # Save the initialized data
@@ -1817,15 +1809,7 @@ def get_entities(request):
             if i not in existing_entries:
                 data.append({
                     "entry": i,
-                    "active_schema": "radgraph",
-                    "ground_truths": {
-                        "radgraph": {"triplets": []},
-                        "pet_ct_oncology": {"triplets": []}
-                    },
-                    "extraction_methods": {
-                        "radgraph": [],
-                        "pet_ct_oncology": []
-                    }
+                    "annotations": []
                 })
 
         # Remove entries beyond CSV row count
@@ -1834,20 +1818,10 @@ def get_entities(request):
         # Sort by entry number
         data.sort(key=lambda x: x.get('entry', 0))
 
-        # Ensure all entries have required structure
+        # Ensure all entries have annotations array
         for entry in data:
-            if 'active_schema' not in entry:
-                entry['active_schema'] = 'radgraph'
-            if 'ground_truths' not in entry:
-                entry['ground_truths'] = {}
-            if 'extraction_methods' not in entry:
-                entry['extraction_methods'] = {}
-            # Ensure common schemas exist
-            for schema in ['radgraph', 'pet_ct_oncology']:
-                if schema not in entry['ground_truths']:
-                    entry['ground_truths'][schema] = {"triplets": []}
-                if schema not in entry['extraction_methods']:
-                    entry['extraction_methods'][schema] = []
+            if 'annotations' not in entry:
+                entry['annotations'] = []
 
         # Save synced data
         with open(entities_file, 'w', encoding='utf-8') as f:
@@ -1868,7 +1842,7 @@ def get_entities(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def save_entities(request):
-    """Save all entity-relation data as array of entry objects with triplets."""
+    """Save all annotation data as array of entry objects."""
     try:
         data = json.loads(request.body) if request.body else []
 
@@ -1898,6 +1872,176 @@ def save_entities(request):
         return JsonResponse({
             'success': False,
             'error': f'Failed to save entities: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def add_annotation(request):
+    """Add an observation-location annotation to a specific entry.
+
+    Expected format:
+    {
+        "entry_number": 1,
+        "annotation": {
+            "observation": ["tumor", [5, 5]],
+            "anatomical_location": ["lung", [10, 10]]  // or null
+        }
+    }
+    """
+    try:
+        data = json.loads(request.body) if request.body else {}
+        entry_number = data.get('entry_number')
+        annotation = data.get('annotation')
+
+        if entry_number is None:
+            return JsonResponse({
+                'success': False,
+                'error': 'entry_number is required'
+            }, status=400)
+
+        if not annotation:
+            return JsonResponse({
+                'success': False,
+                'error': 'annotation is required'
+            }, status=400)
+
+        # Validate annotation structure
+        if 'observation' not in annotation:
+            return JsonResponse({
+                'success': False,
+                'error': 'annotation must have an observation field'
+            }, status=400)
+
+        # Load entities data
+        entities_file = PROJECT_ROOT / "entities.json"
+        if not entities_file.exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'Entities file not found'
+            }, status=404)
+
+        with open(entities_file, 'r', encoding='utf-8') as f:
+            entities_data = json.load(f)
+
+        # Find the entry
+        entry_found = False
+        for entry in entities_data:
+            if entry.get('entry') == entry_number:
+                entry_found = True
+                if 'annotations' not in entry:
+                    entry['annotations'] = []
+                entry['annotations'].append(annotation)
+                break
+
+        if not entry_found:
+            return JsonResponse({
+                'success': False,
+                'error': f'Entry {entry_number} not found'
+            }, status=404)
+
+        # Save back to file
+        with open(entities_file, 'w', encoding='utf-8') as f:
+            json.dump(entities_data, f, indent=2, ensure_ascii=False)
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Annotation added successfully',
+            'annotation': annotation
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON in request body'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to add annotation: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def delete_annotation(request):
+    """Delete an annotation by index from a specific entry.
+
+    Expected format:
+    {
+        "entry_number": 1,
+        "annotation_index": 0
+    }
+    """
+    try:
+        data = json.loads(request.body) if request.body else {}
+        entry_number = data.get('entry_number')
+        annotation_index = data.get('annotation_index')
+
+        if entry_number is None:
+            return JsonResponse({
+                'success': False,
+                'error': 'entry_number is required'
+            }, status=400)
+
+        if annotation_index is None:
+            return JsonResponse({
+                'success': False,
+                'error': 'annotation_index is required'
+            }, status=400)
+
+        # Load entities data
+        entities_file = PROJECT_ROOT / "entities.json"
+        if not entities_file.exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'Entities file not found'
+            }, status=404)
+
+        with open(entities_file, 'r', encoding='utf-8') as f:
+            entities_data = json.load(f)
+
+        # Find the entry
+        entry_found = False
+        for entry in entities_data:
+            if entry.get('entry') == entry_number:
+                entry_found = True
+                annotations = entry.get('annotations', [])
+
+                if annotation_index < 0 or annotation_index >= len(annotations):
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Invalid annotation index: {annotation_index}'
+                    }, status=400)
+
+                deleted_annotation = annotations.pop(annotation_index)
+                break
+
+        if not entry_found:
+            return JsonResponse({
+                'success': False,
+                'error': f'Entry {entry_number} not found'
+            }, status=404)
+
+        # Save back to file
+        with open(entities_file, 'w', encoding='utf-8') as f:
+            json.dump(entities_data, f, indent=2, ensure_ascii=False)
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Annotation deleted successfully',
+            'deleted_annotation': deleted_annotation
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON in request body'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to delete annotation: {str(e)}'
         }, status=500)
 
 
@@ -2019,408 +2163,123 @@ def extract_entities_relations(request):
         return JsonResponse({'success': False, 'error': f'Failed to extract entities: {str(e)}'}, status=500)
 
 
-# Ground Truth and Extraction Methods Endpoints
+# Simplified Observation-Location Extraction
 
 @csrf_exempt
 @require_http_methods(["POST"])
-def add_ground_truth_triplet(request):
-    """Add a ground truth triplet to a specific entry."""
+def extract_observations(request):
+    """Extract observation-location pairs using LLM (simplified extraction)."""
     try:
         data = json.loads(request.body) if request.body else {}
         entry_number = data.get('entry_number')
-        triplet = data.get('triplet')
+        report_text = data.get('report_text', '')
 
         if entry_number is None:
             return JsonResponse({'success': False, 'error': 'entry_number is required'}, status=400)
 
-        if not triplet:
-            return JsonResponse({'success': False, 'error': 'triplet is required'}, status=400)
+        if not report_text:
+            return JsonResponse({'success': False, 'error': 'report_text is required'}, status=400)
 
-        # Validate triplet structure
-        required_fields = ['entity1_text', 'entity1_type', 'relation_type', 'entity2_text', 'entity2_type']
-        for field in required_fields:
-            if field not in triplet:
-                return JsonResponse({'success': False, 'error': f'Triplet missing required field: {field}'}, status=400)
+        # Load prompts
+        prompts_file = PROJECT_ROOT / "extraction_prompts.json"
+        if not prompts_file.exists():
+            return JsonResponse({'success': False, 'error': 'extraction_prompts.json not found'}, status=404)
 
+        with open(prompts_file, 'r', encoding='utf-8') as f:
+            prompts_data = json.load(f)
+
+        # Get active prompt
+        active_prompt_key = prompts_data.get('active_prompt', 'observation_location')
+        prompt_template = prompts_data['prompts'].get(active_prompt_key, {}).get('template', '')
+
+        if not prompt_template:
+            return JsonResponse({'success': False, 'error': 'No prompt template found'}, status=400)
+
+        # Create indexed report text
+        words = report_text.split()
+        indexed_report = ' '.join([f'[{i}]{word}' for i, word in enumerate(words)])
+
+        # Build prompt
+        prompt = prompt_template.replace('{indexed_report}', indexed_report)
+
+        # Check if LLM server is running
+        llm_service = LlamaService()
+        if not llm_service.is_server_running():
+            return JsonResponse({'success': False, 'error': 'LLM server is not running'}, status=503)
+
+        # Build messages
+        messages = [
+            {
+                'role': 'user',
+                'content': prompt
+            }
+        ]
+
+        # Call LLM
+        response = requests.post(
+            f"{llm_service.base_url}/v1/chat/completions",
+            headers={'Content-Type': 'application/json'},
+            json={
+                'messages': messages,
+                'temperature': 0.1,
+                'max_tokens': 4000
+            },
+            timeout=180
+        )
+
+        if response.status_code != 200:
+            return JsonResponse({'success': False, 'error': f'LLM request failed: {response.text}'}, status=500)
+
+        result = response.json()
+        generated_text = result['choices'][0]['message']['content']
+
+        # Parse JSON response
+        extraction_result, parse_error = extract_json_array(generated_text)
+        if extraction_result is None:
+            return JsonResponse({
+                'success': False,
+                'error': f'Failed to parse LLM response: {parse_error}',
+                'raw_response': generated_text
+            }, status=400)
+
+        # Store extracted annotations in entities.json
         entities_file = PROJECT_ROOT / "entities.json"
-
-        if not entities_file.exists():
-            return JsonResponse({'success': False, 'error': 'entities.json not found'}, status=404)
-
-        with open(entities_file, 'r', encoding='utf-8') as f:
-            entities_data = json.load(f)
-
-        # Find and update the entry
-        entry_found = False
-        for entry in entities_data:
-            if entry.get('entry') == entry_number:
-                active_schema = entry.get('active_schema', 'radgraph')
-                if 'ground_truths' not in entry:
-                    entry['ground_truths'] = {}
-                if active_schema not in entry['ground_truths']:
-                    entry['ground_truths'][active_schema] = {"triplets": []}
-                entry['ground_truths'][active_schema]['triplets'].append(triplet)
-                entry_found = True
-                break
-
-        if not entry_found:
-            return JsonResponse({'success': False, 'error': f'Entry {entry_number} not found'}, status=404)
-
-        # Save updated data
-        with open(entities_file, 'w', encoding='utf-8') as f:
-            json.dump(entities_data, f, indent=2, ensure_ascii=False)
-
-        return JsonResponse({
-            'success': True,
-            'message': 'Ground truth triplet added successfully'
-        })
-
-    except json.JSONDecodeError:
-        return JsonResponse({'success': False, 'error': 'Invalid JSON in request body'}, status=400)
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': f'Failed to add ground truth triplet: {str(e)}'}, status=500)
-
-
-@csrf_exempt
-@require_http_methods(["POST"])
-def delete_ground_truth_triplet(request):
-    """Delete a ground truth triplet from a specific entry."""
-    try:
-        data = json.loads(request.body) if request.body else {}
-        entry_number = data.get('entry_number')
-        triplet_index = data.get('triplet_index')
-
-        if entry_number is None:
-            return JsonResponse({'success': False, 'error': 'entry_number is required'}, status=400)
-
-        if triplet_index is None:
-            return JsonResponse({'success': False, 'error': 'triplet_index is required'}, status=400)
-
-        entities_file = PROJECT_ROOT / "entities.json"
-
-        if not entities_file.exists():
-            return JsonResponse({'success': False, 'error': 'entities.json not found'}, status=404)
-
-        with open(entities_file, 'r', encoding='utf-8') as f:
-            entities_data = json.load(f)
-
-        # Find and update the entry
-        entry_found = False
-        for entry in entities_data:
-            if entry.get('entry') == entry_number:
-                active_schema = entry.get('active_schema', 'radgraph')
-                if 'ground_truths' in entry and active_schema in entry['ground_truths'] and 'triplets' in entry['ground_truths'][active_schema]:
-                    if 0 <= triplet_index < len(entry['ground_truths'][active_schema]['triplets']):
-                        del entry['ground_truths'][active_schema]['triplets'][triplet_index]
-                        entry_found = True
-                    else:
-                        return JsonResponse({'success': False, 'error': 'Invalid triplet_index'}, status=400)
-                break
-
-        if not entry_found:
-            return JsonResponse({'success': False, 'error': f'Entry {entry_number} not found or has no ground truth'}, status=404)
-
-        # Save updated data
-        with open(entities_file, 'w', encoding='utf-8') as f:
-            json.dump(entities_data, f, indent=2, ensure_ascii=False)
-
-        return JsonResponse({
-            'success': True,
-            'message': 'Ground truth triplet deleted successfully'
-        })
-
-    except json.JSONDecodeError:
-        return JsonResponse({'success': False, 'error': 'Invalid JSON in request body'}, status=400)
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': f'Failed to delete ground truth triplet: {str(e)}'}, status=500)
-
-
-@csrf_exempt
-@require_http_methods(["POST"])
-def add_ground_truth_entity(request):
-    """Add a ground truth entity to a specific entry."""
-    try:
-        data = json.loads(request.body) if request.body else {}
-        entry_number = data.get('entry_number')
-        entity = data.get('entity')
-
-        if entry_number is None:
-            return JsonResponse({'success': False, 'error': 'entry_number is required'}, status=400)
-
-        if not entity:
-            return JsonResponse({'success': False, 'error': 'entity is required'}, status=400)
-
-        # Validate entity structure
-        required_fields = ['text', 'type']
-        for field in required_fields:
-            if field not in entity:
-                return JsonResponse({'success': False, 'error': f'Entity missing required field: {field}'}, status=400)
-
-        # Handle optional word indices
-        if 'start_word' in entity:
-            try:
-                entity['start_word'] = int(entity['start_word'])
-                if entity['start_word'] < 0:
-                    entity['start_word'] = None
-            except (ValueError, TypeError):
-                entity['start_word'] = None
+        if entities_file.exists():
+            with open(entities_file, 'r', encoding='utf-8') as f:
+                entities_data = json.load(f)
         else:
-            entity['start_word'] = None
+            entities_data = []
 
-        if 'end_word' in entity:
-            try:
-                entity['end_word'] = int(entity['end_word'])
-                if entity['end_word'] < 0:
-                    entity['end_word'] = None
-            except (ValueError, TypeError):
-                entity['end_word'] = None
-        else:
-            entity['end_word'] = None
-
-        entities_file = PROJECT_ROOT / "entities.json"
-
-        if not entities_file.exists():
-            return JsonResponse({'success': False, 'error': 'entities.json not found'}, status=404)
-
-        with open(entities_file, 'r', encoding='utf-8') as f:
-            entities_data = json.load(f)
-
-        # Find and update the entry
-        entry_found = False
-        new_entity_id = None
+        # Find or create entry
+        target_entry = None
         for entry in entities_data:
             if entry.get('entry') == entry_number:
-                active_schema = entry.get('active_schema', 'radgraph')
-                if 'ground_truths' not in entry:
-                    entry['ground_truths'] = {}
-                if active_schema not in entry['ground_truths']:
-                    entry['ground_truths'][active_schema] = {"entities": [], "triplets": []}
-                if 'entities' not in entry['ground_truths'][active_schema]:
-                    entry['ground_truths'][active_schema]['entities'] = []
-
-                # Generate entity ID with consistent scheme: gt_e{n}
-                existing_ids = [e.get('id', '') for e in entry['ground_truths'][active_schema]['entities']]
-                entity_num = 1
-                while f"gt_e{entity_num}" in existing_ids:
-                    entity_num += 1
-                new_entity_id = f"gt_e{entity_num}"
-
-                entity['id'] = new_entity_id
-                entry['ground_truths'][active_schema]['entities'].append(entity)
-                entry_found = True
+                target_entry = entry
                 break
 
-        if not entry_found:
-            return JsonResponse({'success': False, 'error': f'Entry {entry_number} not found'}, status=404)
+        if not target_entry:
+            target_entry = {'entry': entry_number, 'annotations': []}
+            entities_data.append(target_entry)
+            entities_data.sort(key=lambda x: x.get('entry', 0))
 
-        # Save updated data
+        # Store auto-extracted annotations (separate from manual annotations)
+        target_entry['auto_extracted'] = extraction_result
+
+        # Save
         with open(entities_file, 'w', encoding='utf-8') as f:
-            json.dump(entities_data, f, indent=2, ensure_ascii=False)
+            json.dump(entities_data, f, indent=2)
 
         return JsonResponse({
             'success': True,
-            'message': 'Ground truth entity added successfully',
-            'entity_id': new_entity_id
+            'annotations': extraction_result,
+            'count': len(extraction_result)
         })
 
-    except json.JSONDecodeError:
-        return JsonResponse({'success': False, 'error': 'Invalid JSON in request body'}, status=400)
     except Exception as e:
-        return JsonResponse({'success': False, 'error': f'Failed to add ground truth entity: {str(e)}'}, status=500)
+        return JsonResponse({'success': False, 'error': f'Failed to extract observations: {str(e)}'}, status=500)
 
 
-@csrf_exempt
-@require_http_methods(["POST"])
-def delete_ground_truth_entity(request):
-    """Delete a ground truth entity from a specific entry (also removes related triplets)."""
-    try:
-        data = json.loads(request.body) if request.body else {}
-        entry_number = data.get('entry_number')
-        entity_id = data.get('entity_id')
-
-        if entry_number is None:
-            return JsonResponse({'success': False, 'error': 'entry_number is required'}, status=400)
-
-        if not entity_id:
-            return JsonResponse({'success': False, 'error': 'entity_id is required'}, status=400)
-
-        entities_file = PROJECT_ROOT / "entities.json"
-
-        if not entities_file.exists():
-            return JsonResponse({'success': False, 'error': 'entities.json not found'}, status=404)
-
-        with open(entities_file, 'r', encoding='utf-8') as f:
-            entities_data = json.load(f)
-
-        # Find and update the entry
-        entry_found = False
-        for entry in entities_data:
-            if entry.get('entry') == entry_number:
-                active_schema = entry.get('active_schema', 'radgraph')
-                if 'ground_truths' in entry and active_schema in entry['ground_truths']:
-                    gt = entry['ground_truths'][active_schema]
-                    if 'entities' in gt:
-                        # Find and remove the entity
-                        original_len = len(gt['entities'])
-                        gt['entities'] = [e for e in gt['entities'] if e.get('id') != entity_id]
-                        if len(gt['entities']) < original_len:
-                            entry_found = True
-                            # Also remove any triplets referencing this entity
-                            if 'triplets' in gt:
-                                gt['triplets'] = [
-                                    t for t in gt['triplets']
-                                    if t.get('entity1_id') != entity_id and t.get('entity2_id') != entity_id
-                                ]
-                break
-
-        if not entry_found:
-            return JsonResponse({'success': False, 'error': f'Entity {entity_id} not found'}, status=404)
-
-        # Save updated data
-        with open(entities_file, 'w', encoding='utf-8') as f:
-            json.dump(entities_data, f, indent=2, ensure_ascii=False)
-
-        return JsonResponse({
-            'success': True,
-            'message': 'Ground truth entity deleted successfully'
-        })
-
-    except json.JSONDecodeError:
-        return JsonResponse({'success': False, 'error': 'Invalid JSON in request body'}, status=400)
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': f'Failed to delete ground truth entity: {str(e)}'}, status=500)
-
-
-@csrf_exempt
-@require_http_methods(["POST"])
-def add_ground_truth_relation(request):
-    """Add a ground truth relation (triplet using entity IDs) to a specific entry."""
-    try:
-        data = json.loads(request.body) if request.body else {}
-        entry_number = data.get('entry_number')
-        relation = data.get('relation')
-
-        if entry_number is None:
-            return JsonResponse({'success': False, 'error': 'entry_number is required'}, status=400)
-
-        if not relation:
-            return JsonResponse({'success': False, 'error': 'relation is required'}, status=400)
-
-        # Validate relation structure
-        required_fields = ['entity1_id', 'relation_type', 'entity2_id']
-        for field in required_fields:
-            if field not in relation:
-                return JsonResponse({'success': False, 'error': f'Relation missing required field: {field}'}, status=400)
-
-        entities_file = PROJECT_ROOT / "entities.json"
-
-        if not entities_file.exists():
-            return JsonResponse({'success': False, 'error': 'entities.json not found'}, status=404)
-
-        with open(entities_file, 'r', encoding='utf-8') as f:
-            entities_data = json.load(f)
-
-        # Find and update the entry
-        entry_found = False
-        for entry in entities_data:
-            if entry.get('entry') == entry_number:
-                active_schema = entry.get('active_schema', 'radgraph')
-                if 'ground_truths' not in entry:
-                    entry['ground_truths'] = {}
-                if active_schema not in entry['ground_truths']:
-                    entry['ground_truths'][active_schema] = {"entities": [], "triplets": []}
-                if 'triplets' not in entry['ground_truths'][active_schema]:
-                    entry['ground_truths'][active_schema]['triplets'] = []
-
-                # Verify entity IDs exist
-                entity_ids = {e.get('id') for e in entry['ground_truths'][active_schema].get('entities', [])}
-                if relation['entity1_id'] not in entity_ids:
-                    return JsonResponse({'success': False, 'error': f"Entity {relation['entity1_id']} not found"}, status=400)
-                if relation['entity2_id'] not in entity_ids:
-                    return JsonResponse({'success': False, 'error': f"Entity {relation['entity2_id']} not found"}, status=400)
-
-                # Generate triplet ID with consistent scheme: gt_r{n}
-                existing_triplet_ids = [t.get('id', '') for t in entry['ground_truths'][active_schema]['triplets']]
-                triplet_num = 1
-                while f"gt_r{triplet_num}" in existing_triplet_ids:
-                    triplet_num += 1
-                relation['id'] = f"gt_r{triplet_num}"
-
-                entry['ground_truths'][active_schema]['triplets'].append(relation)
-                entry_found = True
-                break
-
-        if not entry_found:
-            return JsonResponse({'success': False, 'error': f'Entry {entry_number} not found'}, status=404)
-
-        # Save updated data
-        with open(entities_file, 'w', encoding='utf-8') as f:
-            json.dump(entities_data, f, indent=2, ensure_ascii=False)
-
-        return JsonResponse({
-            'success': True,
-            'message': 'Ground truth relation added successfully'
-        })
-
-    except json.JSONDecodeError:
-        return JsonResponse({'success': False, 'error': 'Invalid JSON in request body'}, status=400)
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': f'Failed to add ground truth relation: {str(e)}'}, status=500)
-
-
-@csrf_exempt
-@require_http_methods(["POST"])
-def delete_ground_truth_relation(request):
-    """Delete a ground truth relation from a specific entry."""
-    try:
-        data = json.loads(request.body) if request.body else {}
-        entry_number = data.get('entry_number')
-        relation_index = data.get('relation_index')
-
-        if entry_number is None:
-            return JsonResponse({'success': False, 'error': 'entry_number is required'}, status=400)
-
-        if relation_index is None:
-            return JsonResponse({'success': False, 'error': 'relation_index is required'}, status=400)
-
-        entities_file = PROJECT_ROOT / "entities.json"
-
-        if not entities_file.exists():
-            return JsonResponse({'success': False, 'error': 'entities.json not found'}, status=404)
-
-        with open(entities_file, 'r', encoding='utf-8') as f:
-            entities_data = json.load(f)
-
-        # Find and update the entry
-        entry_found = False
-        for entry in entities_data:
-            if entry.get('entry') == entry_number:
-                active_schema = entry.get('active_schema', 'radgraph')
-                if 'ground_truths' in entry and active_schema in entry['ground_truths'] and 'triplets' in entry['ground_truths'][active_schema]:
-                    if 0 <= relation_index < len(entry['ground_truths'][active_schema]['triplets']):
-                        del entry['ground_truths'][active_schema]['triplets'][relation_index]
-                        entry_found = True
-                    else:
-                        return JsonResponse({'success': False, 'error': 'Invalid relation_index'}, status=400)
-                break
-
-        if not entry_found:
-            return JsonResponse({'success': False, 'error': f'Entry {entry_number} not found or has no ground truth'}, status=404)
-
-        # Save updated data
-        with open(entities_file, 'w', encoding='utf-8') as f:
-            json.dump(entities_data, f, indent=2, ensure_ascii=False)
-
-        return JsonResponse({
-            'success': True,
-            'message': 'Ground truth relation deleted successfully'
-        })
-
-    except json.JSONDecodeError:
-        return JsonResponse({'success': False, 'error': 'Invalid JSON in request body'}, status=400)
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': f'Failed to delete ground truth relation: {str(e)}'}, status=500)
-
+# LLM Extraction Endpoints (Legacy)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -3637,222 +3496,6 @@ def calculate_metrics(request):
         return JsonResponse({'success': False, 'error': f'Failed to calculate metrics: {str(e)}'}, status=500)
 
 
-# Schema Management Endpoints
-
-@require_http_methods(["GET"])
-def get_schemas(request):
-    """Get all available schemas and the active schema name."""
-    try:
-        schemas_file = PROJECT_ROOT / "schemas.json"
-
-        if not schemas_file.exists():
-            return JsonResponse({
-                'success': False,
-                'error': 'schemas.json not found'
-            }, status=404)
-
-        with open(schemas_file, 'r', encoding='utf-8') as f:
-            schemas_data = json.load(f)
-
-        return JsonResponse({
-            'success': True,
-            'active_schema': schemas_data.get('active_schema', 'radgraph'),
-            'schemas': schemas_data.get('schemas', {})
-        })
-
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': f'Failed to load schemas: {str(e)}'
-        }, status=500)
-
-
-@require_http_methods(["GET"])
-def get_active_schema(request):
-    """Get the currently active schema configuration."""
-    try:
-        schemas_file = PROJECT_ROOT / "schemas.json"
-
-        if not schemas_file.exists():
-            return JsonResponse({
-                'success': False,
-                'error': 'schemas.json not found'
-            }, status=404)
-
-        with open(schemas_file, 'r', encoding='utf-8') as f:
-            schemas_data = json.load(f)
-
-        active_name = schemas_data.get('active_schema', 'radgraph')
-        active_schema = schemas_data['schemas'].get(active_name)
-
-        if not active_schema:
-            return JsonResponse({
-                'success': False,
-                'error': f'Active schema "{active_name}" not found'
-            }, status=404)
-
-        return JsonResponse({
-            'success': True,
-            'schema_name': active_name,
-            'schema': active_schema
-        })
-
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': f'Failed to load active schema: {str(e)}'
-        }, status=500)
-
-
-@csrf_exempt
-@require_http_methods(["POST"])
-def set_active_schema(request):
-    """Set which schema to use for extraction."""
-    try:
-        data = json.loads(request.body) if request.body else {}
-        schema_name = data.get('schema_name')
-
-        if not schema_name:
-            return JsonResponse({
-                'success': False,
-                'error': 'schema_name is required'
-            }, status=400)
-
-        schemas_file = PROJECT_ROOT / "schemas.json"
-
-        with open(schemas_file, 'r', encoding='utf-8') as f:
-            schemas_data = json.load(f)
-
-        # Verify schema exists
-        if schema_name not in schemas_data['schemas']:
-            return JsonResponse({
-                'success': False,
-                'error': f'Schema "{schema_name}" not found'
-            }, status=404)
-
-        # Update active schema
-        schemas_data['active_schema'] = schema_name
-
-        # Save back to file
-        with open(schemas_file, 'w', encoding='utf-8') as f:
-            json.dump(schemas_data, f, indent=2, ensure_ascii=False)
-
-        return JsonResponse({
-            'success': True,
-            'message': f'Active schema set to "{schema_name}"'
-        })
-
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': f'Failed to set active schema: {str(e)}'
-        }, status=500)
-
-
-@csrf_exempt
-@require_http_methods(["POST"])
-def save_schema(request):
-    """Create or update a schema definition."""
-    try:
-        data = json.loads(request.body) if request.body else {}
-        schema_name = data.get('schema_name')
-        schema_data = data.get('schema_data')
-
-        if not schema_name or not schema_data:
-            return JsonResponse({
-                'success': False,
-                'error': 'schema_name and schema_data are required'
-            }, status=400)
-
-        # Validate schema structure
-        required_fields = ['name', 'description', 'entity_types', 'relation_types']
-        for field in required_fields:
-            if field not in schema_data:
-                return JsonResponse({
-                    'success': False,
-                    'error': f'Schema missing required field: {field}'
-                }, status=400)
-
-        schemas_file = PROJECT_ROOT / "schemas.json"
-
-        with open(schemas_file, 'r', encoding='utf-8') as f:
-            schemas_data = json.load(f)
-
-        # Add or update schema
-        schemas_data['schemas'][schema_name] = schema_data
-
-        # Save back to file
-        with open(schemas_file, 'w', encoding='utf-8') as f:
-            json.dump(schemas_data, f, indent=2, ensure_ascii=False)
-
-        return JsonResponse({
-            'success': True,
-            'message': f'Schema "{schema_name}" saved successfully'
-        })
-
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': f'Failed to save schema: {str(e)}'
-        }, status=500)
-
-
-@csrf_exempt
-@require_http_methods(["POST"])
-def delete_schema(request):
-    """Delete a custom schema (cannot delete built-in schemas)."""
-    try:
-        data = json.loads(request.body) if request.body else {}
-        schema_name = data.get('schema_name')
-
-        if not schema_name:
-            return JsonResponse({
-                'success': False,
-                'error': 'schema_name is required'
-            }, status=400)
-
-        # Prevent deletion of built-in schemas
-        if schema_name in ['radgraph', 'pet_ct_oncology']:
-            return JsonResponse({
-                'success': False,
-                'error': 'Cannot delete built-in schemas'
-            }, status=403)
-
-        schemas_file = PROJECT_ROOT / "schemas.json"
-
-        with open(schemas_file, 'r', encoding='utf-8') as f:
-            schemas_data = json.load(f)
-
-        # Check if schema exists
-        if schema_name not in schemas_data['schemas']:
-            return JsonResponse({
-                'success': False,
-                'error': f'Schema "{schema_name}" not found'
-            }, status=404)
-
-        # Delete schema
-        del schemas_data['schemas'][schema_name]
-
-        # If deleted schema was active, switch to radgraph
-        if schemas_data.get('active_schema') == schema_name:
-            schemas_data['active_schema'] = 'radgraph'
-
-        # Save back to file
-        with open(schemas_file, 'w', encoding='utf-8') as f:
-            json.dump(schemas_data, f, indent=2, ensure_ascii=False)
-
-        return JsonResponse({
-            'success': True,
-            'message': f'Schema "{schema_name}" deleted successfully'
-        })
-
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': f'Failed to delete schema: {str(e)}'
-        }, status=500)
-
-
 # Extraction Prompt Management Endpoints
 
 def get_extraction_prompts_file():
@@ -4347,355 +3990,4 @@ def migrate_entity_ids(request):
         return JsonResponse({
             'success': False,
             'error': str(e)
-        }, status=500)
-
-
-# =============================================================================
-# Clinical Findings View - Transform entity-relation graph to structured findings
-# =============================================================================
-
-def derive_assertion_status(entity_type):
-    """Derive assertion status from RadGraph entity type."""
-    if 'Definitely Present' in entity_type:
-        return 'present'
-    elif 'Uncertain' in entity_type:
-        return 'uncertain'
-    elif 'Definitely Absent' in entity_type:
-        return 'absent'
-    else:
-        return 'unknown'
-
-
-def transform_to_clinical_findings(entities, triplets):
-    """
-    Transform entity-relation graph into structured clinical findings.
-
-    Each finding has:
-    - observation: The core finding (text, type, assertion status)
-    - anatomical_locations: Where the finding is located
-    - attributes: Modifying entities (size, severity, etc.)
-    - suggested_diagnoses: What the finding suggests
-
-    Algorithm:
-    1. Build graph from entities and triplets
-    2. Identify "anchor" observations (those with locations or that are targets of modify)
-    3. For each anchor, collect related information via graph traversal
-    """
-    if not entities:
-        return []
-
-    # Build entity lookup
-    entity_map = {e['id']: e for e in entities}
-
-    # Build relation indexes
-    # located_at: observation -> anatomy
-    # modify: source -> target (source modifies target)
-    # suggestive_of: observation -> observation
-    located_at_relations = []  # (obs_id, anat_id)
-    modify_relations = []  # (source_id, target_id)
-    suggestive_of_relations = []  # (source_id, target_id)
-
-    for triplet in triplets:
-        e1_id = triplet.get('entity1_id')
-        e2_id = triplet.get('entity2_id')
-        rel_type = triplet.get('relation_type', '')
-
-        if rel_type == 'located_at':
-            located_at_relations.append((e1_id, e2_id))
-        elif rel_type == 'modify':
-            modify_relations.append((e1_id, e2_id))
-        elif rel_type == 'suggestive_of':
-            suggestive_of_relations.append((e1_id, e2_id))
-
-    # Build indexes for quick lookup
-    # What modifies this entity?
-    modifiers_of = {}  # target_id -> [source_ids]
-    for src, tgt in modify_relations:
-        if tgt not in modifiers_of:
-            modifiers_of[tgt] = []
-        modifiers_of[tgt].append(src)
-
-    # What locations does this entity have?
-    locations_of = {}  # obs_id -> [anat_ids]
-    for obs_id, anat_id in located_at_relations:
-        if obs_id not in locations_of:
-            locations_of[obs_id] = []
-        locations_of[obs_id].append(anat_id)
-
-    # What does this entity suggest?
-    suggests = {}  # obs_id -> [suggested_ids]
-    for src, tgt in suggestive_of_relations:
-        if src not in suggests:
-            suggests[src] = []
-        suggests[src].append(tgt)
-
-    # Identify anchor observations
-    # An anchor is an Observation that:
-    # 1. Has a location (located_at relation), OR
-    # 2. Is the target of modify relations, OR
-    # 3. Has suggestive_of relations
-    # But we want to avoid creating findings for pure modifiers
-
-    # First pass: find all observations that are modified by something
-    modified_entities = set(modifiers_of.keys())
-
-    # Find entities that are pure modifiers (only appear as sources of modify, never have locations)
-    pure_modifiers = set()
-    for src, tgt in modify_relations:
-        src_entity = entity_map.get(src)
-        if src_entity and 'Observation' in src_entity.get('type', ''):
-            # Check if this entity has any locations or is itself modified
-            if src not in locations_of and src not in modified_entities:
-                pure_modifiers.add(src)
-
-    # Anchor entities are Observations that:
-    # - Have locations, OR
-    # - Are targets of modify AND have locations OR are terminal (not modifying anything else), OR
-    # - Have suggestive_of relations
-    anchor_ids = set()
-
-    for entity in entities:
-        eid = entity['id']
-        etype = entity.get('type', '')
-
-        if 'Observation' not in etype:
-            continue  # Skip anatomy entities as anchors
-
-        # Has location -> anchor
-        if eid in locations_of:
-            anchor_ids.add(eid)
-        # Has suggestive_of -> anchor
-        elif eid in suggests:
-            anchor_ids.add(eid)
-        # Is modified and not a pure modifier -> anchor
-        elif eid in modified_entities and eid not in pure_modifiers:
-            anchor_ids.add(eid)
-
-    # If no anchors found, use all observations that aren't pure modifiers
-    if not anchor_ids:
-        for entity in entities:
-            eid = entity['id']
-            etype = entity.get('type', '')
-            if 'Observation' in etype and eid not in pure_modifiers:
-                anchor_ids.add(eid)
-
-    # Build findings from anchors
-    findings = []
-    finding_id = 1
-
-    for anchor_id in anchor_ids:
-        anchor = entity_map.get(anchor_id)
-        if not anchor:
-            continue
-
-        assertion_status = derive_assertion_status(anchor.get('type', ''))
-
-        # Collect modifiers recursively
-        def collect_modifiers(eid, visited=None):
-            if visited is None:
-                visited = set()
-            if eid in visited:
-                return []
-            visited.add(eid)
-
-            result = []
-            for mod_id in modifiers_of.get(eid, []):
-                mod_entity = entity_map.get(mod_id)
-                if mod_entity:
-                    result.append({
-                        'text': mod_entity.get('text', ''),
-                        'type': mod_entity.get('type', ''),
-                        'entity_id': mod_id
-                    })
-                    # Recursively get modifiers of modifiers
-                    result.extend(collect_modifiers(mod_id, visited))
-            return result
-
-        attributes = collect_modifiers(anchor_id)
-
-        # Collect locations
-        anatomical_locations = []
-        for loc_id in locations_of.get(anchor_id, []):
-            loc_entity = entity_map.get(loc_id)
-            if loc_entity:
-                # Also collect modifiers of the location (e.g., "right" modifying "lung")
-                loc_modifiers = collect_modifiers(loc_id)
-                anatomical_locations.append({
-                    'text': loc_entity.get('text', ''),
-                    'type': loc_entity.get('type', ''),
-                    'entity_id': loc_id,
-                    'modifiers': loc_modifiers
-                })
-
-        # Collect suggested diagnoses
-        suggested_diagnoses = []
-        for sug_id in suggests.get(anchor_id, []):
-            sug_entity = entity_map.get(sug_id)
-            if sug_entity:
-                suggested_diagnoses.append({
-                    'text': sug_entity.get('text', ''),
-                    'type': sug_entity.get('type', ''),
-                    'entity_id': sug_id,
-                    'assertion_status': derive_assertion_status(sug_entity.get('type', ''))
-                })
-
-        finding = {
-            'id': f'finding_{finding_id}',
-            'observation': {
-                'text': anchor.get('text', ''),
-                'type': anchor.get('type', ''),
-                'entity_id': anchor_id
-            },
-            'assertion_status': assertion_status,
-            'anatomical_locations': anatomical_locations,
-            'attributes': attributes,
-            'suggested_diagnoses': suggested_diagnoses
-        }
-
-        findings.append(finding)
-        finding_id += 1
-
-    # Sort findings by assertion status priority: present > uncertain > absent > unknown
-    status_order = {'present': 0, 'uncertain': 1, 'absent': 2, 'unknown': 3}
-    findings.sort(key=lambda f: status_order.get(f['assertion_status'], 4))
-
-    return findings
-
-
-def calculate_findings_metrics(findings):
-    """Calculate benchmarking metrics for findings extraction."""
-    if not findings:
-        return {
-            'total_findings': 0,
-            'by_assertion_status': {},
-            'with_location': 0,
-            'with_attributes': 0,
-            'with_diagnoses': 0,
-            'location_rate': 0,
-            'attribute_rate': 0
-        }
-
-    total = len(findings)
-    by_status = {}
-    with_location = 0
-    with_attributes = 0
-    with_diagnoses = 0
-
-    for f in findings:
-        status = f.get('assertion_status', 'unknown')
-        by_status[status] = by_status.get(status, 0) + 1
-
-        if f.get('anatomical_locations'):
-            with_location += 1
-        if f.get('attributes'):
-            with_attributes += 1
-        if f.get('suggested_diagnoses'):
-            with_diagnoses += 1
-
-    return {
-        'total_findings': total,
-        'by_assertion_status': by_status,
-        'with_location': with_location,
-        'with_attributes': with_attributes,
-        'with_diagnoses': with_diagnoses,
-        'location_rate': round(with_location / total * 100, 1) if total > 0 else 0,
-        'attribute_rate': round(with_attributes / total * 100, 1) if total > 0 else 0
-    }
-
-
-@require_http_methods(["GET"])
-def get_clinical_findings(request):
-    """
-    Get clinical findings for an entry - transforms entity-relation graph
-    into structured findings format for clinical use.
-
-    Query params:
-    - entry: entry number (required)
-    - source: 'ground_truth' or method_id (default: ground_truth)
-    - schema: schema name (default: current active schema)
-    """
-    try:
-        entry_number = request.GET.get('entry')
-        source = request.GET.get('source', 'ground_truth')
-        schema_name = request.GET.get('schema')
-
-        if not entry_number:
-            return JsonResponse({
-                'success': False,
-                'error': 'Entry number is required'
-            }, status=400)
-
-        entry_number = int(entry_number)
-
-        # Load entities data
-        entities_file = PROJECT_ROOT / "entities.json"
-        if not entities_file.exists():
-            return JsonResponse({
-                'success': False,
-                'error': 'Entities file not found'
-            }, status=404)
-
-        with open(entities_file, 'r', encoding='utf-8') as f:
-            entities_data = json.load(f)
-
-        # Find the entry
-        entry_data = None
-        for entry in entities_data:
-            if entry.get('entry') == entry_number:
-                entry_data = entry
-                break
-
-        if not entry_data:
-            return JsonResponse({
-                'success': False,
-                'error': f'Entry {entry_number} not found'
-            }, status=404)
-
-        # Determine schema
-        if not schema_name:
-            schema_name = entry_data.get('active_schema', 'radgraph')
-
-        # Get entities and triplets based on source
-        entities = []
-        triplets = []
-
-        if source == 'ground_truth':
-            gt_data = entry_data.get('ground_truths', {}).get(schema_name, {})
-            entities = gt_data.get('entities', [])
-            triplets = gt_data.get('triplets', [])
-        else:
-            # Look for extraction method with matching ID
-            methods = entry_data.get('extraction_methods', {}).get(schema_name, [])
-            for method in methods:
-                if method.get('id') == source:
-                    entities = method.get('entities', [])
-                    triplets = method.get('triplets', [])
-                    break
-
-        # Transform to clinical findings
-        findings = transform_to_clinical_findings(entities, triplets)
-        metrics = calculate_findings_metrics(findings)
-
-        return JsonResponse({
-            'success': True,
-            'entry': entry_number,
-            'schema': schema_name,
-            'source': source,
-            'findings': findings,
-            'metrics': metrics,
-            'raw_counts': {
-                'entities': len(entities),
-                'relations': len(triplets)
-            }
-        })
-
-    except ValueError as e:
-        return JsonResponse({
-            'success': False,
-            'error': f'Invalid entry number: {str(e)}'
-        }, status=400)
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': f'Failed to get clinical findings: {str(e)}'
         }, status=500)

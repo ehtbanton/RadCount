@@ -730,29 +730,6 @@
                         <!-- Annotation & Extraction Section -->
                         <div style="background: #f8f9fa; padding: 20px; border-radius: 6px; border: 1px solid #e5e7eb; margin-top: 15px;">
 
-                            <!-- Schema Selector (Applies to Both Tabs) -->
-                            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px;">
-                                <div style="font-weight: 400; color: #374151; font-size: 1.05em; white-space: nowrap; width: 150px;">
-                                    Schema:
-                                </div>
-                                <select
-                                    id="schema-selector"
-                                    onchange="switchSchema()"
-                                    style="flex: 1; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9em; background: white; cursor: pointer;"
-                                >
-                                    <option value="">Loading schemas...</option>
-                                </select>
-                                <button
-                                    onclick="openSchemaEditorModal()"
-                                    style="padding: 6px 12px; background: #6366f1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s; white-space: nowrap;"
-                                    onmouseover="this.style.background='#4f46e5'"
-                                    onmouseout="this.style.background='#6366f1'"
-                                    title="Create or edit custom schemas"
-                                >
-                                    Edit Schema
-                                </button>
-                            </div>
-
                             <!-- Tab Navigation -->
                             <div id="method-tabs-container" style="display: flex; border-bottom: 2px solid #e5e7eb; margin-bottom: 15px; gap: 4px;">
                                 <button
@@ -779,48 +756,32 @@
                                 >
                                     A2
                                 </button>
-                                <button
-                                    id="findings-view-tab-btn"
-                                    class="annotation-tab-btn"
-                                    onclick="switchAnnotationTab('findings-view')"
-                                    style="padding: 10px 20px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; cursor: pointer; font-size: 0.95em; font-weight: 400; margin-bottom: -2px;"
-                                >
-                                    Clinical Findings
-                                </button>
                             </div>
 
                             <!-- Ground Truth Tab Content -->
                             <div id="ground-truth-tab" class="annotation-tab-content" style="display: block;">
 
-                                <!-- Step 1: Add Entity Form -->
+                                <!-- Add Annotation Form -->
                                 <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
                                     <div style="font-weight: 500; color: #374151; margin-bottom: 12px; font-size: 0.95em;">
-                                        Step 1: Add Entities
+                                        Add Observation-Location Annotation
                                     </div>
 
-                                    <div style="display: flex; gap: 10px; align-items: end; flex-wrap: wrap;">
+                                    <!-- Observation Row -->
+                                    <div style="display: flex; gap: 10px; align-items: end; flex-wrap: wrap; margin-bottom: 10px;">
                                         <div style="flex: 2; min-width: 150px;">
-                                            <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Entity Text</label>
+                                            <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Observation Text</label>
                                             <input
-                                                id="gt-entity-text"
+                                                id="annotation-obs-text"
                                                 type="text"
-                                                placeholder="e.g., lung opacity"
+                                                placeholder="e.g., tumor, opacity"
                                                 style="width: 100%; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9em;"
                                             />
-                                        </div>
-                                        <div style="flex: 1; min-width: 120px;">
-                                            <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Entity Type</label>
-                                            <select
-                                                id="gt-entity-type"
-                                                style="width: 100%; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em; background: white;"
-                                            >
-                                                <option value="">Select type...</option>
-                                            </select>
                                         </div>
                                         <div style="flex: 0 0 70px;">
                                             <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Start</label>
                                             <input
-                                                id="gt-entity-start-word"
+                                                id="annotation-obs-start"
                                                 type="number"
                                                 min="0"
                                                 placeholder="0"
@@ -830,7 +791,40 @@
                                         <div style="flex: 0 0 70px;">
                                             <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">End</label>
                                             <input
-                                                id="gt-entity-end-word"
+                                                id="annotation-obs-end"
+                                                type="number"
+                                                min="0"
+                                                placeholder="0"
+                                                style="width: 100%; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em;"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <!-- Anatomical Location Row -->
+                                    <div style="display: flex; gap: 10px; align-items: end; flex-wrap: wrap; margin-bottom: 10px;">
+                                        <div style="flex: 2; min-width: 150px;">
+                                            <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Anatomical Location (optional)</label>
+                                            <input
+                                                id="annotation-loc-text"
+                                                type="text"
+                                                placeholder="e.g., lung, liver"
+                                                style="width: 100%; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9em;"
+                                            />
+                                        </div>
+                                        <div style="flex: 0 0 70px;">
+                                            <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Start</label>
+                                            <input
+                                                id="annotation-loc-start"
+                                                type="number"
+                                                min="0"
+                                                placeholder="0"
+                                                style="width: 100%; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em;"
+                                            />
+                                        </div>
+                                        <div style="flex: 0 0 70px;">
+                                            <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">End</label>
+                                            <input
+                                                id="annotation-loc-end"
                                                 type="number"
                                                 min="0"
                                                 placeholder="0"
@@ -838,81 +832,26 @@
                                             />
                                         </div>
                                         <button
-                                            onclick="addGroundTruthEntity()"
+                                            onclick="addAnnotation()"
                                             style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: background 0.2s;"
                                             onmouseover="this.style.background='#059669'"
                                             onmouseout="this.style.background='#10b981'"
                                         >
-                                            Add Entity
+                                            Add Annotation
                                         </button>
                                     </div>
-                                    <div style="margin-top: 8px; font-size: 0.75em; color: #9ca3af;">
+                                    <div style="font-size: 0.75em; color: #9ca3af;">
                                         Word indices are 0-based. Select text in the report to auto-fill indices.
                                     </div>
                                 </div>
 
-                                <!-- Ground Truth Entities Display -->
-                                <div style="margin-bottom: 15px;">
-                                    <div style="font-weight: 500; color: #374151; margin-bottom: 8px; font-size: 0.9em;">
-                                        Entities (<span id="gt-entity-count">0</span>)
-                                    </div>
-                                    <div id="gt-entities-container" style="display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; background: #f9fafb; border-radius: 6px; min-height: 40px; max-height: 150px; overflow-y: auto;">
-                                        <div style="color: #6b7280; font-size: 0.85em;">No entities yet.</div>
-                                    </div>
-                                </div>
-
-                                <!-- Step 2: Add Relation Form -->
-                                <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
-                                    <div style="font-weight: 500; color: #374151; margin-bottom: 12px; font-size: 0.95em;">
-                                        Step 2: Add Relations
-                                    </div>
-
-                                    <div style="display: flex; gap: 10px; align-items: end;">
-                                        <div style="flex: 1;">
-                                            <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Entity 1</label>
-                                            <select
-                                                id="gt-relation-entity1"
-                                                style="width: 100%; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em; background: white;"
-                                            >
-                                                <option value="">Select entity...</option>
-                                            </select>
-                                        </div>
-                                        <div style="flex-shrink: 0;">
-                                            <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Relation</label>
-                                            <select
-                                                id="gt-relation-type"
-                                                style="width: 120px; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em; background: white;"
-                                            >
-                                                <option value="">Relation...</option>
-                                            </select>
-                                        </div>
-                                        <div style="flex: 1;">
-                                            <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Entity 2</label>
-                                            <select
-                                                id="gt-relation-entity2"
-                                                style="width: 100%; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em; background: white;"
-                                            >
-                                                <option value="">Select entity...</option>
-                                            </select>
-                                        </div>
-                                        <button
-                                            onclick="addGroundTruthRelation()"
-                                            style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: background 0.2s;"
-                                            onmouseover="this.style.background='#2563eb'"
-                                            onmouseout="this.style.background='#3b82f6'"
-                                        >
-                                            Add Relation
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- Ground Truth Relations Display -->
+                                <!-- Annotations Display -->
                                 <div>
                                     <div style="font-weight: 500; color: #374151; margin-bottom: 8px; font-size: 0.9em;">
-                                        Relations (<span id="gt-relation-count">0</span>)
+                                        Annotations (<span id="annotation-count">0</span>)
                                     </div>
-                                    <div id="gt-relations-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto;">
-                                        <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">No relations yet.</div>
+                                    <div id="annotations-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">
+                                        <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">No annotations yet.</div>
                                     </div>
                                 </div>
 
@@ -920,70 +859,27 @@
 
                             <!-- Auto-Extracted Tab Content -->
                             <div id="auto-extracted-tab" class="annotation-tab-content" style="display: none;">
-                                <!-- Two-step extraction buttons -->
-                                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                                <!-- Single extraction button -->
+                                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                                     <button
-                                        id="extract-entities-btn"
-                                        onclick="runEntityExtraction()"
-                                        style="flex: 1; padding: 10px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: background 0.2s;"
+                                        id="extract-observations-btn"
+                                        onclick="runObservationExtraction()"
+                                        style="flex: 1; padding: 12px 20px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.95em; font-weight: 500; transition: background 0.2s;"
                                         onmouseover="this.style.background='#059669'"
                                         onmouseout="this.style.background='#10b981'"
                                     >
-                                        Step 1: Extract Entities
-                                    </button>
-                                    <button
-                                        id="extract-relations-btn"
-                                        onclick="runRelationExtraction()"
-                                        style="flex: 1; padding: 10px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: background 0.2s;"
-                                        onmouseover="this.style.background='#2563eb'"
-                                        onmouseout="this.style.background='#3b82f6'"
-                                    >
-                                        Step 2: Extract Relations
-                                    </button>
-                                </div>
-                                <!-- Edit Prompt buttons -->
-                                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                                    <button
-                                        onclick="openPromptEditor('entity')"
-                                        style="flex: 1; padding: 6px 12px; background: white; color: #10b981; border: 1px solid #10b981; border-radius: 4px; cursor: pointer; font-size: 0.8em; transition: all 0.2s;"
-                                        onmouseover="this.style.background='#ecfdf5'"
-                                        onmouseout="this.style.background='white'"
-                                    >
-                                        Edit Entity Prompt
-                                    </button>
-                                    <button
-                                        onclick="openPromptEditor('relation')"
-                                        style="flex: 1; padding: 6px 12px; background: white; color: #3b82f6; border: 1px solid #3b82f6; border-radius: 4px; cursor: pointer; font-size: 0.8em; transition: all 0.2s;"
-                                        onmouseover="this.style.background='#eff6ff'"
-                                        onmouseout="this.style.background='white'"
-                                    >
-                                        Edit Relation Prompt
+                                        Extract Observations
                                     </button>
                                 </div>
 
-                                <!-- Extracted Entities Display -->
-                                <div style="margin-bottom: 15px;">
+                                <!-- Extracted Annotations Display -->
+                                <div>
                                     <div style="font-weight: 500; color: #374151; margin-bottom: 8px; font-size: 0.9em;">
-                                        Extracted Entities (<span id="auto-entity-count">0</span>)
+                                        Auto-Extracted Annotations (<span id="auto-annotation-count">0</span>)
                                     </div>
-                                    <div id="auto-entities-container" style="display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; background: #f9fafb; border-radius: 6px; min-height: 40px; max-height: 150px; overflow-y: auto;">
-                                        <div style="color: #6b7280; font-size: 0.85em;">No entities extracted yet. Click "Extract Entities" to start.</div>
+                                    <div id="auto-annotations-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">
+                                        <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">No annotations extracted yet. Click "Extract Observations" to start.</div>
                                     </div>
-                                </div>
-
-                                <!-- Extracted Relations Display -->
-                                <div style="margin-bottom: 15px;">
-                                    <div style="font-weight: 500; color: #374151; margin-bottom: 8px; font-size: 0.9em;">
-                                        Extracted Relations (<span id="auto-relation-count">0</span>)
-                                    </div>
-                                    <div id="auto-relations-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto;">
-                                        <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">No relations extracted yet. Extract entities first, then click "Extract Relations".</div>
-                                    </div>
-                                </div>
-
-                                <!-- Metrics Display -->
-                                <div id="auto-extracted-metrics-container" style="display: none;">
-                                    <!-- Metrics will be populated here by JavaScript -->
                                 </div>
                             </div>
 
@@ -1028,74 +924,6 @@
                                 </div>
                             </div>
 
-                            <!-- Clinical Findings Tab Content -->
-                            <div id="findings-view-tab" class="annotation-tab-content" style="display: none;">
-                                <!-- Source Selector -->
-                                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px;">
-                                    <label style="font-size: 0.85em; color: #6b7280;">Data Source:</label>
-                                    <select
-                                        id="findings-source-selector"
-                                        onchange="loadClinicalFindings()"
-                                        style="padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em; background: white;"
-                                    >
-                                        <option value="ground_truth">Ground Truth</option>
-                                    </select>
-                                    <button
-                                        onclick="loadClinicalFindings()"
-                                        style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;"
-                                    >
-                                        Refresh
-                                    </button>
-                                </div>
-
-                                <!-- Assertion Status Filter -->
-                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 15px; flex-wrap: wrap;">
-                                    <span style="font-size: 0.85em; color: #6b7280;">Filter:</span>
-                                    <label style="display: flex; align-items: center; gap: 4px; font-size: 0.85em; cursor: pointer;">
-                                        <input type="checkbox" id="filter-present" checked onchange="filterFindings()">
-                                        <span style="color: #10b981;">Present</span>
-                                    </label>
-                                    <label style="display: flex; align-items: center; gap: 4px; font-size: 0.85em; cursor: pointer;">
-                                        <input type="checkbox" id="filter-uncertain" checked onchange="filterFindings()">
-                                        <span style="color: #f59e0b;">Uncertain</span>
-                                    </label>
-                                    <label style="display: flex; align-items: center; gap: 4px; font-size: 0.85em; cursor: pointer;">
-                                        <input type="checkbox" id="filter-absent" checked onchange="filterFindings()">
-                                        <span style="color: #ef4444;">Absent</span>
-                                    </label>
-                                </div>
-
-                                <!-- Metrics Summary -->
-                                <div id="findings-metrics" style="background: #f0f9ff; padding: 12px; border-radius: 6px; margin-bottom: 15px; display: none;">
-                                    <div style="font-weight: 500; color: #1e40af; margin-bottom: 8px; font-size: 0.9em;">Extraction Metrics</div>
-                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; font-size: 0.85em;">
-                                        <div>
-                                            <span style="color: #6b7280;">Total Findings:</span>
-                                            <span id="metric-total" style="font-weight: 500; color: #374151;">0</span>
-                                        </div>
-                                        <div>
-                                            <span style="color: #6b7280;">With Location:</span>
-                                            <span id="metric-location" style="font-weight: 500; color: #374151;">0%</span>
-                                        </div>
-                                        <div>
-                                            <span style="color: #6b7280;">With Attributes:</span>
-                                            <span id="metric-attributes" style="font-weight: 500; color: #374151;">0%</span>
-                                        </div>
-                                    </div>
-                                    <div style="display: flex; gap: 12px; margin-top: 8px; font-size: 0.8em;">
-                                        <span style="color: #10b981;">Present: <span id="metric-present">0</span></span>
-                                        <span style="color: #f59e0b;">Uncertain: <span id="metric-uncertain">0</span></span>
-                                        <span style="color: #ef4444;">Absent: <span id="metric-absent">0</span></span>
-                                    </div>
-                                </div>
-
-                                <!-- Findings List -->
-                                <div id="findings-container" style="max-height: 400px; overflow-y: auto;">
-                                    <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 40px;">
-                                        Select a data source and click Refresh to view clinical findings.
-                                    </div>
-                                </div>
-                            </div>
 
                         </div>
                     {% else %}
@@ -2173,14 +2001,9 @@
                         // Clear selection hint
                         document.getElementById('word-selection-hint').textContent = '';
 
-                        // Render ground truth UI (check if functions exist first)
-                        if (typeof renderGroundTruthEntities === 'function') {
-                            renderGroundTruthEntities();
-                            renderGroundTruthRelations();
-                            updateEntityDropdowns();
-                            await renderAutoExtractedEntities();
-                            await renderAutoExtractedRelations();
-                        }
+                        // Render annotation UI
+                        renderAnnotations();
+                        await renderAutoExtractedTab();
                     } else {
                         textDisplayArea.textContent = 'No fields found';
                         textDisplayArea.style.color = '#6b7280';
@@ -2764,99 +2587,25 @@
             return true; // Always return success for legacy code
         }
 
-        // Schema management
-        let allSchemas = {}; // All available schemas
-        let activeSchemaName = ''; // Currently active schema name
-        let activeSchema = null; // Currently active schema object
+        // Schema management (simplified - single default schema)
+        let activeSchemaName = 'default';
+        let activeSchema = {
+            name: 'Default',
+            description: 'Simplified observation-location schema',
+            entity_types: [
+                { name: 'Observation', description: 'Clinical observation or finding', color: '#3b82f6' },
+                { name: 'Anatomy', description: 'Anatomical location', color: '#10b981' }
+            ],
+            relation_types: [
+                { name: 'located_at', description: 'Observation located at anatomy' }
+            ]
+        };
+        let allSchemas = { 'default': activeSchema };
 
-        // Load all schemas from server
+        // Load schemas (now just uses hardcoded default)
         async function loadSchemas() {
-            console.log('loadSchemas() called - fetching from /llm/schemas/');
-            try {
-                const response = await fetch('/llm/schemas/');
-                console.log('Fetch response received:', response.status, response.statusText);
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('Response not OK:', errorText);
-                    throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
-                }
-
-                const data = await response.json();
-                console.log('Parsed JSON data:', data);
-
-                if (data.success) {
-                    allSchemas = data.schemas;
-                    activeSchemaName = data.active_schema;
-                    activeSchema = allSchemas[activeSchemaName];
-                    populateSchemaSelector();
-                    console.log(`✓ Loaded ${Object.keys(allSchemas).length} schemas. Active: ${activeSchemaName}`);
-                } else {
-                    console.error('Failed to load schemas:', data.error);
-                    alert(`Failed to load schemas: ${data.error}\n\nPlease check the console and refresh the page.`);
-                }
-            } catch (error) {
-                console.error('Error loading schemas:', error);
-                alert(`Error loading schemas: ${error.message}\n\nThe server may need to be restarted. Check the console for details.`);
-            }
-        }
-
-        // Populate schema selector dropdown
-        function populateSchemaSelector() {
-            const selector = document.getElementById('schema-selector');
-            if (!selector) {
-                console.warn('schema-selector element not found, skipping population');
-                return;
-            }
-            selector.innerHTML = '';
-
-            for (const [key, schema] of Object.entries(allSchemas)) {
-                const option = document.createElement('option');
-                option.value = key;
-                option.textContent = schema.name;
-                if (key === activeSchemaName) {
-                    option.selected = true;
-                }
-                selector.appendChild(option);
-            }
-        }
-
-        // Switch to a different schema
-        async function switchSchema() {
-            const selector = document.getElementById('schema-selector');
-            const newSchemaName = selector.value;
-
-            if (newSchemaName === activeSchemaName) {
-                return; // No change
-            }
-
-            try {
-                const response = await fetch('/llm/set-active-schema/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ schema_name: newSchemaName })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    activeSchemaName = newSchemaName;
-                    activeSchema = allSchemas[newSchemaName];
-                    // Re-render entities with new schema colors
-                    renderEntities();
-                    console.log(`Switched to schema: ${activeSchema.name}`);
-                } else {
-                    alert(`Failed to switch schema: ${data.error}`);
-                    // Revert selector to previous value
-                    selector.value = activeSchemaName;
-                }
-            } catch (error) {
-                alert(`Error switching schema: ${error.message}`);
-                // Revert selector to previous value
-                selector.value = activeSchemaName;
-            }
+            console.log('Using simplified default schema');
+            // Schema is already initialized above
         }
 
         // RadGraph schema constants (kept for backward compatibility)
@@ -2932,42 +2681,20 @@
             return entitiesData.find(e => e.entry === entryNum);
         }
 
-        // Ensure entity entry exists with schema-specific structure
+        // Ensure entity entry exists with simplified annotations structure
         function ensureEntityEntryExists(entryNum) {
             let entryData = getEntityEntryData(entryNum);
             if (!entryData) {
                 entryData = {
                     entry: entryNum,
-                    active_schema: activeSchemaName || 'radgraph',
-                    ground_truths: {
-                        radgraph: {triplets: []},
-                        pet_ct_oncology: {triplets: []}
-                    },
-                    extraction_methods: {
-                        radgraph: [],
-                        pet_ct_oncology: []
-                    }
+                    annotations: []
                 };
                 entitiesData.push(entryData);
                 entitiesData.sort((a, b) => a.entry - b.entry);
             }
-            // Ensure schema-specific structure fields exist
-            if (!entryData.active_schema) {
-                entryData.active_schema = activeSchemaName || 'radgraph';
-            }
-            if (!entryData.ground_truths) {
-                entryData.ground_truths = {};
-            }
-            if (!entryData.extraction_methods) {
-                entryData.extraction_methods = {};
-            }
-            // Ensure current schema exists in both structures
-            const currentSchema = entryData.active_schema;
-            if (!entryData.ground_truths[currentSchema]) {
-                entryData.ground_truths[currentSchema] = {triplets: []};
-            }
-            if (!entryData.extraction_methods[currentSchema]) {
-                entryData.extraction_methods[currentSchema] = [];
+            // Ensure annotations array exists
+            if (!entryData.annotations) {
+                entryData.annotations = [];
             }
             return entryData;
         }
@@ -2981,9 +2708,6 @@
             if (!currentEntry) {
                 return;
             }
-
-            // Populate entity type dropdowns for ground truth form
-            populateEntityTypeDropdowns();
 
             // Populate extraction prompt dropdown for auto-extracted tab
             populateExtractionPromptDropdown();
@@ -3117,185 +2841,7 @@
             event.target.value = '';
         }
 
-        // ===== Clinical Findings Functions =====
-
-        let currentFindings = [];  // Store loaded findings for filtering
-
-        async function loadClinicalFindings() {
-            const container = document.getElementById('findings-container');
-            const metricsDiv = document.getElementById('findings-metrics');
-            const sourceSelector = document.getElementById('findings-source-selector');
-
-            if (!currentEntry) {
-                container.innerHTML = '<div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 40px;">No entry selected. Navigate to an entry first.</div>';
-                metricsDiv.style.display = 'none';
-                return;
-            }
-
-            container.innerHTML = '<div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 40px;">Loading clinical findings...</div>';
-
-            try {
-                const source = sourceSelector.value;
-                // Get current schema from entry data or fall back to active schema
-                const entryData = getEntityEntryData(currentEntry);
-                const schemaToUse = entryData?.active_schema || activeSchemaName || 'radgraph';
-                const response = await fetch(`/llm/clinical-findings/?entry=${currentEntry}&source=${source}&schema=${schemaToUse}`);
-                const result = await response.json();
-
-                if (result.success) {
-                    currentFindings = result.findings;
-
-                    // Update metrics display
-                    if (result.metrics) {
-                        metricsDiv.style.display = 'block';
-                        document.getElementById('metric-total').textContent = result.metrics.total_findings;
-                        document.getElementById('metric-location').textContent = result.metrics.location_rate + '%';
-                        document.getElementById('metric-attributes').textContent = result.metrics.attribute_rate + '%';
-
-                        const byStatus = result.metrics.by_assertion_status || {};
-                        document.getElementById('metric-present').textContent = byStatus.present || 0;
-                        document.getElementById('metric-uncertain').textContent = byStatus.uncertain || 0;
-                        document.getElementById('metric-absent').textContent = byStatus.absent || 0;
-                    }
-
-                    // Render findings
-                    renderFindings(currentFindings);
-
-                    // Update source selector with available methods
-                    updateFindingsSourceSelector();
-                } else {
-                    container.innerHTML = `<div style="color: #ef4444; font-size: 0.85em; text-align: center; padding: 40px;">Error: ${result.error}</div>`;
-                    metricsDiv.style.display = 'none';
-                }
-            } catch (error) {
-                container.innerHTML = `<div style="color: #ef4444; font-size: 0.85em; text-align: center; padding: 40px;">Error loading findings: ${error.message}</div>`;
-                metricsDiv.style.display = 'none';
-            }
-        }
-
-        function updateFindingsSourceSelector() {
-            const selector = document.getElementById('findings-source-selector');
-            const currentValue = selector.value;
-
-            // Clear existing options except ground truth
-            selector.innerHTML = '<option value="ground_truth">Ground Truth</option>';
-
-            // Add extraction methods if available
-            const entryData = getEntityEntryData(currentEntry);
-            const schemaToUse = entryData?.active_schema || activeSchemaName || 'radgraph';
-            if (entryData && entryData.extraction_methods && entryData.extraction_methods[schemaToUse]) {
-                const methods = entryData.extraction_methods[schemaToUse];
-                methods.forEach(method => {
-                    const option = document.createElement('option');
-                    option.value = method.id;
-                    option.textContent = method.name || method.id;
-                    selector.appendChild(option);
-                });
-            }
-
-            // Restore selection if possible
-            selector.value = currentValue || 'ground_truth';
-        }
-
-        function filterFindings() {
-            const showPresent = document.getElementById('filter-present').checked;
-            const showUncertain = document.getElementById('filter-uncertain').checked;
-            const showAbsent = document.getElementById('filter-absent').checked;
-
-            const filtered = currentFindings.filter(f => {
-                if (f.assertion_status === 'present' && showPresent) return true;
-                if (f.assertion_status === 'uncertain' && showUncertain) return true;
-                if (f.assertion_status === 'absent' && showAbsent) return true;
-                if (f.assertion_status === 'unknown') return true;  // Always show unknown
-                return false;
-            });
-
-            renderFindings(filtered);
-        }
-
-        function renderFindings(findings) {
-            const container = document.getElementById('findings-container');
-
-            if (!findings || findings.length === 0) {
-                container.innerHTML = '<div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 40px;">No findings to display. Extract entities and relations first.</div>';
-                return;
-            }
-
-            const statusColors = {
-                'present': '#10b981',
-                'uncertain': '#f59e0b',
-                'absent': '#ef4444',
-                'unknown': '#6b7280'
-            };
-
-            const statusLabels = {
-                'present': 'Present',
-                'uncertain': 'Uncertain',
-                'absent': 'Absent',
-                'unknown': 'Unknown'
-            };
-
-            let html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
-
-            findings.forEach((finding, index) => {
-                const statusColor = statusColors[finding.assertion_status] || '#6b7280';
-                const statusLabel = statusLabels[finding.assertion_status] || 'Unknown';
-
-                html += `<div style="background: white; border: 1px solid #e5e7eb; border-left: 4px solid ${statusColor}; border-radius: 6px; padding: 12px;">`;
-
-                // Header: Observation + Status Badge
-                html += '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">';
-                html += `<div style="font-weight: 600; color: #1f2937; font-size: 1em;">${escapeHtml(finding.observation.text)}</div>`;
-                html += `<span style="background: ${statusColor}20; color: ${statusColor}; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: 500;">${statusLabel}</span>`;
-                html += '</div>';
-
-                // Anatomical Location(s)
-                if (finding.anatomical_locations && finding.anatomical_locations.length > 0) {
-                    html += '<div style="margin-bottom: 6px;">';
-                    html += '<span style="color: #6b7280; font-size: 0.8em;">Location: </span>';
-                    const locations = finding.anatomical_locations.map(loc => {
-                        let locText = escapeHtml(loc.text);
-                        if (loc.modifiers && loc.modifiers.length > 0) {
-                            const mods = loc.modifiers.map(m => escapeHtml(m.text)).join(' ');
-                            locText = mods + ' ' + locText;
-                        }
-                        return `<span style="background: #dbeafe; color: #1e40af; padding: 2px 6px; border-radius: 4px; font-size: 0.85em;">${locText}</span>`;
-                    }).join(' ');
-                    html += locations;
-                    html += '</div>';
-                }
-
-                // Attributes/Modifiers
-                if (finding.attributes && finding.attributes.length > 0) {
-                    html += '<div style="margin-bottom: 6px;">';
-                    html += '<span style="color: #6b7280; font-size: 0.8em;">Attributes: </span>';
-                    const attrs = finding.attributes.map(attr =>
-                        `<span style="background: #f3e8ff; color: #7c3aed; padding: 2px 6px; border-radius: 4px; font-size: 0.85em;">${escapeHtml(attr.text)}</span>`
-                    ).join(' ');
-                    html += attrs;
-                    html += '</div>';
-                }
-
-                // Suggested Diagnoses
-                if (finding.suggested_diagnoses && finding.suggested_diagnoses.length > 0) {
-                    html += '<div>';
-                    html += '<span style="color: #6b7280; font-size: 0.8em;">Suggests: </span>';
-                    const diagnoses = finding.suggested_diagnoses.map(diag => {
-                        const diagStatusColor = statusColors[diag.assertion_status] || '#6b7280';
-                        return `<span style="background: ${diagStatusColor}15; color: ${diagStatusColor}; padding: 2px 6px; border-radius: 4px; font-size: 0.85em; border: 1px solid ${diagStatusColor}40;">${escapeHtml(diag.text)}</span>`;
-                    }).join(' ');
-                    html += diagnoses;
-                    html += '</div>';
-                }
-
-                html += '</div>';
-            });
-
-            html += '</div>';
-            container.innerHTML = html;
-        }
-
-        // ===== New Tab and Annotation Functions =====
+        // ===== Tab and Annotation Functions =====
 
         // Switch between annotation tabs
         async function switchAnnotationTab(tabName) {
@@ -3316,8 +2862,6 @@
                 activeBtn = document.getElementById('auto-extracted-tab-btn');
             } else if (tabName === 'auto-extracted-2') {
                 activeBtn = document.getElementById('auto-extracted-2-tab-btn');
-            } else if (tabName === 'findings-view') {
-                activeBtn = document.getElementById('findings-view-tab-btn');
             }
 
             if (activeBtn) {
@@ -3330,7 +2874,6 @@
             document.getElementById('ground-truth-tab').style.display = tabName === 'ground-truth' ? 'block' : 'none';
             document.getElementById('auto-extracted-tab').style.display = tabName === 'auto-extracted' ? 'block' : 'none';
             document.getElementById('auto-extracted-2-tab').style.display = tabName === 'auto-extracted-2' ? 'block' : 'none';
-            document.getElementById('findings-view-tab').style.display = tabName === 'findings-view' ? 'block' : 'none';
 
             // Render content for active tab
             if (tabName === 'ground-truth') {
@@ -3339,8 +2882,6 @@
                 await renderAutoExtractedTab();
             } else if (tabName === 'auto-extracted-2') {
                 await renderAutoExtracted2Tab();
-            } else if (tabName === 'findings-view') {
-                await loadClinicalFindings();
             }
         }
 
@@ -3552,370 +3093,188 @@
             calculateMethodMetrics(methodId);
         }
 
-        // Populate entity type dropdowns from active schema
-        function populateEntityTypeDropdowns() {
-            if (!activeSchema) return;
-
-            // Entity type dropdown for adding entities
-            const entityTypeDropdown = document.getElementById('gt-entity-type');
-            if (entityTypeDropdown) {
-                entityTypeDropdown.innerHTML = '<option value="">Select type...</option>';
-                activeSchema.entity_types.forEach(et => {
-                    const option = document.createElement('option');
-                    option.value = et.name;
-                    option.textContent = et.name;
-                    entityTypeDropdown.appendChild(option);
-                });
-            }
-
-            // Relation type dropdown
-            const relationDropdown = document.getElementById('gt-relation-type');
-            if (relationDropdown) {
-                relationDropdown.innerHTML = '<option value="">Relation...</option>';
-                activeSchema.relation_types.forEach(rt => {
-                    const option = document.createElement('option');
-                    option.value = rt.name;
-                    option.textContent = rt.name;
-                    relationDropdown.appendChild(option);
-                });
-            }
-
-            // Update entity dropdowns for relation form
-            updateEntityDropdowns();
-        }
-
-        // Update entity dropdowns in the relation form based on current entities
-        function updateEntityDropdowns() {
-            const entity1Dropdown = document.getElementById('gt-relation-entity1');
-            const entity2Dropdown = document.getElementById('gt-relation-entity2');
-
-            if (!entity1Dropdown || !entity2Dropdown) return;
-
-            const entryData = getEntityEntryData(currentEntry);
-            const currentSchema = entryData?.active_schema || activeSchemaName || 'radgraph';
-            const entities = entryData?.ground_truths?.[currentSchema]?.entities || [];
-
-            const baseHtml = '<option value="">Select entity...</option>';
-            let optionsHtml = baseHtml;
-
-            entities.forEach(e => {
-                const color = getEntityTypeColor(e.type);
-                optionsHtml += `<option value="${e.id}" style="color: ${color};">[${e.id}] ${escapeHtml(e.text)} (${e.type})</option>`;
-            });
-
-            entity1Dropdown.innerHTML = optionsHtml;
-            entity2Dropdown.innerHTML = optionsHtml;
-        }
-
-        // Add ground truth entity
-        async function addGroundTruthEntity() {
+        // Add annotation (observation-location pair)
+        async function addAnnotation() {
             if (!currentEntry) {
                 alert('Please select a CSV entry first');
                 return;
             }
 
-            const entityText = document.getElementById('gt-entity-text').value.trim();
-            const entityType = document.getElementById('gt-entity-type').value;
-            const startWordInput = document.getElementById('gt-entity-start-word').value;
-            const endWordInput = document.getElementById('gt-entity-end-word').value;
+            const obsText = document.getElementById('annotation-obs-text').value.trim();
+            const obsStartInput = document.getElementById('annotation-obs-start').value;
+            const obsEndInput = document.getElementById('annotation-obs-end').value;
+            const locText = document.getElementById('annotation-loc-text').value.trim();
+            const locStartInput = document.getElementById('annotation-loc-start').value;
+            const locEndInput = document.getElementById('annotation-loc-end').value;
 
-            if (!entityText || !entityType) {
-                alert('Please fill in both entity text and type');
+            if (!obsText) {
+                alert('Please enter observation text');
                 return;
             }
 
-            // Parse word indices (optional)
-            const startWord = startWordInput !== '' ? parseInt(startWordInput, 10) : null;
-            const endWord = endWordInput !== '' ? parseInt(endWordInput, 10) : null;
+            // Parse word indices
+            const obsStart = obsStartInput !== '' ? parseInt(obsStartInput, 10) : 0;
+            const obsEnd = obsEndInput !== '' ? parseInt(obsEndInput, 10) : obsStart;
 
-            const entity = {
-                text: entityText,
-                type: entityType,
-                start_word: startWord,
-                end_word: endWord
+            // Build annotation object
+            const annotation = {
+                observation: [obsText, [obsStart, obsEnd]]
             };
 
+            // Add anatomical location if provided
+            if (locText) {
+                const locStart = locStartInput !== '' ? parseInt(locStartInput, 10) : 0;
+                const locEnd = locEndInput !== '' ? parseInt(locEndInput, 10) : locStart;
+                annotation.anatomical_location = [locText, [locStart, locEnd]];
+            } else {
+                annotation.anatomical_location = null;
+            }
+
             try {
-                const response = await fetch('/llm/add-ground-truth-entity/', {
+                const response = await fetch('/llm/add-annotation/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         entry_number: currentEntry,
-                        entity: entity
+                        annotation: annotation
                     })
                 });
 
                 const result = await response.json();
 
                 if (result.success) {
-                    // Update local data
-                    const entryData = ensureEntityEntryExists(currentEntry);
-                    const currentSchema = entryData.active_schema || activeSchemaName || 'radgraph';
-                    if (!entryData.ground_truths[currentSchema]) {
-                        entryData.ground_truths[currentSchema] = {entities: [], triplets: []};
-                    }
-                    if (!entryData.ground_truths[currentSchema].entities) {
-                        entryData.ground_truths[currentSchema].entities = [];
-                    }
-                    entity.id = result.entity_id;
-                    entryData.ground_truths[currentSchema].entities.push(entity);
+                    // Reload entities data to get updated annotations
+                    await loadEntities();
 
                     // Clear form
-                    document.getElementById('gt-entity-text').value = '';
-                    document.getElementById('gt-entity-type').value = '';
-                    document.getElementById('gt-entity-start-word').value = '';
-                    document.getElementById('gt-entity-end-word').value = '';
+                    document.getElementById('annotation-obs-text').value = '';
+                    document.getElementById('annotation-obs-start').value = '';
+                    document.getElementById('annotation-obs-end').value = '';
+                    document.getElementById('annotation-loc-text').value = '';
+                    document.getElementById('annotation-loc-start').value = '';
+                    document.getElementById('annotation-loc-end').value = '';
 
                     // Clear word selection
                     clearWordSelection();
 
                     // Re-render
-                    renderGroundTruthEntities();
-                    updateEntityDropdowns();
+                    renderAnnotations();
                 } else {
                     alert('Error: ' + result.error);
                 }
             } catch (error) {
-                alert('Error adding entity: ' + error.message);
+                alert('Error adding annotation: ' + error.message);
             }
         }
 
-        // Delete ground truth entity
-        async function deleteGroundTruthEntity(entityId) {
+        // Delete annotation by index
+        async function deleteAnnotation(annotationIndex) {
             if (!currentEntry) return;
 
+            if (!confirm('Delete this annotation?')) return;
+
             try {
-                const response = await fetch('/llm/delete-ground-truth-entity/', {
+                const response = await fetch('/llm/delete-annotation/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         entry_number: currentEntry,
-                        entity_id: entityId
+                        annotation_index: annotationIndex
                     })
                 });
 
                 const result = await response.json();
 
                 if (result.success) {
-                    // Update local data
-                    const entryData = getEntityEntryData(currentEntry);
-                    const currentSchema = entryData?.active_schema || activeSchemaName || 'radgraph';
-                    if (entryData?.ground_truths?.[currentSchema]?.entities) {
-                        entryData.ground_truths[currentSchema].entities =
-                            entryData.ground_truths[currentSchema].entities.filter(e => e.id !== entityId);
-                        // Also remove related relations
-                        if (entryData.ground_truths[currentSchema].triplets) {
-                            entryData.ground_truths[currentSchema].triplets =
-                                entryData.ground_truths[currentSchema].triplets.filter(
-                                    t => t.entity1_id !== entityId && t.entity2_id !== entityId
-                                );
-                        }
-                    }
-
-                    // Re-render
-                    renderGroundTruthEntities();
-                    renderGroundTruthRelations();
-                    updateEntityDropdowns();
+                    // Reload entities data to get updated annotations
+                    await loadEntities();
+                    renderAnnotations();
                 } else {
                     alert('Error: ' + result.error);
                 }
             } catch (error) {
-                alert('Error deleting entity: ' + error.message);
+                alert('Error deleting annotation: ' + error.message);
             }
         }
 
-        // Add ground truth relation
-        async function addGroundTruthRelation() {
-            if (!currentEntry) {
-                alert('Please select a CSV entry first');
-                return;
-            }
-
-            const entity1Id = document.getElementById('gt-relation-entity1').value;
-            const relationType = document.getElementById('gt-relation-type').value;
-            const entity2Id = document.getElementById('gt-relation-entity2').value;
-
-            if (!entity1Id || !relationType || !entity2Id) {
-                alert('Please select both entities and a relation type');
-                return;
-            }
-
-            const relation = {
-                entity1_id: entity1Id,
-                relation_type: relationType,
-                entity2_id: entity2Id
-            };
-
-            try {
-                const response = await fetch('/llm/add-ground-truth-relation/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        entry_number: currentEntry,
-                        relation: relation
-                    })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    // Update local data
-                    const entryData = ensureEntityEntryExists(currentEntry);
-                    const currentSchema = entryData.active_schema || activeSchemaName || 'radgraph';
-                    if (!entryData.ground_truths[currentSchema]) {
-                        entryData.ground_truths[currentSchema] = {entities: [], triplets: []};
-                    }
-                    if (!entryData.ground_truths[currentSchema].triplets) {
-                        entryData.ground_truths[currentSchema].triplets = [];
-                    }
-                    entryData.ground_truths[currentSchema].triplets.push(relation);
-
-                    // Clear form
-                    document.getElementById('gt-relation-entity1').value = '';
-                    document.getElementById('gt-relation-type').value = '';
-                    document.getElementById('gt-relation-entity2').value = '';
-
-                    // Re-render
-                    renderGroundTruthRelations();
-                } else {
-                    alert('Error: ' + result.error);
-                }
-            } catch (error) {
-                alert('Error adding relation: ' + error.message);
-            }
-        }
-
-        // Delete ground truth relation
-        async function deleteGroundTruthRelation(relationIndex) {
-            if (!currentEntry) return;
-
-            try {
-                const response = await fetch('/llm/delete-ground-truth-relation/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        entry_number: currentEntry,
-                        relation_index: relationIndex
-                    })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    // Update local data
-                    const entryData = getEntityEntryData(currentEntry);
-                    const currentSchema = entryData?.active_schema || activeSchemaName || 'radgraph';
-                    if (entryData?.ground_truths?.[currentSchema]?.triplets) {
-                        entryData.ground_truths[currentSchema].triplets.splice(relationIndex, 1);
-                    }
-
-                    // Re-render
-                    renderGroundTruthRelations();
-                } else {
-                    alert('Error: ' + result.error);
-                }
-            } catch (error) {
-                alert('Error deleting relation: ' + error.message);
-            }
-        }
-
-        // Render ground truth entities with hover highlighting support
-        function renderGroundTruthEntities() {
-            const container = document.getElementById('gt-entities-container');
-            const countSpan = document.getElementById('gt-entity-count');
+        // Render annotations (observation-location pairs)
+        function renderAnnotations() {
+            const container = document.getElementById('annotations-container');
+            const countSpan = document.getElementById('annotation-count');
             if (!container) return;
 
+            // Get annotations for current entry from the new format
             const entryData = getEntityEntryData(currentEntry);
-            const currentSchema = entryData?.active_schema || activeSchemaName || 'radgraph';
-            const entities = entryData?.ground_truths?.[currentSchema]?.entities || [];
+            const annotations = entryData?.annotations || [];
 
-            if (countSpan) countSpan.textContent = entities.length;
+            if (countSpan) countSpan.textContent = annotations.length;
 
-            if (entities.length === 0) {
-                container.innerHTML = '<div style="color: #6b7280; font-size: 0.85em;">No entities yet.</div>';
+            if (annotations.length === 0) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">No annotations yet.</div>';
                 return;
             }
 
             let html = '';
-            entities.forEach(e => {
-                const color = getEntityTypeColor(e.type);
-                // Format word indices if present
-                let indexDisplay = '';
-                const hasWordIndices = e.start_word !== null && e.start_word !== undefined;
-                if (hasWordIndices) {
-                    if (e.end_word !== null && e.end_word !== undefined && e.end_word !== e.start_word) {
-                        indexDisplay = `<span style="color: #9ca3af; font-size: 0.75em; margin-left: 2px;">[${e.start_word}-${e.end_word}]</span>`;
-                    } else {
-                        indexDisplay = `<span style="color: #9ca3af; font-size: 0.75em; margin-left: 2px;">[${e.start_word}]</span>`;
-                    }
+            annotations.forEach((ann, index) => {
+                const obs = ann.observation;
+                const loc = ann.anatomical_location;
+
+                // Format observation
+                const obsText = obs ? obs[0] : '?';
+                const obsIndices = obs && obs[1] ? `[${obs[1][0]}-${obs[1][1]}]` : '';
+
+                // Format location
+                let locDisplay = '';
+                if (loc) {
+                    const locText = loc[0];
+                    const locIndices = loc[1] ? `[${loc[1][0]}-${loc[1][1]}]` : '';
+                    locDisplay = `<span style="color: #10b981; font-weight: 500;">${escapeHtml(locText)}</span> <span style="color: #9ca3af; font-size: 0.75em;">${locIndices}</span>`;
+                } else {
+                    locDisplay = '<span style="color: #9ca3af; font-style: italic;">—</span>';
                 }
-                // Add data attributes for hover highlighting
-                const startWord = hasWordIndices ? e.start_word : '';
-                const endWord = hasWordIndices ? (e.end_word !== null && e.end_word !== undefined ? e.end_word : e.start_word) : '';
-                html += `<div class="entity-chip" data-start-word="${startWord}" data-end-word="${endWord}" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: white; border: 1px solid ${color}; border-radius: 16px; font-size: 0.85em; cursor: pointer; transition: box-shadow 0.15s;">
-                    <span style="font-weight: 500; color: ${color};">[${e.id}]</span>
-                    <span style="color: #374151;">${escapeHtml(e.text)}${indexDisplay}</span>
-                    <span style="color: ${color}; font-size: 0.8em;">(${e.type})</span>
-                    <button onclick="event.stopPropagation(); deleteGroundTruthEntity('${e.id}')" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0 2px; font-size: 1em;">&times;</button>
+
+                // Data attributes for hover highlighting
+                const obsStart = obs && obs[1] ? obs[1][0] : '';
+                const obsEnd = obs && obs[1] ? obs[1][1] : '';
+                const locStart = loc && loc[1] ? loc[1][0] : '';
+                const locEnd = loc && loc[1] ? loc[1][1] : '';
+
+                html += `<div class="annotation-item" data-obs-start="${obsStart}" data-obs-end="${obsEnd}" data-loc-start="${locStart}" data-loc-end="${locEnd}" style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #f9fafb; border-radius: 6px; font-size: 0.9em; cursor: pointer; transition: box-shadow 0.15s;">
+                    <span style="font-weight: 500; color: #6b7280; flex-shrink: 0;">#${index + 1}</span>
+                    <div style="flex: 1; display: flex; align-items: center; gap: 8px;">
+                        <span style="color: #3b82f6; font-weight: 500;">${escapeHtml(obsText)}</span>
+                        <span style="color: #9ca3af; font-size: 0.75em;">${obsIndices}</span>
+                        <span style="color: #9ca3af;">→</span>
+                        ${locDisplay}
+                    </div>
+                    <button onclick="event.stopPropagation(); deleteAnnotation(${index})" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0 4px; font-size: 1.1em; flex-shrink: 0;">&times;</button>
                 </div>`;
             });
             container.innerHTML = html;
 
             // Add hover handlers for highlighting
-            container.querySelectorAll('.entity-chip').forEach(chip => {
-                chip.addEventListener('mouseenter', () => {
-                    const startWord = chip.dataset.startWord;
-                    const endWord = chip.dataset.endWord;
-                    if (startWord !== '') {
-                        highlightWordRange(parseInt(startWord, 10), parseInt(endWord, 10));
-                        chip.style.boxShadow = '0 0 0 2px #fef08a';
+            container.querySelectorAll('.annotation-item').forEach(item => {
+                item.addEventListener('mouseenter', () => {
+                    const obsStart = item.dataset.obsStart;
+                    const obsEnd = item.dataset.obsEnd;
+                    const locStart = item.dataset.locStart;
+                    const locEnd = item.dataset.locEnd;
+
+                    // Highlight observation words
+                    if (obsStart !== '' && obsEnd !== '') {
+                        highlightWordRange(parseInt(obsStart, 10), parseInt(obsEnd, 10), '#dbeafe');
                     }
+                    // Highlight location words
+                    if (locStart !== '' && locEnd !== '') {
+                        highlightWordRange(parseInt(locStart, 10), parseInt(locEnd, 10), '#d1fae5');
+                    }
+                    item.style.boxShadow = '0 0 0 2px #fef08a';
                 });
-                chip.addEventListener('mouseleave', () => {
+                item.addEventListener('mouseleave', () => {
                     clearWordHighlights();
-                    chip.style.boxShadow = '';
+                    item.style.boxShadow = '';
                 });
             });
-        }
-
-        // Render ground truth relations
-        function renderGroundTruthRelations() {
-            const container = document.getElementById('gt-relations-container');
-            const countSpan = document.getElementById('gt-relation-count');
-            if (!container) return;
-
-            const entryData = getEntityEntryData(currentEntry);
-            const currentSchema = entryData?.active_schema || activeSchemaName || 'radgraph';
-            const relations = entryData?.ground_truths?.[currentSchema]?.triplets || [];
-            const entities = entryData?.ground_truths?.[currentSchema]?.entities || [];
-
-            if (countSpan) countSpan.textContent = relations.length;
-
-            if (relations.length === 0) {
-                container.innerHTML = '<div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">No relations yet.</div>';
-                return;
-            }
-
-            // Build entity lookup
-            const entityLookup = {};
-            entities.forEach(e => { entityLookup[e.id] = e; });
-
-            let html = '';
-            relations.forEach((rel, index) => {
-                const e1 = entityLookup[rel.entity1_id] || { text: rel.entity1_id, type: '?' };
-                const e2 = entityLookup[rel.entity2_id] || { text: rel.entity2_id, type: '?' };
-                const color1 = getEntityTypeColor(e1.type);
-                const color2 = getEntityTypeColor(e2.type);
-
-                html += `<div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f9fafb; border-radius: 4px; font-size: 0.85em;">
-                    <span style="font-weight: 500; color: #6b7280;">[${rel.id}]</span>
-                    <span style="flex: 2; color: ${color1};">[${rel.entity1_id}] ${escapeHtml(e1.text)}</span>
-                    <span style="flex-shrink: 0; background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 4px; font-size: 0.9em;">${rel.relation_type}</span>
-                    <span style="flex: 2; color: ${color2};">[${rel.entity2_id}] ${escapeHtml(e2.text)}</span>
-                    <button onclick="deleteGroundTruthRelation(${index})" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0 4px; font-size: 1em;">&times;</button>
-                </div>`;
-            });
-            container.innerHTML = html;
         }
 
         // Ensure an extraction method exists, create one if not
@@ -3964,7 +3323,101 @@
             }
         }
 
-        // Run entity extraction (LLM)
+        // Run simplified observation extraction
+        async function runObservationExtraction() {
+            if (!currentEntry) {
+                alert('Please select a CSV entry first');
+                return;
+            }
+
+            const reportText = currentReportText;
+            if (!reportText) {
+                alert('No report text available');
+                return;
+            }
+
+            const btn = document.getElementById('extract-observations-btn');
+            const originalText = btn.textContent;
+            btn.textContent = 'Extracting...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/llm/extract-observations/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        report_text: reportText
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Reload entities data to get updated auto_extracted
+                    await loadEntities();
+                    renderAutoExtractedAnnotations();
+                    alert(`Extracted ${result.count} observation-location pairs`);
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error extracting observations: ' + error.message);
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // Render auto-extracted annotations (new simplified format)
+        function renderAutoExtractedAnnotations() {
+            const container = document.getElementById('auto-annotations-container');
+            const countSpan = document.getElementById('auto-annotation-count');
+            if (!container) return;
+
+            const entryData = getEntityEntryData(currentEntry);
+            const annotations = entryData?.auto_extracted || [];
+
+            if (countSpan) countSpan.textContent = annotations.length;
+
+            if (annotations.length === 0) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">No annotations extracted yet. Click "Extract Observations" to start.</div>';
+                return;
+            }
+
+            let html = '';
+            annotations.forEach((ann, index) => {
+                const obs = ann.observation;
+                const loc = ann.anatomical_location;
+
+                // Format observation
+                const obsText = obs ? obs[0] : '?';
+                const obsIndices = obs && obs[1] ? `[${obs[1][0]}-${obs[1][1]}]` : '';
+
+                // Format location
+                let locDisplay = '';
+                if (loc) {
+                    const locText = loc[0];
+                    const locIndices = loc[1] ? `[${loc[1][0]}-${loc[1][1]}]` : '';
+                    locDisplay = `<span style="color: #10b981; font-weight: 500;">${escapeHtml(locText)}</span> <span style="color: #9ca3af; font-size: 0.75em;">${locIndices}</span>`;
+                } else {
+                    locDisplay = '<span style="color: #9ca3af; font-style: italic;">—</span>';
+                }
+
+                html += `<div class="auto-annotation-item" style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #fef3c7; border-radius: 6px; font-size: 0.9em;">
+                    <span style="font-weight: 500; color: #6b7280; flex-shrink: 0;">#${index + 1}</span>
+                    <div style="flex: 1; display: flex; align-items: center; gap: 8px;">
+                        <span style="color: #3b82f6; font-weight: 500;">${escapeHtml(obsText)}</span>
+                        <span style="color: #9ca3af; font-size: 0.75em;">${obsIndices}</span>
+                        <span style="color: #9ca3af;">→</span>
+                        ${locDisplay}
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        // Run entity extraction (LLM) - Legacy
         async function runEntityExtraction() {
             console.log('runEntityExtraction called, currentEntry:', currentEntry);
             if (!currentEntry) {
@@ -4899,118 +4352,10 @@
             }
         }
 
-        // Add ground truth triplet
-        async function addGroundTruthTriplet() {
-            if (!currentEntry) {
-                alert('Please select a CSV entry first');
-                return;
-            }
-
-            const entity1Text = document.getElementById('gt-entity1-text').value.trim();
-            const entity1Type = document.getElementById('gt-entity1-type').value;
-            const relationType = document.getElementById('gt-relation-type').value;
-            const entity2Text = document.getElementById('gt-entity2-text').value.trim();
-            const entity2Type = document.getElementById('gt-entity2-type').value;
-
-            if (!entity1Text || !entity1Type || !relationType || !entity2Text || !entity2Type) {
-                alert('Please fill in all fields');
-                return;
-            }
-
-            const triplet = {
-                entity1_text: entity1Text,
-                entity1_type: entity1Type,
-                relation_type: relationType,
-                entity2_text: entity2Text,
-                entity2_type: entity2Type
-            };
-
-            try {
-                const response = await fetch('/llm/add-ground-truth-triplet/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        entry_number: currentEntry,
-                        triplet: triplet
-                    })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    // Update local data
-                    const entryData = ensureEntityEntryExists(currentEntry);
-                    const currentSchema = entryData.active_schema || activeSchemaName || 'radgraph';
-                    if (!entryData.ground_truths[currentSchema]) {
-                        entryData.ground_truths[currentSchema] = {triplets: []};
-                    }
-                    entryData.ground_truths[currentSchema].triplets.push(triplet);
-
-                    // Clear form
-                    document.getElementById('gt-entity1-text').value = '';
-                    document.getElementById('gt-entity1-type').value = '';
-                    document.getElementById('gt-relation-type').value = '';
-                    document.getElementById('gt-entity2-text').value = '';
-                    document.getElementById('gt-entity2-type').value = '';
-
-                    // Re-render
-                    renderGroundTruthTab();
-                } else {
-                    alert('Failed to add triplet: ' + (result.error || 'Unknown error'));
-                }
-            } catch (error) {
-                console.error('Failed to add ground truth triplet:', error);
-                alert('Failed to add triplet: ' + error.message);
-            }
-        }
-
-        // Delete ground truth triplet
-        async function deleteGroundTruthTriplet(index) {
-            if (!confirm('Delete this ground truth triplet?')) {
-                return;
-            }
-
-            try {
-                const response = await fetch('/llm/delete-ground-truth-triplet/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        entry_number: currentEntry,
-                        triplet_index: index
-                    })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    // Update local data
-                    const entryData = getEntityEntryData(currentEntry);
-                    if (entryData && entryData.ground_truths) {
-                        const currentSchema = entryData.active_schema || activeSchemaName || 'radgraph';
-                        if (entryData.ground_truths[currentSchema]) {
-                            entryData.ground_truths[currentSchema].triplets.splice(index, 1);
-                        }
-                    }
-
-                    // Re-render
-                    renderGroundTruthTab();
-                } else {
-                    alert('Failed to delete triplet: ' + (result.error || 'Unknown error'));
-                }
-            } catch (error) {
-                console.error('Failed to delete ground truth triplet:', error);
-                alert('Failed to delete triplet: ' + error.message);
-            }
-        }
-
         // Render ground truth tab
         function renderGroundTruthTab() {
-            // Use the new entity-first render functions
-            if (typeof renderGroundTruthEntities === 'function') {
-                renderGroundTruthEntities();
-                renderGroundTruthRelations();
-                updateEntityDropdowns();
-            }
+            // Render the simplified annotation list
+            renderAnnotations();
         }
 
         // Populate extraction prompt dropdown
@@ -5127,12 +4472,8 @@
 
         // Render auto-extracted tab
         async function renderAutoExtractedTab() {
-            // Use the new entity-first render functions
-            if (typeof renderAutoExtractedEntities === 'function') {
-                await renderAutoExtractedEntities();
-                await renderAutoExtractedRelations();
-                await renderAutoExtractedMetrics();
-            }
+            // Render simplified auto-extracted annotations
+            renderAutoExtractedAnnotations();
         }
 
         // Calculate metrics
@@ -5910,439 +5251,6 @@
             } catch (error) {
                 console.error('Failed to delete method:', error);
                 alert('Failed to delete method: ' + error.message);
-            }
-        }
-
-        // Open schema information modal
-        function openSchemaModal() {
-            if (!activeSchema) {
-                alert('No schema loaded');
-                return;
-            }
-
-            let message = `${activeSchema.name}\n\n${activeSchema.description}\n\n`;
-            message += `ENTITY TYPES (${activeSchema.entity_types.length}):\n`;
-            activeSchema.entity_types.forEach(et => {
-                message += `- ${et.name}: ${et.description}\n`;
-            });
-
-            message += `\nRELATION TYPES (${activeSchema.relation_types.length}):\n`;
-            activeSchema.relation_types.forEach(rt => {
-                message += `- ${rt.name}: ${rt.description}\n`;
-            });
-
-            alert(message);
-        }
-
-        // ===== Schema Editor =====
-
-        let editorEntityTypes = [];
-        let editorRelationTypes = [];
-        let editorSchemaKey = '';
-        let editorIsNewSchema = false;
-
-        // Open schema editor modal
-        async function openSchemaEditorModal() {
-            console.log('openSchemaEditorModal() called');
-            const modal = document.getElementById('schema-editor-modal');
-            const selector = document.getElementById('editor-schema-select');
-
-            // Load schemas from server first
-            console.log('Calling loadSchemas() before populating editor dropdown...');
-            await loadSchemas();
-            console.log('loadSchemas() completed. allSchemas has', Object.keys(allSchemas).length, 'schemas');
-
-            // Populate schema selector
-            selector.innerHTML = '<option value="">Select a schema...</option>';
-            for (const [key, schema] of Object.entries(allSchemas)) {
-                const option = document.createElement('option');
-                option.value = key;
-                option.textContent = schema.name;
-                selector.appendChild(option);
-            }
-            console.log('Populated editor dropdown with', Object.keys(allSchemas).length, 'schema options');
-
-            // Clear the form
-            clearEditorForm();
-
-            modal.classList.add('active');
-            console.log('Modal opened');
-        }
-
-        // Close schema editor modal
-        function closeSchemaEditor() {
-            document.getElementById('schema-editor-modal').classList.remove('active');
-            clearEditorForm();
-        }
-
-        // Clear editor form
-        function clearEditorForm() {
-            document.getElementById('schema-key-input').value = '';
-            document.getElementById('schema-name-input').value = '';
-            document.getElementById('schema-description-input').value = '';
-            document.getElementById('editor-schema-select').value = '';
-            editorEntityTypes = [];
-            editorRelationTypes = [];
-            editorSchemaKey = '';
-            editorIsNewSchema = false;
-            renderEditorEntityTypes();
-            renderEditorRelationTypes();
-            document.getElementById('delete-schema-btn').style.display = 'none';
-        }
-
-        // Load selected schema into editor
-        function loadSchemaIntoEditor() {
-            const selector = document.getElementById('editor-schema-select');
-            const schemaKey = selector.value;
-
-            if (!schemaKey) {
-                clearEditorForm();
-                return;
-            }
-
-            const schema = allSchemas[schemaKey];
-            if (!schema) return;
-
-            editorSchemaKey = schemaKey;
-            editorIsNewSchema = false;
-
-            // Load basic info
-            document.getElementById('schema-key-input').value = schemaKey;
-            document.getElementById('schema-key-input').disabled = true; // Can't change key of existing schema
-            document.getElementById('schema-name-input').value = schema.name;
-            document.getElementById('schema-description-input').value = schema.description;
-
-            // Load entity types
-            editorEntityTypes = JSON.parse(JSON.stringify(schema.entity_types));
-            renderEditorEntityTypes();
-
-            // Load relation types
-            editorRelationTypes = JSON.parse(JSON.stringify(schema.relation_types));
-            renderEditorRelationTypes();
-
-            // Show delete button (except for built-in schemas)
-            const builtInSchemas = ['radgraph', 'pet_ct_oncology'];
-            if (builtInSchemas.includes(schemaKey)) {
-                document.getElementById('delete-schema-btn').style.display = 'none';
-            } else {
-                document.getElementById('delete-schema-btn').style.display = 'block';
-            }
-        }
-
-        // Create new schema
-        function createNewSchema() {
-            clearEditorForm();
-            editorIsNewSchema = true;
-            document.getElementById('schema-key-input').disabled = false;
-            document.getElementById('delete-schema-btn').style.display = 'none';
-
-            // Add default entity type
-            addEntityType();
-        }
-
-        // Add entity type
-        function addEntityType() {
-            editorEntityTypes.push({
-                name: '',
-                description: '',
-                color: '#3b82f6'
-            });
-            renderEditorEntityTypes();
-        }
-
-        // Remove entity type
-        function removeEntityType(index) {
-            editorEntityTypes.splice(index, 1);
-            renderEditorEntityTypes();
-        }
-
-        // Render entity types list
-        function renderEditorEntityTypes() {
-            const container = document.getElementById('entity-types-list');
-
-            if (editorEntityTypes.length === 0) {
-                container.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">No entity types defined. Click "+ Add Entity Type" to add one.</div>';
-                return;
-            }
-
-            container.innerHTML = '';
-            editorEntityTypes.forEach((entityType, index) => {
-                const row = document.createElement('div');
-                row.style.cssText = 'display: flex; gap: 10px; align-items: start; padding: 10px; background: #f9fafb; border-radius: 4px;';
-
-                row.innerHTML = `
-                    <div style="flex: 1;">
-                        <input type="text"
-                            id="entity-name-${index}"
-                            value="${escapeHtml(entityType.name)}"
-                            placeholder="Entity type name (e.g., PrimaryTumor)"
-                            onchange="editorEntityTypes[${index}].name = this.value"
-                            style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px; margin-bottom: 5px;" />
-                        <input type="text"
-                            id="entity-desc-${index}"
-                            value="${escapeHtml(entityType.description)}"
-                            placeholder="Description"
-                            onchange="editorEntityTypes[${index}].description = this.value"
-                            style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9em;" />
-                    </div>
-                    <div style="width: 80px;">
-                        <label style="display: block; font-size: 0.75em; color: #6b7280; margin-bottom: 3px;">Color</label>
-                        <input type="color"
-                            id="entity-color-${index}"
-                            value="${entityType.color}"
-                            onchange="editorEntityTypes[${index}].color = this.value"
-                            style="width: 100%; height: 38px; border: 1px solid #d1d5db; border-radius: 4px;" />
-                    </div>
-                    <button onclick="removeEntityType(${index})"
-                        style="padding: 8px 12px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; margin-top: 18px;">
-                        Remove
-                    </button>
-                `;
-
-                container.appendChild(row);
-            });
-        }
-
-        // Add relation type
-        function addRelationType() {
-            editorRelationTypes.push({
-                name: '',
-                description: '',
-                valid_pairs: []
-            });
-            renderEditorRelationTypes();
-        }
-
-        // Remove relation type
-        function removeRelationType(index) {
-            editorRelationTypes.splice(index, 1);
-            renderEditorRelationTypes();
-        }
-
-        // Render relation types list
-        function renderEditorRelationTypes() {
-            const container = document.getElementById('relation-types-list');
-
-            if (editorRelationTypes.length === 0) {
-                container.innerHTML = '<div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">No relation types defined. Click "+ Add Relation Type" to add one.</div>';
-                return;
-            }
-
-            container.innerHTML = '';
-            editorRelationTypes.forEach((relationType, index) => {
-                const row = document.createElement('div');
-                row.style.cssText = 'display: flex; flex-direction: column; gap: 8px; padding: 10px; background: #f9fafb; border-radius: 4px;';
-
-                const pairsHTML = (relationType.valid_pairs || []).map((pair, pairIndex) =>
-                    `<div style="display: flex; gap: 5px; align-items: center;">
-                        <span style="font-size: 0.85em;">${escapeHtml(pair[0])} → ${escapeHtml(pair[1])}</span>
-                        <button onclick="removeValidPair(${index}, ${pairIndex})"
-                            style="padding: 2px 6px; background: #ef4444; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 0.75em;">
-                            ×
-                        </button>
-                    </div>`
-                ).join('');
-
-                row.innerHTML = `
-                    <div style="display: flex; gap: 10px;">
-                        <div style="flex: 1;">
-                            <input type="text"
-                                id="relation-name-${index}"
-                                value="${escapeHtml(relationType.name)}"
-                                placeholder="Relation name (e.g., located_in)"
-                                onchange="editorRelationTypes[${index}].name = this.value"
-                                style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px; margin-bottom: 5px;" />
-                            <input type="text"
-                                id="relation-desc-${index}"
-                                value="${escapeHtml(relationType.description)}"
-                                placeholder="Description"
-                                onchange="editorRelationTypes[${index}].description = this.value"
-                                style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9em;" />
-                        </div>
-                        <button onclick="removeRelationType(${index})"
-                            style="padding: 8px 12px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; height: fit-content;">
-                            Remove
-                        </button>
-                    </div>
-                    <div style="padding: 8px; background: white; border-radius: 4px; border: 1px solid #e5e7eb;">
-                        <div style="font-size: 0.85em; color: #6b7280; margin-bottom: 5px;">Valid Entity Pairs:</div>
-                        <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px;">
-                            ${pairsHTML || '<span style="font-size: 0.85em; color: #9ca3af;">No valid pairs defined</span>'}
-                        </div>
-                        <button onclick="addValidPair(${index})"
-                            style="padding: 4px 10px; background: #10b981; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 0.8em;">
-                            + Add Valid Pair
-                        </button>
-                    </div>
-                `;
-
-                container.appendChild(row);
-            });
-        }
-
-        // Add valid pair for a relation type
-        function addValidPair(relationIndex) {
-            if (editorEntityTypes.length === 0) {
-                alert('Please add at least one entity type first');
-                return;
-            }
-
-            // Create a simple prompt to select source and target
-            const entityNames = editorEntityTypes.map(et => et.name).filter(n => n);
-            if (entityNames.length === 0) {
-                alert('Please name your entity types first');
-                return;
-            }
-
-            const source = prompt('Enter source entity type:\nAvailable: ' + entityNames.join(', '));
-            if (!source) return;
-
-            const target = prompt('Enter target entity type:\nAvailable: ' + entityNames.join(', '));
-            if (!target) return;
-
-            if (!editorRelationTypes[relationIndex].valid_pairs) {
-                editorRelationTypes[relationIndex].valid_pairs = [];
-            }
-
-            editorRelationTypes[relationIndex].valid_pairs.push([source, target]);
-            renderEditorRelationTypes();
-        }
-
-        // Remove valid pair
-        function removeValidPair(relationIndex, pairIndex) {
-            editorRelationTypes[relationIndex].valid_pairs.splice(pairIndex, 1);
-            renderEditorRelationTypes();
-        }
-
-        // Save schema from editor
-        async function saveSchemaFromEditor() {
-            // Validate inputs
-            const schemaKey = document.getElementById('schema-key-input').value.trim();
-            const schemaName = document.getElementById('schema-name-input').value.trim();
-            const schemaDescription = document.getElementById('schema-description-input').value.trim();
-
-            if (!schemaKey) {
-                alert('Please enter a schema key');
-                return;
-            }
-
-            if (!/^[a-z_]+$/.test(schemaKey)) {
-                alert('Schema key must be lowercase with underscores only (e.g., my_custom_schema)');
-                return;
-            }
-
-            if (!schemaName) {
-                alert('Please enter a schema name');
-                return;
-            }
-
-            if (editorEntityTypes.length === 0) {
-                alert('Please add at least one entity type');
-                return;
-            }
-
-            if (editorRelationTypes.length === 0) {
-                alert('Please add at least one relation type');
-                return;
-            }
-
-            // Validate entity types
-            for (const et of editorEntityTypes) {
-                if (!et.name || !et.description) {
-                    alert('All entity types must have a name and description');
-                    return;
-                }
-            }
-
-            // Validate relation types
-            for (const rt of editorRelationTypes) {
-                if (!rt.name || !rt.description) {
-                    alert('All relation types must have a name and description');
-                    return;
-                }
-            }
-
-            // Build schema object
-            const schemaData = {
-                name: schemaName,
-                description: schemaDescription,
-                entity_types: editorEntityTypes,
-                relation_types: editorRelationTypes
-            };
-
-            try {
-                const response = await fetch('/llm/save-schema/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        schema_name: schemaKey,
-                        schema_data: schemaData
-                    })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    alert('Schema saved successfully!');
-                    await loadSchemas(); // Reload schemas
-                    closeSchemaEditor();
-                } else {
-                    alert(`Failed to save schema: ${result.error}`);
-                }
-            } catch (error) {
-                alert(`Error saving schema: ${error.message}`);
-            }
-        }
-
-        // Delete current schema
-        async function deleteCurrentSchema() {
-            const schemaKey = editorSchemaKey;
-
-            if (!schemaKey) {
-                alert('No schema selected to delete');
-                return;
-            }
-
-            const builtInSchemas = ['radgraph', 'pet_ct_oncology'];
-            if (builtInSchemas.includes(schemaKey)) {
-                alert('Cannot delete built-in schemas');
-                return;
-            }
-
-            if (!confirm(`Are you sure you want to delete the schema "${allSchemas[schemaKey].name}"?`)) {
-                return;
-            }
-
-            try {
-                const response = await fetch('/llm/delete-schema/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ schema_name: schemaKey })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    alert('Schema deleted successfully!');
-                    await loadSchemas(); // Reload schemas
-                    closeSchemaEditor();
-                } else {
-                    alert(`Failed to delete schema: ${result.error}`);
-                }
-            } catch (error) {
-                alert(`Error deleting schema: ${error.message}`);
-            }
-        }
-
-        // Initialize schema editor modal event listeners (called after DOM is ready)
-        function initSchemaEditorListeners() {
-            const closeBtn = document.getElementById('close-schema-editor');
-            if (closeBtn) {
-                closeBtn.addEventListener('click', closeSchemaEditor);
             }
         }
 
@@ -7158,7 +6066,6 @@
 
             // Initialize modal event listeners
             initExtractionModalListeners();
-            initSchemaEditorListeners();
             initPromptEditorListeners();
             initPropertyModalListeners();
 
@@ -7184,92 +6091,6 @@
             console.log('Initialization complete');
         });
     </script>
-
-    <!-- Schema Editor Modal -->
-    <div id="schema-editor-modal" class="modal">
-        <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
-            <div class="modal-header">
-                <h3>Schema Editor</h3>
-                <button class="close-modal" id="close-schema-editor">&times;</button>
-            </div>
-            <div style="padding: 20px;">
-                <!-- Schema Selection -->
-                <div style="margin-bottom: 20px; padding: 15px; background: #f3f4f6; border-radius: 6px;">
-                    <div style="display: flex; gap: 10px; align-items: end;">
-                        <div style="flex: 1;">
-                            <label for="editor-schema-select" style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 5px;">Select Schema to Edit</label>
-                            <select id="editor-schema-select" onchange="loadSchemaIntoEditor()" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
-                                <option value="">Select a schema...</option>
-                            </select>
-                        </div>
-                        <button onclick="createNewSchema()" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; white-space: nowrap;">
-                            Create New Schema
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Schema Basic Info -->
-                <div style="margin-bottom: 20px;">
-                    <div class="form-group" style="margin-bottom: 15px;">
-                        <label for="schema-key-input" style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 5px;">Schema Key (lowercase_with_underscores)</label>
-                        <input type="text" id="schema-key-input" placeholder="e.g., my_custom_schema" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;" />
-                        <div style="font-size: 0.75em; color: #6b7280; margin-top: 3px;">Unique identifier for the schema</div>
-                    </div>
-                    <div class="form-group" style="margin-bottom: 15px;">
-                        <label for="schema-name-input" style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 5px;">Display Name</label>
-                        <input type="text" id="schema-name-input" placeholder="e.g., My Custom Schema" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;" />
-                    </div>
-                    <div class="form-group">
-                        <label for="schema-description-input" style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 5px;">Description</label>
-                        <textarea id="schema-description-input" placeholder="Brief description of this schema's purpose" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; min-height: 60px;"></textarea>
-                    </div>
-                </div>
-
-                <!-- Entity Types Section -->
-                <div style="margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <h4 style="margin: 0; font-size: 1em; color: #374151;">Entity Types</h4>
-                        <button onclick="addEntityType()" style="padding: 4px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">
-                            + Add Entity Type
-                        </button>
-                    </div>
-                    <div id="entity-types-list" style="display: flex; flex-direction: column; gap: 10px;">
-                        <div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">
-                            No entity types defined. Click "+ Add Entity Type" to add one.
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Relation Types Section -->
-                <div style="margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <h4 style="margin: 0; font-size: 1em; color: #374151;">Relation Types</h4>
-                        <button onclick="addRelationType()" style="padding: 4px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">
-                            + Add Relation Type
-                        </button>
-                    </div>
-                    <div id="relation-types-list" style="display: flex; flex-direction: column; gap: 10px;">
-                        <div style="color: #6b7280; font-size: 0.9em; text-align: center; padding: 20px;">
-                            No relation types defined. Click "+ Add Relation Type" to add one.
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Modal Actions -->
-                <div class="modal-actions" style="display: flex; gap: 10px; justify-content: flex-end; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-                    <button type="button" onclick="deleteCurrentSchema()" id="delete-schema-btn" style="margin-right: auto; padding: 8px 16px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                        Delete Schema
-                    </button>
-                    <button type="button" onclick="closeSchemaEditor()" style="padding: 8px 16px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                        Cancel
-                    </button>
-                    <button type="button" onclick="saveSchemaFromEditor()" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                        Save Schema
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Extraction Prompt Editor Modal -->
     <div id="extraction-prompt-editor-modal" class="modal">

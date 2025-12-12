@@ -23,15 +23,11 @@ urlpatterns = [
     path('delete-extraction-function/', views.delete_extraction_function, name='delete_extraction_function'),
     path('entities/', views.get_entities, name='get_entities'),
     path('save-entities/', views.save_entities, name='save_entities'),
-    path('extract-entities-relations/', views.extract_entities_relations, name='extract_entities_relations'),
-    # Ground Truth - Entities and Relations (new entity-first workflow)
-    path('add-ground-truth-entity/', views.add_ground_truth_entity, name='add_ground_truth_entity'),
-    path('delete-ground-truth-entity/', views.delete_ground_truth_entity, name='delete_ground_truth_entity'),
-    path('add-ground-truth-relation/', views.add_ground_truth_relation, name='add_ground_truth_relation'),
-    path('delete-ground-truth-relation/', views.delete_ground_truth_relation, name='delete_ground_truth_relation'),
-    # Legacy triplet endpoints (for backward compatibility)
-    path('add-ground-truth-triplet/', views.add_ground_truth_triplet, name='add_ground_truth_triplet'),
-    path('delete-ground-truth-triplet/', views.delete_ground_truth_triplet, name='delete_ground_truth_triplet'),
+    # Annotations (simplified observation-location pairs)
+    path('add-annotation/', views.add_annotation, name='add_annotation'),
+    path('delete-annotation/', views.delete_annotation, name='delete_annotation'),
+    # Simplified LLM extraction
+    path('extract-observations/', views.extract_observations, name='extract_observations'),
     # Extraction Methods
     path('create-extraction-method/', views.create_extraction_method, name='create_extraction_method'),
     path('run-extraction-method/', views.run_extraction_method, name='run_extraction_method'),
@@ -45,11 +41,6 @@ urlpatterns = [
     path('calculate-metrics/', views.calculate_metrics, name='calculate_metrics'),
     # Migration
     path('migrate-entity-ids/', views.migrate_entity_ids, name='migrate_entity_ids'),
-    path('schemas/', views.get_schemas, name='get_schemas'),
-    path('active-schema/', views.get_active_schema, name='get_active_schema'),
-    path('set-active-schema/', views.set_active_schema, name='set_active_schema'),
-    path('save-schema/', views.save_schema, name='save_schema'),
-    path('delete-schema/', views.delete_schema, name='delete_schema'),
     path('extraction-prompts/', views.get_extraction_prompts_view, name='get_extraction_prompts'),
     path('set-active-prompt/', views.set_active_prompt, name='set_active_prompt'),
     path('save-prompt/', views.save_prompt, name='save_prompt'),
@@ -60,6 +51,4 @@ urlpatterns = [
     path('save-entity-extraction-prompt/', views.save_entity_extraction_prompt, name='save_entity_extraction_prompt'),
     path('save-relation-extraction-prompt/', views.save_relation_extraction_prompt, name='save_relation_extraction_prompt'),
     path('execute-extraction/', views.execute_extraction_function, name='execute_extraction_function'),
-    # Clinical Findings View
-    path('clinical-findings/', views.get_clinical_findings, name='get_clinical_findings'),
 ]
