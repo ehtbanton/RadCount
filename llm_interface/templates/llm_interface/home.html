@@ -30,30 +30,33 @@
 
         .content {
             display: grid;
-            grid-template-columns: 1fr 0.5fr 1fr;
+            grid-template-columns: 1fr 1fr;
             gap: 0;
             flex: 1;
             overflow: hidden;
+            height: 100%;
         }
 
         .panel {
-            padding: 30px;
+            padding: 20px;
             overflow-y: auto;
+            height: 100%;
         }
 
         .panel-left {
             border-right: 2px solid #e5e7eb;
+            grid-column: 1;
+            grid-row: 1;
             background: #fafafa;
-        }
-
-        .panel-middle {
-            border-right: 2px solid #e5e7eb;
-            background: #ffffff;
-            padding: 30px 20px;
+            min-width: 0;
         }
 
         .panel-right {
-            background: white;
+            background: #f0f9ff;
+            grid-column: 2;
+            grid-row: 1;
+            border-left: 3px solid #3b82f6;
+            min-width: 0;
         }
 
         .panel-title {
@@ -177,75 +180,6 @@
             cursor: not-allowed;
         }
 
-        .generate-btn {
-            padding: 15px;
-            background: #3b82f6;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 1.1em;
-            font-weight: 400;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .generate-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4);
-        }
-
-        .generate-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .response-area {
-            margin-top: 25px;
-        }
-
-        .response-label {
-            font-weight: 400;
-            color: #374151;
-            margin-bottom: 10px;
-            font-size: 1.1em;
-        }
-
-        .response-box {
-            width: 100%;
-            min-height: 250px;
-            padding: 20px;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            font-size: 0.95em;
-            line-height: 1.6;
-            background: #f9fafb;
-            color: #1f2937;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-
-        .response-box.loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #9ca3af;
-        }
-
-        .spinner {
-            border: 3px solid #f3f4f6;
-            border-top: 3px solid #333333;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin-right: 15px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
         .error {
             color: #ef4444;
             background: #fee2e2;
@@ -278,105 +212,6 @@
             border-radius: 12px;
             font-size: 0.85em;
             font-weight: 400;
-        }
-
-        .token-info {
-            display: flex;
-            gap: 15px;
-            padding: 12px 20px;
-            background: white;
-            border-radius: 6px;
-            border: 1px solid #e5e7eb;
-            margin-bottom: 15px;
-            align-items: center;
-            font-size: 0.9em;
-        }
-
-        .token-label {
-            color: #6b7280;
-            font-weight: 400;
-        }
-
-        .token-count {
-            font-weight: 400;
-            color: #3b82f6;
-            font-size: 1.1em;
-        }
-
-        .token-breakdown {
-            color: #6b7280;
-            font-size: 0.85em;
-        }
-
-        .token-loading {
-            color: #9ca3af;
-            font-style: italic;
-        }
-
-        .token-error {
-            color: #ef4444;
-            font-size: 0.85em;
-        }
-
-        .context-files-grid {
-            display: grid;
-            gap: 8px;
-        }
-
-        .context-file {
-            background: white;
-            padding: 10px 15px;
-            border-radius: 6px;
-            border: 1px solid #e5e7eb;
-            transition: box-shadow 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .context-file:hover {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-
-        .file-left {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex: 1;
-        }
-
-        .file-type-badge {
-            padding: 3px 10px;
-            border-radius: 12px;
-            font-size: 0.7em;
-            font-weight: 400;
-            text-transform: uppercase;
-            flex-shrink: 0;
-        }
-
-        .file-type-badge.system {
-            background: #dbeafe;
-            color: #1e40af;
-        }
-
-        .file-type-badge.user {
-            background: #e0e7ff;
-            color: #5b21b6;
-        }
-
-        .file-type-badge.image {
-            background: #fce7f3;
-            color: #9f1239;
-        }
-
-        .file-name {
-            font-weight: 400;
-            color: #3b82f6;
-            font-size: 0.9em;
-            flex: 1;
-            text-decoration: none;
-            cursor: pointer;
-            transition: color 0.2s;
         }
 
         .file-name:hover {
@@ -628,72 +463,67 @@
 <body>
     <div class="container">
         <div class="content">
-            <!-- Left Panel: Large Data Management -->
+            <!-- Left Panel: LLM Controls & Report Viewer -->
             <div class="panel panel-left">
-                <h2 class="panel-title">CSV Data Store</h2>
-
-                <div class="context-section" style="background: white; border-left-color: #3b82f6;">
-                    <h2 style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="display: flex; align-items: center; gap: 10px;">
-                            Import and Manage
-                            {% if csv_metadata %}
-                            <span class="context-badge" id="large-file-count" style="background: #3b82f6;">
-                                {{ csv_metadata.row_count }} entries
-                            </span>
-                            {% endif %}
-                        </span>
-                        <label for="large-file-upload" class="upload-label large-file" style="margin: 0; padding: 8px 16px; font-size: 0.9em;">
-                            Import
-                        </label>
-                    </h2>
-
-                    <div style="display: none;">
-                        <input type="file" id="large-file-upload" accept=".csv" />
+                <!-- Compact LLM Controls -->
+                <div style="background: white; padding: 10px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
+                    <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; font-size: 0.85em;">
+                        <span class="status-dot {% if server_running %}online{% else %}offline{% endif %}" id="status-dot"></span>
+                        <span id="status-text" style="color: #6b7280;">{% if server_running %}Online{% else %}Offline{% endif %}</span>
                     </div>
-                    <div class="upload-status" id="large-upload-status" style="margin-top: 10px;"></div>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 8px; margin-bottom: 8px;">
+                        <select id="model-select" class="model-dropdown" style="padding: 6px 10px; font-size: 0.85em;">
+                            {% if available_models %}
+                                {% for model in available_models %}
+                                    <option value="{{ model.filename }}" {% if current_model == model.filename %}selected{% endif %}>{{ model.filename }} ({{ model.size_mb|floatformat:1 }} MB)</option>
+                                {% endfor %}
+                            {% else %}
+                                <option value="">No models found</option>
+                            {% endif %}
+                        </select>
+                        <input type="number" id="context-size" class="context-size-input" placeholder="Context" value="{% if current_context_size %}{{ current_context_size }}{% else %}4096{% endif %}" min="512" max="32768" step="512" style="padding: 6px 10px; font-size: 0.85em;">
+                    </div>
+                    <button id="server-toggle-btn" class="server-toggle-btn" style="width: 100%; padding: 8px;" {% if not available_models %}disabled{% endif %}>
+                        {% if server_running %}Stop{% else %}Start{% endif %}
+                    </button>
+                </div>
 
-                    {% if csv_metadata %}
-                        <!-- CSV Info Display -->
-                        <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-top: 15px; margin-bottom: 15px; border: 1px solid #e5e7eb;">
-                            <div style="font-weight: 400; color: #374151; margin-bottom: 8px;">
-                                <strong>File:</strong> {{ csv_metadata.filename }}
-                            </div>
-                            <div style="font-size: 0.85em; color: #6b7280;">
-                                {{ csv_metadata.size_mb|floatformat:2 }} MB • {{ csv_metadata.row_count }} entries
-                            </div>
-                            <button class="delete-btn" onclick="deleteLargeFile('{{ csv_metadata.filename }}')" style="margin-top: 10px;">
-                                Delete CSV
-                            </button>
+                <!-- CSV Upload Section -->
+                <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 20px;">
+                    <div style="font-weight: 500; color: #374151; margin-bottom: 12px;">
+                        {% if csv_metadata %}
+                            CSV File: {{ csv_metadata.filename }} ({{ csv_metadata.row_count }} entries)
+                        {% else %}
+                            Upload CSV File
+                        {% endif %}
+                    </div>
+                    <input type="file" id="large-file-upload" accept=".csv" style="display: none;" />
+                    <label for="large-file-upload" class="upload-label" style="display: inline-block; padding: 8px 16px; background: #3b82f6; color: white; border-radius: 6px; cursor: pointer; font-size: 0.9em;">
+                        {% if csv_metadata %}Replace CSV{% else %}Import CSV{% endif %}
+                    </label>
+                    <div id="large-upload-status" style="margin-top: 10px; font-size: 0.9em;"></div>
+                </div>
+
+                {% if csv_metadata %}
+                    <!-- CSV Entry Navigator -->
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 6px; border: 1px solid #e5e7eb;">
+                        <div style="font-weight: 400; color: #374151; margin-bottom: 12px; font-size: 1.05em;">
+                            Report Viewer
                         </div>
 
-                        <!-- CSV Entry Navigator -->
-                        <div style="background: #f8f9fa; padding: 20px; border-radius: 6px; border: 1px solid #e5e7eb;">
-                            <div style="font-weight: 400; color: #374151; margin-bottom: 12px; font-size: 1.05em;">
-                                CSV Entry Viewer
-                            </div>
-
-                            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-wrap: wrap;">
-                                <label for="entry-number" style="color: #6b7280; font-size: 0.9em;">Entry #:</label>
-                                <input
-                                    type="number"
-                                    id="entry-number"
-                                    min="1"
-                                    max="{{ csv_metadata.row_count }}"
-                                    value="1"
-                                    style="padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 0.9em; width: 100px;"
-                                    onkeypress="if(event.key === 'Enter') loadCsvEntry()"
-                                />
-                                <span style="color: #6b7280; font-size: 0.85em;">of {{ csv_metadata.row_count }}</span>
-                                <button
-                                    id="add-to-context-btn"
-                                    onclick="addEntryToContext()"
-                                    style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s;"
-                                    onmouseover="this.style.background='#059669'"
-                                    onmouseout="this.style.background='#10b981'"
-                                >
-                                    Add to generator context
-                                </button>
-                            </div>
+                        <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-wrap: wrap;">
+                            <label for="entry-number" style="color: #6b7280; font-size: 0.9em;">Entry #:</label>
+                            <input
+                                type="number"
+                                id="entry-number"
+                                min="1"
+                                max="{{ csv_metadata.row_count }}"
+                                value="1"
+                                style="padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 0.9em; width: 100px;"
+                                onkeypress="if(event.key === 'Enter') loadCsvEntry()"
+                            />
+                            <span style="color: #6b7280; font-size: 0.85em;">of {{ csv_metadata.row_count }}</span>
+                        </div>
 
                             <!-- View Toggle Buttons -->
                             <div style="display: flex; gap: 10px; margin-bottom: 15px;">
@@ -725,377 +555,141 @@
                             <pre id="csv-entry-display" style="display: none; background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 0.85em; line-height: 1.5; height: 400px; overflow-y: scroll; overflow-x: hidden; color: #1f2937; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;">No entry loaded</pre>
 
                             <div id="csv-entry-text-display" onmouseup="handleTextSelection()" style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 1.02em; line-height: 1.6; height: 400px; overflow-y: scroll; overflow-x: hidden; color: #1f2937; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word; user-select: none;">No entry loaded</div>
-                        </div>
-
-                        <!-- Annotation & Extraction Section -->
-                        <div style="background: #f8f9fa; padding: 20px; border-radius: 6px; border: 1px solid #e5e7eb; margin-top: 15px;">
-
-                            <!-- Tab Navigation -->
-                            <div id="method-tabs-container" style="display: flex; border-bottom: 2px solid #e5e7eb; margin-bottom: 15px; gap: 4px;">
-                                <button
-                                    id="ground-truth-tab-btn"
-                                    class="annotation-tab-btn"
-                                    onclick="switchAnnotationTab('ground-truth')"
-                                    style="padding: 10px 20px; background: none; border: none; border-bottom: 2px solid #3b82f6; color: #3b82f6; cursor: pointer; font-size: 0.95em; font-weight: 500; margin-bottom: -2px;"
-                                >
-                                    Ground Truth Annotations
-                                </button>
-                                <button
-                                    id="auto-extracted-tab-btn"
-                                    class="annotation-tab-btn"
-                                    onclick="switchAnnotationTab('auto-extracted')"
-                                    style="padding: 10px 20px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; cursor: pointer; font-size: 0.95em; font-weight: 400; margin-bottom: -2px;"
-                                >
-                                    A1
-                                </button>
-                                <button
-                                    id="auto-extracted-2-tab-btn"
-                                    class="annotation-tab-btn"
-                                    onclick="switchAnnotationTab('auto-extracted-2')"
-                                    style="padding: 10px 20px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; cursor: pointer; font-size: 0.95em; font-weight: 400; margin-bottom: -2px;"
-                                >
-                                    A2
-                                </button>
-                            </div>
-
-                            <!-- Ground Truth Tab Content -->
-                            <div id="ground-truth-tab" class="annotation-tab-content" style="display: block;">
-
-                                <!-- Add Annotation Form -->
-                                <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
-                                    <div style="font-weight: 500; color: #374151; margin-bottom: 12px; font-size: 0.95em;">
-                                        Add Observation-Location Annotation
-                                    </div>
-
-                                    <!-- Observation Row -->
-                                    <div style="display: flex; gap: 10px; align-items: end; flex-wrap: wrap; margin-bottom: 10px;">
-                                        <div style="flex: 2; min-width: 150px;">
-                                            <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Observation Text</label>
-                                            <input
-                                                id="annotation-obs-text"
-                                                type="text"
-                                                placeholder="e.g., tumor, opacity"
-                                                style="width: 100%; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9em;"
-                                            />
-                                        </div>
-                                        <div style="flex: 0 0 70px;">
-                                            <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Start</label>
-                                            <input
-                                                id="annotation-obs-start"
-                                                type="number"
-                                                min="0"
-                                                placeholder="0"
-                                                style="width: 100%; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em;"
-                                            />
-                                        </div>
-                                        <div style="flex: 0 0 70px;">
-                                            <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">End</label>
-                                            <input
-                                                id="annotation-obs-end"
-                                                type="number"
-                                                min="0"
-                                                placeholder="0"
-                                                style="width: 100%; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em;"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <!-- Anatomical Location Row -->
-                                    <div style="display: flex; gap: 10px; align-items: end; flex-wrap: wrap; margin-bottom: 10px;">
-                                        <div style="flex: 2; min-width: 150px;">
-                                            <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Anatomical Location (optional)</label>
-                                            <input
-                                                id="annotation-loc-text"
-                                                type="text"
-                                                placeholder="e.g., lung, liver"
-                                                style="width: 100%; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9em;"
-                                            />
-                                        </div>
-                                        <div style="flex: 0 0 70px;">
-                                            <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Start</label>
-                                            <input
-                                                id="annotation-loc-start"
-                                                type="number"
-                                                min="0"
-                                                placeholder="0"
-                                                style="width: 100%; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em;"
-                                            />
-                                        </div>
-                                        <div style="flex: 0 0 70px;">
-                                            <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">End</label>
-                                            <input
-                                                id="annotation-loc-end"
-                                                type="number"
-                                                min="0"
-                                                placeholder="0"
-                                                style="width: 100%; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em;"
-                                            />
-                                        </div>
-                                        <button
-                                            onclick="addAnnotation()"
-                                            style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: background 0.2s;"
-                                            onmouseover="this.style.background='#059669'"
-                                            onmouseout="this.style.background='#10b981'"
-                                        >
-                                            Add Annotation
-                                        </button>
-                                    </div>
-                                    <div style="font-size: 0.75em; color: #9ca3af;">
-                                        Word indices are 0-based. Select text in the report to auto-fill indices.
-                                    </div>
-                                </div>
-
-                                <!-- Annotations Display -->
-                                <div>
-                                    <div style="font-weight: 500; color: #374151; margin-bottom: 8px; font-size: 0.9em;">
-                                        Annotations (<span id="annotation-count">0</span>)
-                                    </div>
-                                    <div id="annotations-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">
-                                        <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">No annotations yet.</div>
-                                    </div>
-                                </div>
-
-                            </div>
-
-                            <!-- Auto-Extracted Tab Content -->
-                            <div id="auto-extracted-tab" class="annotation-tab-content" style="display: none;">
-                                <!-- Single extraction button -->
-                                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                                    <button
-                                        id="extract-observations-btn"
-                                        onclick="runObservationExtraction()"
-                                        style="flex: 1; padding: 12px 20px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.95em; font-weight: 500; transition: background 0.2s;"
-                                        onmouseover="this.style.background='#059669'"
-                                        onmouseout="this.style.background='#10b981'"
-                                    >
-                                        Extract Observations
-                                    </button>
-                                </div>
-
-                                <!-- Extracted Annotations Display -->
-                                <div>
-                                    <div style="font-weight: 500; color: #374151; margin-bottom: 8px; font-size: 0.9em;">
-                                        Auto-Extracted Annotations (<span id="auto-annotation-count">0</span>)
-                                    </div>
-                                    <div id="auto-annotations-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">
-                                        <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">No annotations extracted yet. Click "Extract Observations" to start.</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- A2 Tab Content (One-shot extraction) -->
-                            <div id="auto-extracted-2-tab" class="annotation-tab-content" style="display: none;">
-                                <!-- One-shot extraction button -->
-                                <div style="margin-bottom: 15px;">
-                                    <button
-                                        id="extract-oneshot-btn"
-                                        onclick="runOneShotExtraction()"
-                                        style="width: 100%; padding: 12px 16px; background: #8b5cf6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.95em; font-weight: 500; transition: background 0.2s;"
-                                        onmouseover="this.style.background='#7c3aed'"
-                                        onmouseout="this.style.background='#8b5cf6'"
-                                    >
-                                        Extract Entities & Relations (One-Shot)
-                                    </button>
-                                </div>
-
-                                <!-- Extracted Entities Display -->
-                                <div style="margin-bottom: 15px;">
-                                    <div style="font-weight: 500; color: #374151; margin-bottom: 8px; font-size: 0.9em;">
-                                        Extracted Entities (<span id="auto-2-entity-count">0</span>)
-                                    </div>
-                                    <div id="auto-2-entities-container" style="display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; background: #f9fafb; border-radius: 6px; min-height: 40px; max-height: 150px; overflow-y: auto;">
-                                        <div style="color: #6b7280; font-size: 0.85em;">No entities extracted yet. Click "Extract Entities & Relations" to start.</div>
-                                    </div>
-                                </div>
-
-                                <!-- Extracted Relations Display -->
-                                <div style="margin-bottom: 15px;">
-                                    <div style="font-weight: 500; color: #374151; margin-bottom: 8px; font-size: 0.9em;">
-                                        Extracted Relations (<span id="auto-2-relation-count">0</span>)
-                                    </div>
-                                    <div id="auto-2-relations-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto;">
-                                        <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">No relations extracted yet. Click "Extract Entities & Relations" to start.</div>
-                                    </div>
-                                </div>
-
-                                <!-- Metrics Display -->
-                                <div id="auto-extracted-2-metrics-container" style="display: none;">
-                                    <!-- Metrics will be populated here by JavaScript -->
-                                </div>
-                            </div>
-
-
-                        </div>
-                    {% else %}
-                        <div class="no-context">
-                            No CSV file found. Import a CSV file using the button above.
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Middle Panel: Extraction Functions -->
-            <div class="panel panel-middle">
-                <h2 class="panel-title">Extraction Functions</h2>
-
-                <div class="context-section" style="background: white; border-left-color: #10b981;">
-                    <h2 style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="display: flex; align-items: center; gap: 10px;">
-                            Functions
-                            <span class="context-badge" id="function-count" style="background: #10b981;">
-                                0
-                            </span>
-                        </span>
-                        <button
-                            onclick="openExtractionModal('new')"
-                            class="create-btn"
-                            style="margin: 0; padding: 8px 16px; font-size: 0.9em; background: #10b981;"
-                            onmouseover="this.style.background='#059669'"
-                            onmouseout="this.style.background='#10b981'"
-                        >
-                            + Add
-                        </button>
-                    </h2>
-
-                    {% if csv_metadata %}
-                        <!-- Extraction Functions Panel -->
-                        <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; margin-top: 15px;">
-                            <div style="font-weight: 400; color: #374151; margin-bottom: 12px; font-size: 0.95em;">
-                                Click a function to extract data from the CSV file. Right-click to edit.
-                            </div>
-                            <div id="extraction-functions-container" style="display: flex; gap: 8px; flex-wrap: wrap; min-height: 60px;">
-                                <!-- Function buttons will be populated by JavaScript -->
-                            </div>
-                        </div>
-
-                        <!-- Debug Terminal -->
-                        <div style="background: #1f2937; padding: 15px; border-radius: 6px; border: 1px solid #374151; margin-top: 15px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                <span style="font-weight: 400; color: #9ca3af; font-size: 0.9em; font-family: 'Courier New', monospace;">Debug Output</span>
-                                <button
-                                    onclick="clearDebugTerminal()"
-                                    style="padding: 4px 10px; background: #374151; color: #9ca3af; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75em; font-family: 'Courier New', monospace;"
-                                    onmouseover="this.style.background='#4b5563'"
-                                    onmouseout="this.style.background='#374151'"
-                                >
-                                    Clear
-                                </button>
-                            </div>
-                            <pre id="debug-terminal" style="font-family: 'Courier New', monospace; font-size: 0.85em; color: #10b981; background: #111827; padding: 12px; border-radius: 4px; min-height: 200px; max-height: 400px; overflow-y: auto; margin: 0; white-space: pre-wrap; word-wrap: break-word;"></pre>
-                        </div>
-                    {% else %}
-                        <div class="no-context" style="margin-top: 15px;">
-                            No CSV file loaded. Import a CSV file first.
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Right Panel: LLM Manager -->
-            <div class="panel panel-right">
-                <h2 class="panel-title">LLM Manager</h2>
-
-                <div class="status-bar">
-                <div class="status-indicator">
-                    <span class="status-dot {% if server_running %}online{% else %}offline{% endif %}" id="status-dot"></span>
-                    <span id="status-text"><strong>Server Status:</strong> {% if server_running %}Online{% else %}Offline{% endif %}</span>
-                </div>
-                <div class="model-info">
-                    <label for="model-select"><strong>Model:</strong></label>
-                    <select id="model-select" class="model-dropdown">
-                        {% if available_models %}
-                            {% for model in available_models %}
-                                <option value="{{ model.filename }}" {% if current_model == model.filename %}selected{% endif %}>{{ model.filename }} ({{ model.size_mb|floatformat:1 }} MB)</option>
-                            {% endfor %}
-                        {% else %}
-                            <option value="">No models found</option>
-                        {% endif %}
-                    </select>
-                    <label for="context-size"><strong>Context Size:</strong></label>
-                    <input type="number" id="context-size" class="context-size-input" value="{% if current_context_size %}{{ current_context_size }}{% else %}4096{% endif %}" min="512" max="32768" step="512">
-                </div>
-            </div>
-
-            <div class="control-panel">
-                <button id="server-toggle-btn" class="server-toggle-btn" {% if not available_models %}disabled{% endif %}>
-                    {% if server_running %}Stop LLM Server{% else %}Start LLM Server{% endif %}
-                </button>
-                <button id="generate-btn" class="generate-btn" {% if not server_running %}disabled{% endif %}>
-                    Generate Response
-                </button>
-            </div>
-
-            <div class="context-section">
-                <h2>
-                    Context Files
-                    <span class="context-badge" id="file-count">
-                        {{ total_context_files }} file(s)
-                    </span>
-                </h2>
-
-                <div class="token-info" id="token-info">
-                    <span class="token-label">Total Tokens:</span>
-                    <span class="token-count" id="token-count">-</span>
-                    <span class="token-breakdown" id="token-breakdown"></span>
-                </div>
-
-                <div class="upload-section">
-                    <input type="file" id="file-upload" accept=".txt,.json,.jpg,.jpeg,.png" />
-                    <label for="file-upload" class="upload-label">
-                        Import Context File
-                    </label>
-                    <button class="create-btn" id="create-context-btn">
-                        Create Context File
-                    </button>
-                    <div class="upload-status" id="upload-status"></div>
-                </div>
-
-                {% if context_files.system_files or context_files.user_files or context_files.image_files %}
-                    <div class="context-files-grid">
-                        {% for file in context_files.system_files %}
-                            <div class="context-file">
-                                <div class="file-left">
-                                    <span class="file-type-badge system">System</span>
-                                    <a href="?edit={{ file.filename }}" class="file-name">{{ file.filename }}</a>
-                                </div>
-                                <span class="file-size">{{ file.size }} bytes</span>
-                                <button class="delete-btn" onclick="deleteFile('{{ file.filename }}')">Delete</button>
-                            </div>
-                        {% endfor %}
-
-                        {% for file in context_files.user_files %}
-                            <div class="context-file">
-                                <div class="file-left">
-                                    <span class="file-type-badge user">User</span>
-                                    <a href="?edit={{ file.filename }}" class="file-name">{{ file.filename }}</a>
-                                </div>
-                                <span class="file-size">{{ file.size }} bytes</span>
-                                <button class="delete-btn" onclick="deleteFile('{{ file.filename }}')">Delete</button>
-                            </div>
-                        {% endfor %}
-
-                        {% for file in context_files.image_files %}
-                            <div class="context-file">
-                                <div class="file-left">
-                                    <span class="file-type-badge image">Image</span>
-                                    <span class="file-name">{{ file.filename }}</span>
-                                </div>
-                                <span class="file-size">{{ file.size }} bytes</span>
-                                <button class="delete-btn" onclick="deleteFile('{{ file.filename }}')">Delete</button>
-                            </div>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <div class="no-context">
-                        No context files found. Import files using the button above.
                     </div>
                 {% endif %}
             </div>
 
-            <div class="response-area">
-                <div class="response-label">Response:</div>
-                <div id="response-box" class="response-box"></div>
-            </div>
+            <!-- Right Panel: Annotations & Metrics -->
+            <div class="panel panel-right">
+                <h2 class="panel-title">Annotations</h2>
+
+                <!-- Tab Navigation -->
+                <div id="method-tabs-container" style="display: flex; border-bottom: 2px solid #e5e7eb; margin-bottom: 15px; gap: 4px;">
+                    <button
+                        id="ground-truth-tab-btn"
+                        class="annotation-tab-btn"
+                        onclick="switchAnnotationTab('ground-truth')"
+                        style="padding: 10px 20px; background: none; border: none; border-bottom: 2px solid #3b82f6; color: #3b82f6; cursor: pointer; font-size: 0.95em; font-weight: 500; margin-bottom: -2px;"
+                    >
+                        Ground Truth Annotations
+                    </button>
+                    <button
+                        id="auto-extracted-tab-btn"
+                        class="annotation-tab-btn"
+                        onclick="switchAnnotationTab('auto-extracted')"
+                        style="padding: 10px 20px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; cursor: pointer; font-size: 0.95em; font-weight: 400; margin-bottom: -2px;"
+                    >
+                        A1
+                    </button>
+                    <button
+                        id="auto-extracted-2-tab-btn"
+                        class="annotation-tab-btn"
+                        onclick="switchAnnotationTab('auto-extracted-2')"
+                        style="padding: 10px 20px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; cursor: pointer; font-size: 0.95em; font-weight: 400; margin-bottom: -2px;"
+                    >
+                        A2
+                    </button>
+                </div>
+
+                <!-- Ground Truth Tab Content -->
+                <div id="ground-truth-tab" class="annotation-tab-content" style="display: block;">
+                    <!-- Add Annotation Form -->
+                    <div style="background: #f9fafb; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+                        <div style="font-weight: 500; color: #374151; margin-bottom: 12px; font-size: 0.9em;">Add Annotation</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                            <div>
+                                <label style="display: block; font-size: 0.8em; color: #6b7280; margin-bottom: 4px;">Observation Tokens (start-end)</label>
+                                <input type="text" id="obs-tokens-input" placeholder="e.g., 5-8" style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 0.9em;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.8em; color: #6b7280; margin-bottom: 4px;">Location Tokens (start-end)</label>
+                                <input type="text" id="loc-tokens-input" placeholder="e.g., 12-15" style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 0.9em;">
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button onclick="addAnnotationFromInputs()" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Add Annotation</button>
+                            <button onclick="addAnnotationFromSelection()" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Add from Selection</button>
+                        </div>
+                        <div style="font-size: 0.75em; color: #6b7280; margin-top: 8px;">Tip: Select words in the report view, then click "Add from Selection" to use selected range.</div>
+                    </div>
+
+                    <!-- Annotations Display -->
+                    <div>
+                        <div style="font-weight: 500; color: #374151; margin-bottom: 8px; font-size: 0.9em;">
+                            Annotations (<span id="annotation-count">0</span>)
+                        </div>
+                        <div id="annotations-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">
+                            <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">No annotations yet.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Auto-Extracted Tab Content -->
+                <div id="auto-extracted-tab" class="annotation-tab-content" style="display: none;">
+                    <!-- Single extraction button -->
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <button
+                            id="extract-observations-btn"
+                            onclick="runObservationExtraction()"
+                            style="flex: 1; padding: 12px 20px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.95em; font-weight: 500; transition: background 0.2s;"
+                            onmouseover="this.style.background='#059669'"
+                            onmouseout="this.style.background='#10b981'"
+                        >
+                            Extract Observations
+                        </button>
+                    </div>
+
+                    <!-- Extracted Annotations Display -->
+                    <div>
+                        <div style="font-weight: 500; color: #374151; margin-bottom: 8px; font-size: 0.9em;">
+                            Auto-Extracted Annotations (<span id="auto-annotation-count">0</span>)
+                        </div>
+                        <div id="auto-annotations-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">
+                            <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">No annotations extracted yet. Click "Extract Observations" to start.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- A2 Tab Content (One-shot extraction) -->
+                <div id="auto-extracted-2-tab" class="annotation-tab-content" style="display: none;">
+                    <!-- One-shot extraction button -->
+                    <div style="margin-bottom: 15px;">
+                        <button
+                            id="extract-oneshot-btn"
+                            onclick="runOneShotExtraction()"
+                            style="width: 100%; padding: 12px 16px; background: #8b5cf6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.95em; font-weight: 500; transition: background 0.2s;"
+                            onmouseover="this.style.background='#7c3aed'"
+                            onmouseout="this.style.background='#8b5cf6'"
+                        >
+                            Extract Entities & Relations (One-Shot)
+                        </button>
+                    </div>
+
+                    <!-- Extracted Entities Display -->
+                    <div style="margin-bottom: 15px;">
+                        <div style="font-weight: 500; color: #374151; margin-bottom: 8px; font-size: 0.9em;">
+                            Extracted Entities (<span id="auto-2-entity-count">0</span>)
+                        </div>
+                        <div id="auto-2-entities-container" style="display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; background: #f9fafb; border-radius: 6px; min-height: 40px; max-height: 150px; overflow-y: auto;">
+                            <div style="color: #6b7280; font-size: 0.85em;">No entities extracted yet. Click "Extract Entities & Relations" to start.</div>
+                        </div>
+                    </div>
+
+                    <!-- Extracted Relations Display -->
+                    <div style="margin-bottom: 15px;">
+                        <div style="font-weight: 500; color: #374151; margin-bottom: 8px; font-size: 0.9em;">
+                            Extracted Relations (<span id="auto-2-relation-count">0</span>)
+                        </div>
+                        <div id="auto-2-relations-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto;">
+                            <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">No relations extracted yet. Click "Extract Entities & Relations" to start.</div>
+                        </div>
+                    </div>
+
+                    <!-- Metrics Display -->
+                    <div id="auto-extracted-2-metrics-container" style="display: none;">
+                        <!-- Metrics will be populated here by JavaScript -->
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1119,43 +713,6 @@
                 <div class="modal-actions">
                     <button type="button" class="btn-secondary" id="cancel-create">Cancel</button>
                     <button type="submit" class="btn-primary" id="submit-context-btn">Save</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Extraction Function Editor Modal -->
-    <div id="extraction-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="extraction-modal-title">Edit Extraction Function</h3>
-                <button class="close-modal" id="close-extraction-modal">&times;</button>
-            </div>
-            <form id="extraction-form">
-                <input type="hidden" id="extraction-function-id" />
-                <div class="form-group">
-                    <label for="extraction-name">Function Name</label>
-                    <input type="text" id="extraction-name" placeholder="e.g., Lung Entries Filter" required />
-                </div>
-                <div class="form-group">
-                    <label for="extraction-description">Description (optional)</label>
-                    <input type="text" id="extraction-description" placeholder="Brief description of what this function does" />
-                </div>
-                <div class="form-group">
-                    <label for="extraction-code">Python Code</label>
-                    <textarea id="extraction-code" placeholder="# Your extraction code here&#10;# Available: all_entries (list of dicts)&#10;# Must set: result variable&#10;&#10;result = []&#10;for entry in all_entries:&#10;    # Your filtering logic here&#10;    result.append(entry)" style="font-family: 'Courier New', monospace; min-height: 300px;" required></textarea>
-                    <div style="margin-top: 8px; padding: 10px; background: #f3f4f6; border-radius: 4px; border-left: 3px solid #6b7280;">
-                        <code style="font-family: 'Courier New', monospace; color: #374151;">return result</code>
-                    </div>
-                    <div style="font-size: 0.85em; color: #6b7280; margin-top: 5px;">
-                        Available variables: <code>all_entries</code> (list of dicts), <code>json</code>, <code>len</code>, <code>str</code>, etc.<br>
-                        Your code must set a <code>result</code> variable with the extraction output.
-                    </div>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn-secondary" id="delete-extraction-btn" style="margin-right: auto;">Delete</button>
-                    <button type="button" class="btn-secondary" id="cancel-extraction">Cancel</button>
-                    <button type="submit" class="btn-primary" id="submit-extraction-btn">Save</button>
                 </div>
             </form>
         </div>
@@ -1211,19 +768,17 @@
 
     <script>
         const serverToggleBtn = document.getElementById('server-toggle-btn');
-        const generateBtn = document.getElementById('generate-btn');
         const modelSelect = document.getElementById('model-select');
         const contextSizeInput = document.getElementById('context-size');
-        const responseBox = document.getElementById('response-box');
         const statusDot = document.getElementById('status-dot');
         const statusText = document.getElementById('status-text');
 
         let statusCheckInterval = null;
-        let tokenCheckInterval = null;
         let isLoading = false;
         let isStopping = false;
         let currentServerState = {{ server_running|lower }};
         let originalFilename = null; // Track original filename when editing
+        let entitiesLoaded = false; // Flag to track if entities have been loaded
 
         // Auto-open modal if editing
         {% if edit_filename %}
@@ -1234,60 +789,15 @@
         });
         {% endif %}
 
-        // Token count elements
-        const tokenCountEl = document.getElementById('token-count');
-        const tokenBreakdownEl = document.getElementById('token-breakdown');
-
-        async function updateTokenCount() {
-            try {
-                const response = await fetch('/llm/token-count/', {
-                    method: 'GET',
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-
-                    if (data.success) {
-                        const counts = data.counts;
-                        tokenCountEl.textContent = counts.total_tokens.toLocaleString();
-                        tokenCountEl.className = 'token-count';
-
-                        if (counts.system_tokens > 0 || counts.user_tokens > 0) {
-                            tokenBreakdownEl.textContent = `(System: ${counts.system_tokens.toLocaleString()}, User: ${counts.user_tokens.toLocaleString()})`;
-                        } else {
-                            tokenBreakdownEl.textContent = '';
-                        }
-                    } else {
-                        tokenCountEl.textContent = '-';
-                        tokenCountEl.className = 'token-count token-error';
-                        tokenBreakdownEl.textContent = '';
-                    }
-                } else if (response.status === 503) {
-                    tokenCountEl.textContent = 'Server offline';
-                    tokenCountEl.className = 'token-count token-loading';
-                    tokenBreakdownEl.textContent = '';
-                } else {
-                    tokenCountEl.textContent = 'Error';
-                    tokenCountEl.className = 'token-count token-error';
-                    tokenBreakdownEl.textContent = '';
-                }
-            } catch (error) {
-                tokenCountEl.textContent = 'N/A';
-                tokenCountEl.className = 'token-count token-loading';
-                tokenBreakdownEl.textContent = '';
-            }
-        }
-
         function updateServerStatus(isRunning, currentModel = null, currentContextSize = null) {
             currentServerState = isRunning;
 
             if (isRunning) {
                 statusDot.className = 'status-dot online';
-                statusText.innerHTML = '<strong>Server Status:</strong> Online';
-                serverToggleBtn.textContent = 'Stop LLM Server';
+                statusText.textContent = 'Online';
+                serverToggleBtn.textContent = 'Stop';
                 serverToggleBtn.className = 'server-toggle-btn stop';
                 serverToggleBtn.disabled = false;
-                generateBtn.disabled = false;
 
                 // Update dropdown if we have current model info
                 if (currentModel) {
@@ -1298,37 +808,21 @@
                 if (currentContextSize) {
                     contextSizeInput.value = currentContextSize;
                 }
-
-                // Start token count updates when server is online
-                if (!tokenCheckInterval) {
-                    updateTokenCount(); // Initial update
-                    tokenCheckInterval = setInterval(updateTokenCount, 5000); // Update every 5 seconds
-                }
             } else {
                 statusDot.className = 'status-dot offline';
-                statusText.innerHTML = '<strong>Server Status:</strong> Offline';
-                serverToggleBtn.textContent = 'Start LLM Server';
+                statusText.textContent = 'Offline';
+                serverToggleBtn.textContent = 'Start';
                 serverToggleBtn.className = 'server-toggle-btn';
                 serverToggleBtn.disabled = false;
-                generateBtn.disabled = true;
-
-                // Stop token count updates when server is offline
-                if (tokenCheckInterval) {
-                    clearInterval(tokenCheckInterval);
-                    tokenCheckInterval = null;
-                }
-                tokenCountEl.textContent = 'Server offline';
-                tokenCountEl.className = 'token-count token-loading';
-                tokenBreakdownEl.textContent = '';
             }
 
             // If loading, override the button state
             if (isStopping) {
-                serverToggleBtn.textContent = 'Stopping server...';
+                serverToggleBtn.textContent = 'Stopping...';
                 serverToggleBtn.className = 'server-toggle-btn loading';
                 serverToggleBtn.disabled = true;
             } else if (isLoading) {
-                serverToggleBtn.textContent = 'Loading server...';
+                serverToggleBtn.textContent = 'Starting...';
                 serverToggleBtn.className = 'server-toggle-btn loading';
                 serverToggleBtn.disabled = true;
             }
@@ -1377,10 +871,10 @@
 
                     if (!data.success) {
                         // Only show errors
-                        responseBox.innerHTML = `<div class="error">${data.error}</div>`;
+                        console.error('Stop server error:', data.error);
                     }
                 } catch (error) {
-                    responseBox.innerHTML = `<div class="error">Failed to stop server: ${error.message}</div>`;
+                    console.error('Failed to stop server:', error.message);
                 } finally {
                     isStopping = false;
                 }
@@ -1433,136 +927,15 @@
                             }
                         }, 1000);
                     } else {
-                        responseBox.innerHTML = `<div class="error">${data.error}</div>`;
+                        console.error('Start server error:', data.error);
                         isLoading = false;
                     }
                 } catch (error) {
-                    responseBox.innerHTML = `<div class="error">Failed to start server: ${error.message}</div>`;
+                    console.error('Failed to start server:', error.message);
                     isLoading = false;
                 }
             }
         });
-
-        generateBtn.addEventListener('click', async () => {
-            // Disable button during generation
-            generateBtn.disabled = true;
-            generateBtn.textContent = 'Generating...';
-
-            try {
-                const response = await fetch('/llm/generate/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        temperature: 0.7,
-                        max_tokens: 512
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    responseBox.className = 'response-box';
-                    responseBox.textContent = data.response;
-                } else {
-                    responseBox.className = 'response-box';
-                    responseBox.innerHTML = `<div class="error">${data.error}</div>`;
-                }
-            } catch (error) {
-                responseBox.className = 'response-box';
-                responseBox.innerHTML = `<div class="error">Failed to connect to server: ${error.message}</div>`;
-            } finally {
-                generateBtn.disabled = false;
-                generateBtn.textContent = 'Generate Response';
-            }
-        });
-
-        // File upload handler
-        const fileUpload = document.getElementById('file-upload');
-        const uploadStatus = document.getElementById('upload-status');
-        const uploadLabel = document.querySelector('.upload-label');
-
-        fileUpload.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            // Disable upload button
-            uploadLabel.classList.add('uploading');
-            uploadLabel.textContent = 'Importing...';
-
-            uploadStatus.textContent = `Importing ${file.name}...`;
-            uploadStatus.style.color = '#6b7280';
-
-            const formData = new FormData();
-            formData.append('file', file);
-
-            const startTime = Date.now();
-
-            try {
-                const response = await fetch('/llm/upload/', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const uploadTime = ((Date.now() - startTime) / 1000).toFixed(2);
-                const data = await response.json();
-
-                if (data.success) {
-                    uploadStatus.textContent = `✓ ${data.message} (${uploadTime}s)`;
-                    uploadStatus.style.color = '#10b981';
-
-                    // Reload immediately
-                    location.reload();
-                } else {
-                    uploadStatus.textContent = `✗ ${data.error}`;
-                    uploadStatus.style.color = '#ef4444';
-                    uploadLabel.classList.remove('uploading');
-                    uploadLabel.textContent = 'Import Context File';
-                }
-            } catch (error) {
-                uploadStatus.textContent = `✗ Import failed: ${error.message}`;
-                uploadStatus.style.color = '#ef4444';
-                uploadLabel.classList.remove('uploading');
-                uploadLabel.textContent = 'Import Context File';
-            }
-
-            // Clear the file input
-            fileUpload.value = '';
-        });
-
-        // File deletion function
-        async function deleteFile(filename) {
-            if (!confirm(`Are you sure you want to delete ${filename}?`)) {
-                return;
-            }
-
-            try {
-                const response = await fetch('/llm/delete/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        filename: filename
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    // Reload the page to show updated context files
-                    location.reload();
-                } else {
-                    alert(`Failed to delete file: ${data.error}`);
-                }
-            } catch (error) {
-                alert(`Failed to delete file: ${error.message}`);
-            }
-        }
-
-        // Make deleteFile available globally for onclick handlers
-        window.deleteFile = deleteFile;
 
         // Large file upload handler
         const largeFileUpload = document.getElementById('large-file-upload');
@@ -2118,104 +1491,6 @@
         // Make addEntryToContext available globally
         window.addEntryToContext = addEntryToContext;
 
-        // Create context file modal handlers
-        const createContextBtn = document.getElementById('create-context-btn');
-        const createContextModal = document.getElementById('create-context-modal');
-        const closeModalBtn = document.getElementById('close-modal');
-        const cancelCreateBtn = document.getElementById('cancel-create');
-        const createContextForm = document.getElementById('create-context-form');
-        const contextFilenameInput = document.getElementById('context-filename');
-        const contextContentInput = document.getElementById('context-content');
-
-        // Open modal
-        createContextBtn.addEventListener('click', () => {
-            // Reset for creating new file
-            originalFilename = null;
-            document.getElementById('modal-title').textContent = 'Create Context File';
-            createContextForm.reset();
-            createContextModal.classList.add('active');
-            contextFilenameInput.focus();
-        });
-
-        // Close modal
-        function closeModal() {
-            createContextModal.classList.remove('active');
-            createContextForm.reset();
-            originalFilename = null;
-            // Reset URL to remove edit parameter
-            if (window.location.search.includes('edit=')) {
-                window.history.replaceState({}, document.title, window.location.pathname);
-            }
-        }
-
-        closeModalBtn.addEventListener('click', closeModal);
-        cancelCreateBtn.addEventListener('click', closeModal);
-
-        // Close modal when clicking outside
-        createContextModal.addEventListener('click', (e) => {
-            if (e.target === createContextModal) {
-                closeModal();
-            }
-        });
-
-        // Handle form submission
-        createContextForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const filename = contextFilenameInput.value.trim();
-            const content = contextContentInput.value;
-
-            // Validate filename
-            if (!filename.endsWith('.txt') && !filename.endsWith('.json')) {
-                alert('Filename must end with .txt or .json');
-                return;
-            }
-
-            // Validate JSON content if filename ends with .json
-            if (filename.endsWith('.json')) {
-                try {
-                    JSON.parse(content);
-                } catch (e) {
-                    alert('Invalid JSON content. Please check your syntax.');
-                    return;
-                }
-            }
-
-            try {
-                const submitBtn = createContextForm.querySelector('button[type="submit"]');
-                submitBtn.disabled = true;
-                submitBtn.textContent = 'Saving...';
-
-                const response = await fetch('/llm/save/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        filename: filename,
-                        content: content
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    // Close modal and reload page
-                    closeModal();
-                    location.reload();
-                } else {
-                    alert(`Failed to save file: ${data.error}`);
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Save';
-                }
-            } catch (error) {
-                alert(`Failed to save file: ${error.message}`);
-                const submitBtn = createContextForm.querySelector('button[type="submit"]');
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Save';
-            }
-        });
-
         // Model switching - restart server with new model
         modelSelect.addEventListener('change', async () => {
             // Only restart if server is currently running
@@ -2241,7 +1516,7 @@
                 const stopData = await stopResponse.json();
 
                 if (!stopData.success) {
-                    responseBox.innerHTML = `<div class="error">Failed to stop server: ${stopData.error}</div>`;
+                    console.error('Failed to stop server:', stopData.error);
                     isStopping = false;
                     return;
                 }
@@ -2292,11 +1567,11 @@
                         }
                     }, 1000);
                 } else {
-                    responseBox.innerHTML = `<div class="error">Failed to start server: ${startData.error}</div>`;
+                    console.error('Failed to start server:', startData.error);
                     isLoading = false;
                 }
             } catch (error) {
-                responseBox.innerHTML = `<div class="error">Failed to restart server: ${error.message}</div>`;
+                console.error('Failed to restart server:', error.message);
                 isStopping = false;
                 isLoading = false;
             }
@@ -2574,7 +1849,6 @@
 
         // Global entities data storage
         let entitiesData = []; // Array of { entry: N, triplets: [{entity1_text, entity1_type, relation_type, entity2_text, entity2_type}, ...] }
-        let entitiesLoaded = false; // Flag to track if entities have been loaded
 
         // Legacy compatibility - stub variables and functions for old property code
         let propertiesData = []; // Empty array for legacy code compatibility
@@ -3165,6 +2439,87 @@
             } catch (error) {
                 alert('Error adding annotation: ' + error.message);
             }
+        }
+
+        // Add annotation from simplified token inputs
+        async function addAnnotationFromInputs() {
+            if (!currentEntry) {
+                alert('Please select a CSV entry first');
+                return;
+            }
+
+            const obsTokens = document.getElementById('obs-tokens-input').value.trim();
+            const locTokens = document.getElementById('loc-tokens-input').value.trim();
+
+            if (!obsTokens) {
+                alert('Please enter observation tokens (e.g., 5-8)');
+                return;
+            }
+
+            // Parse observation tokens
+            const obsParts = obsTokens.split('-').map(s => parseInt(s.trim(), 10));
+            const obsStart = obsParts[0] || 0;
+            const obsEnd = obsParts.length > 1 ? obsParts[1] : obsStart;
+
+            // Get observation text from the report
+            const words = currentReportText ? currentReportText.split(/\s+/) : [];
+            const obsText = words.slice(obsStart, obsEnd + 1).join(' ');
+
+            // Build annotation object
+            const annotation = {
+                observation: [obsText, [obsStart, obsEnd]]
+            };
+
+            // Add anatomical location if provided
+            if (locTokens) {
+                const locParts = locTokens.split('-').map(s => parseInt(s.trim(), 10));
+                const locStart = locParts[0] || 0;
+                const locEnd = locParts.length > 1 ? locParts[1] : locStart;
+                const locText = words.slice(locStart, locEnd + 1).join(' ');
+                annotation.anatomical_location = [locText, [locStart, locEnd]];
+            } else {
+                annotation.anatomical_location = null;
+            }
+
+            try {
+                const response = await fetch('/llm/add-annotation/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        annotation: annotation
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    await loadEntities();
+                    document.getElementById('obs-tokens-input').value = '';
+                    document.getElementById('loc-tokens-input').value = '';
+                    clearWordSelection();
+                    renderAnnotations();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error adding annotation: ' + error.message);
+            }
+        }
+
+        // Add annotation from current word selection
+        function addAnnotationFromSelection() {
+            if (selectedWordIndices.size === 0) {
+                alert('Please select words in the report first (enable "Show Word Indices" and click/drag to select)');
+                return;
+            }
+
+            const indices = Array.from(selectedWordIndices).sort((a, b) => a - b);
+            const start = indices[0];
+            const end = indices[indices.length - 1];
+
+            document.getElementById('obs-tokens-input').value = `${start}-${end}`;
+            document.getElementById('obs-tokens-input').focus();
         }
 
         // Delete annotation by index
