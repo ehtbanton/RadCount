@@ -596,21 +596,25 @@
                     <!-- Add Annotation Form -->
                     <div style="background: #f9fafb; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
                         <div style="font-weight: 500; color: #374151; margin-bottom: 12px; font-size: 0.9em;">Add Annotation</div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
                             <div>
-                                <label style="display: block; font-size: 0.8em; color: #6b7280; margin-bottom: 4px;">Observation Tokens (start-end)</label>
-                                <input type="text" id="obs-tokens-input" placeholder="e.g., 5-8" style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 0.9em;">
+                                <label style="display: block; font-size: 0.8em; color: #3b82f6; margin-bottom: 4px; font-weight: 500;">Observation (start-end)</label>
+                                <input type="text" id="obs-tokens-input" placeholder="e.g., 5-5" style="width: 100%; padding: 8px; border: 1px solid #3b82f6; border-radius: 4px; font-size: 0.9em;">
                             </div>
                             <div>
-                                <label style="display: block; font-size: 0.8em; color: #6b7280; margin-bottom: 4px;">Location Tokens (start-end)</label>
-                                <input type="text" id="loc-tokens-input" placeholder="e.g., 12-15" style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 0.9em;">
+                                <label style="display: block; font-size: 0.8em; color: #10b981; margin-bottom: 4px; font-weight: 500;">Location (start-end)</label>
+                                <input type="text" id="loc-tokens-input" placeholder="e.g., 12-15" style="width: 100%; padding: 8px; border: 1px solid #10b981; border-radius: 4px; font-size: 0.9em;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.8em; color: #f59e0b; margin-bottom: 4px; font-weight: 500;">Properties (ranges)</label>
+                                <input type="text" id="props-tokens-input" placeholder="e.g., 3-3, 4-4" style="width: 100%; padding: 8px; border: 1px solid #f59e0b; border-radius: 4px; font-size: 0.9em;">
                             </div>
                         </div>
                         <div style="display: flex; gap: 8px;">
                             <button onclick="addAnnotationFromInputs()" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Add Annotation</button>
                             <button onclick="addAnnotationFromSelection()" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Add from Selection</button>
                         </div>
-                        <div style="font-size: 0.75em; color: #6b7280; margin-top: 8px;">Tip: Select words in the report view, then click "Add from Selection" to use selected range.</div>
+                        <div style="font-size: 0.75em; color: #6b7280; margin-top: 8px;">Word indices are 0-based. Properties: comma-separated ranges for modifiers/descriptors.</div>
                     </div>
 
                     <!-- Annotations Display -->
@@ -618,8 +622,8 @@
                         <div style="font-weight: 500; color: #374151; margin-bottom: 8px; font-size: 0.9em;">
                             Annotations (<span id="annotation-count">0</span>)
                         </div>
-                        <div id="annotations-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">
-                            <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">No annotations yet.</div>
+                        <div id="annotations-container" style="min-height: 40px; padding: 10px; background: white; border: 1px solid #e5e7eb; border-radius: 6px;">
+                            <div style="color: #6b7280; font-size: 0.85em; text-align: center;">No annotations yet.</div>
                         </div>
                     </div>
                 </div>
@@ -627,13 +631,13 @@
                 <!-- Auto-Extracted Tab Content -->
                 <div id="auto-extracted-tab" class="annotation-tab-content" style="display: none;">
                     <!-- Single extraction button -->
-                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <div style="margin-bottom: 15px;">
                         <button
                             id="extract-observations-btn"
                             onclick="runObservationExtraction()"
-                            style="flex: 1; padding: 12px 20px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.95em; font-weight: 500; transition: background 0.2s;"
-                            onmouseover="this.style.background='#059669'"
-                            onmouseout="this.style.background='#10b981'"
+                            style="width: 100%; padding: 12px 20px; background: #f59e0b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.95em; font-weight: 500; transition: background 0.2s;"
+                            onmouseover="this.style.background='#d97706'"
+                            onmouseout="this.style.background='#f59e0b'"
                         >
                             Extract Observations
                         </button>
@@ -642,10 +646,10 @@
                     <!-- Extracted Annotations Display -->
                     <div>
                         <div style="font-weight: 500; color: #374151; margin-bottom: 8px; font-size: 0.9em;">
-                            Auto-Extracted Annotations (<span id="auto-annotation-count">0</span>)
+                            Auto-Extracted (<span id="auto-annotation-count">0</span>)
                         </div>
-                        <div id="auto-annotations-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">
-                            <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">No annotations extracted yet. Click "Extract Observations" to start.</div>
+                        <div id="auto-annotations-container" style="min-height: 40px; padding: 10px; background: white; border: 1px solid #e5e7eb; border-radius: 6px;">
+                            <div style="color: #6b7280; font-size: 0.85em; text-align: center;">Click "Extract Observations" to start.</div>
                         </div>
                     </div>
                 </div>
@@ -2367,80 +2371,6 @@
             calculateMethodMetrics(methodId);
         }
 
-        // Add annotation (observation-location pair)
-        async function addAnnotation() {
-            if (!currentEntry) {
-                alert('Please select a CSV entry first');
-                return;
-            }
-
-            const obsText = document.getElementById('annotation-obs-text').value.trim();
-            const obsStartInput = document.getElementById('annotation-obs-start').value;
-            const obsEndInput = document.getElementById('annotation-obs-end').value;
-            const locText = document.getElementById('annotation-loc-text').value.trim();
-            const locStartInput = document.getElementById('annotation-loc-start').value;
-            const locEndInput = document.getElementById('annotation-loc-end').value;
-
-            if (!obsText) {
-                alert('Please enter observation text');
-                return;
-            }
-
-            // Parse word indices
-            const obsStart = obsStartInput !== '' ? parseInt(obsStartInput, 10) : 0;
-            const obsEnd = obsEndInput !== '' ? parseInt(obsEndInput, 10) : obsStart;
-
-            // Build annotation object
-            const annotation = {
-                observation: [obsText, [obsStart, obsEnd]]
-            };
-
-            // Add anatomical location if provided
-            if (locText) {
-                const locStart = locStartInput !== '' ? parseInt(locStartInput, 10) : 0;
-                const locEnd = locEndInput !== '' ? parseInt(locEndInput, 10) : locStart;
-                annotation.anatomical_location = [locText, [locStart, locEnd]];
-            } else {
-                annotation.anatomical_location = null;
-            }
-
-            try {
-                const response = await fetch('/llm/add-annotation/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        entry_number: currentEntry,
-                        annotation: annotation
-                    })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    // Reload entities data to get updated annotations
-                    await loadEntities();
-
-                    // Clear form
-                    document.getElementById('annotation-obs-text').value = '';
-                    document.getElementById('annotation-obs-start').value = '';
-                    document.getElementById('annotation-obs-end').value = '';
-                    document.getElementById('annotation-loc-text').value = '';
-                    document.getElementById('annotation-loc-start').value = '';
-                    document.getElementById('annotation-loc-end').value = '';
-
-                    // Clear word selection
-                    clearWordSelection();
-
-                    // Re-render
-                    renderAnnotations();
-                } else {
-                    alert('Error: ' + result.error);
-                }
-            } catch (error) {
-                alert('Error adding annotation: ' + error.message);
-            }
-        }
-
         // Add annotation from simplified token inputs
         async function addAnnotationFromInputs() {
             if (!currentEntry) {
@@ -2450,9 +2380,10 @@
 
             const obsTokens = document.getElementById('obs-tokens-input').value.trim();
             const locTokens = document.getElementById('loc-tokens-input').value.trim();
+            const propsTokens = document.getElementById('props-tokens-input').value.trim();
 
             if (!obsTokens) {
-                alert('Please enter observation tokens (e.g., 5-8)');
+                alert('Please enter observation tokens (e.g., 5-5)');
                 return;
             }
 
@@ -2481,6 +2412,19 @@
                 annotation.anatomical_location = null;
             }
 
+            // Add properties if provided (comma-separated ranges)
+            annotation.properties = [];
+            if (propsTokens) {
+                const propRanges = propsTokens.split(',').map(s => s.trim()).filter(s => s);
+                propRanges.forEach(range => {
+                    const parts = range.split('-').map(s => parseInt(s.trim(), 10));
+                    const propStart = parts[0] || 0;
+                    const propEnd = parts.length > 1 ? parts[1] : propStart;
+                    const propText = words.slice(propStart, propEnd + 1).join(' ');
+                    annotation.properties.push([propText, [propStart, propEnd]]);
+                });
+            }
+
             try {
                 const response = await fetch('/llm/add-annotation/', {
                     method: 'POST',
@@ -2497,6 +2441,7 @@
                     await loadEntities();
                     document.getElementById('obs-tokens-input').value = '';
                     document.getElementById('loc-tokens-input').value = '';
+                    document.getElementById('props-tokens-input').value = '';
                     clearWordSelection();
                     renderAnnotations();
                 } else {
@@ -2552,7 +2497,7 @@
             }
         }
 
-        // Render annotations (observation-location pairs)
+        // Render annotations as compact observation boxes with hover popup
         function renderAnnotations() {
             const container = document.getElementById('annotations-container');
             const countSpan = document.getElementById('annotation-count');
@@ -2569,67 +2514,105 @@
                 return;
             }
 
-            let html = '';
+            let html = '<div style="display: flex; flex-wrap: wrap; gap: 6px;">';
             annotations.forEach((ann, index) => {
                 const obs = ann.observation;
-                const loc = ann.anatomical_location;
-
-                // Format observation
                 const obsText = obs ? obs[0] : '?';
-                const obsIndices = obs && obs[1] ? `[${obs[1][0]}-${obs[1][1]}]` : '';
 
-                // Format location
-                let locDisplay = '';
-                if (loc) {
-                    const locText = loc[0];
-                    const locIndices = loc[1] ? `[${loc[1][0]}-${loc[1][1]}]` : '';
-                    locDisplay = `<span style="color: #10b981; font-weight: 500;">${escapeHtml(locText)}</span> <span style="color: #9ca3af; font-size: 0.75em;">${locIndices}</span>`;
-                } else {
-                    locDisplay = '<span style="color: #9ca3af; font-style: italic;">—</span>';
+                // Store JSON data for popup
+                const jsonData = JSON.stringify(ann, null, 2);
+                const encodedJson = encodeURIComponent(jsonData);
+
+                // Collect all word ranges for highlighting
+                const ranges = [];
+                if (obs && obs[1]) ranges.push({start: obs[1][0], end: obs[1][1], color: '#dbeafe'});
+                if (ann.anatomical_location && ann.anatomical_location[1]) {
+                    ranges.push({start: ann.anatomical_location[1][0], end: ann.anatomical_location[1][1], color: '#d1fae5'});
+                }
+                if (ann.properties && Array.isArray(ann.properties)) {
+                    ann.properties.forEach(prop => {
+                        if (prop && prop[1]) ranges.push({start: prop[1][0], end: prop[1][1], color: '#fef3c7'});
+                    });
                 }
 
-                // Data attributes for hover highlighting
-                const obsStart = obs && obs[1] ? obs[1][0] : '';
-                const obsEnd = obs && obs[1] ? obs[1][1] : '';
-                const locStart = loc && loc[1] ? loc[1][0] : '';
-                const locEnd = loc && loc[1] ? loc[1][1] : '';
-
-                html += `<div class="annotation-item" data-obs-start="${obsStart}" data-obs-end="${obsEnd}" data-loc-start="${locStart}" data-loc-end="${locEnd}" style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #f9fafb; border-radius: 6px; font-size: 0.9em; cursor: pointer; transition: box-shadow 0.15s;">
-                    <span style="font-weight: 500; color: #6b7280; flex-shrink: 0;">#${index + 1}</span>
-                    <div style="flex: 1; display: flex; align-items: center; gap: 8px;">
-                        <span style="color: #3b82f6; font-weight: 500;">${escapeHtml(obsText)}</span>
-                        <span style="color: #9ca3af; font-size: 0.75em;">${obsIndices}</span>
-                        <span style="color: #9ca3af;">→</span>
-                        ${locDisplay}
-                    </div>
-                    <button onclick="event.stopPropagation(); deleteAnnotation(${index})" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0 4px; font-size: 1.1em; flex-shrink: 0;">&times;</button>
+                html += `<div class="annotation-box" data-index="${index}" data-json="${encodedJson}" data-ranges='${JSON.stringify(ranges)}'
+                    style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: white; border: 2px solid #3b82f6; border-radius: 6px; font-size: 0.85em; cursor: pointer; transition: all 0.15s; position: relative;">
+                    <span style="color: #3b82f6; font-weight: 600;">${escapeHtml(obsText)}</span>
+                    <button onclick="event.stopPropagation(); deleteAnnotation(${index})" style="background: none; border: none; color: #dc2626; cursor: pointer; padding: 0; font-size: 0.9em; line-height: 1; opacity: 0.6; transition: opacity 0.15s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">&times;</button>
                 </div>`;
             });
+            html += '</div>';
             container.innerHTML = html;
 
-            // Add hover handlers for highlighting
-            container.querySelectorAll('.annotation-item').forEach(item => {
-                item.addEventListener('mouseenter', () => {
-                    const obsStart = item.dataset.obsStart;
-                    const obsEnd = item.dataset.obsEnd;
-                    const locStart = item.dataset.locStart;
-                    const locEnd = item.dataset.locEnd;
+            // Add hover handlers for highlighting and popup
+            container.querySelectorAll('.annotation-box').forEach(box => {
+                box.addEventListener('mouseenter', (e) => {
+                    // Highlight all word ranges
+                    const ranges = JSON.parse(box.dataset.ranges || '[]');
+                    ranges.forEach(r => {
+                        highlightWordRange(r.start, r.end, r.color);
+                    });
+                    box.style.boxShadow = '0 2px 8px rgba(59, 130, 246, 0.3)';
+                    box.style.transform = 'translateY(-1px)';
 
-                    // Highlight observation words
-                    if (obsStart !== '' && obsEnd !== '') {
-                        highlightWordRange(parseInt(obsStart, 10), parseInt(obsEnd, 10), '#dbeafe');
-                    }
-                    // Highlight location words
-                    if (locStart !== '' && locEnd !== '') {
-                        highlightWordRange(parseInt(locStart, 10), parseInt(locEnd, 10), '#d1fae5');
-                    }
-                    item.style.boxShadow = '0 0 0 2px #fef08a';
+                    // Show JSON popup
+                    showAnnotationPopup(box, decodeURIComponent(box.dataset.json));
                 });
-                item.addEventListener('mouseleave', () => {
+                box.addEventListener('mouseleave', () => {
                     clearWordHighlights();
-                    item.style.boxShadow = '';
+                    box.style.boxShadow = '';
+                    box.style.transform = '';
+                    hideAnnotationPopup();
                 });
             });
+        }
+
+        // Show annotation JSON popup
+        function showAnnotationPopup(element, jsonContent) {
+            hideAnnotationPopup(); // Remove any existing popup
+
+            const popup = document.createElement('div');
+            popup.id = 'annotation-popup';
+            popup.style.cssText = `
+                position: fixed;
+                background: #1f2937;
+                color: #f3f4f6;
+                padding: 10px 14px;
+                border-radius: 8px;
+                font-family: monospace;
+                font-size: 0.75em;
+                white-space: pre;
+                z-index: 10000;
+                max-width: 400px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                pointer-events: none;
+            `;
+            popup.textContent = jsonContent;
+            document.body.appendChild(popup);
+
+            // Position popup near element
+            const rect = element.getBoundingClientRect();
+            const popupRect = popup.getBoundingClientRect();
+
+            let left = rect.left;
+            let top = rect.bottom + 8;
+
+            // Adjust if off-screen
+            if (left + popupRect.width > window.innerWidth) {
+                left = window.innerWidth - popupRect.width - 10;
+            }
+            if (top + popupRect.height > window.innerHeight) {
+                top = rect.top - popupRect.height - 8;
+            }
+
+            popup.style.left = left + 'px';
+            popup.style.top = top + 'px';
+        }
+
+        // Hide annotation popup
+        function hideAnnotationPopup() {
+            const popup = document.getElementById('annotation-popup');
+            if (popup) popup.remove();
         }
 
         // Ensure an extraction method exists, create one if not
@@ -2724,7 +2707,7 @@
             }
         }
 
-        // Render auto-extracted annotations (new simplified format)
+        // Render auto-extracted annotations as compact boxes with hover popup
         function renderAutoExtractedAnnotations() {
             const container = document.getElementById('auto-annotations-container');
             const countSpan = document.getElementById('auto-annotation-count');
@@ -2740,36 +2723,56 @@
                 return;
             }
 
-            let html = '';
+            let html = '<div style="display: flex; flex-wrap: wrap; gap: 6px;">';
             annotations.forEach((ann, index) => {
                 const obs = ann.observation;
-                const loc = ann.anatomical_location;
-
-                // Format observation
                 const obsText = obs ? obs[0] : '?';
-                const obsIndices = obs && obs[1] ? `[${obs[1][0]}-${obs[1][1]}]` : '';
 
-                // Format location
-                let locDisplay = '';
-                if (loc) {
-                    const locText = loc[0];
-                    const locIndices = loc[1] ? `[${loc[1][0]}-${loc[1][1]}]` : '';
-                    locDisplay = `<span style="color: #10b981; font-weight: 500;">${escapeHtml(locText)}</span> <span style="color: #9ca3af; font-size: 0.75em;">${locIndices}</span>`;
-                } else {
-                    locDisplay = '<span style="color: #9ca3af; font-style: italic;">—</span>';
+                // Store JSON data for popup
+                const jsonData = JSON.stringify(ann, null, 2);
+                const encodedJson = encodeURIComponent(jsonData);
+
+                // Collect all word ranges for highlighting
+                const ranges = [];
+                if (obs && obs[1]) ranges.push({start: obs[1][0], end: obs[1][1], color: '#dbeafe'});
+                if (ann.anatomical_location && ann.anatomical_location[1]) {
+                    ranges.push({start: ann.anatomical_location[1][0], end: ann.anatomical_location[1][1], color: '#d1fae5'});
+                }
+                if (ann.properties && Array.isArray(ann.properties)) {
+                    ann.properties.forEach(prop => {
+                        if (prop && prop[1]) ranges.push({start: prop[1][0], end: prop[1][1], color: '#fef3c7'});
+                    });
                 }
 
-                html += `<div class="auto-annotation-item" style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #fef3c7; border-radius: 6px; font-size: 0.9em;">
-                    <span style="font-weight: 500; color: #6b7280; flex-shrink: 0;">#${index + 1}</span>
-                    <div style="flex: 1; display: flex; align-items: center; gap: 8px;">
-                        <span style="color: #3b82f6; font-weight: 500;">${escapeHtml(obsText)}</span>
-                        <span style="color: #9ca3af; font-size: 0.75em;">${obsIndices}</span>
-                        <span style="color: #9ca3af;">→</span>
-                        ${locDisplay}
-                    </div>
+                html += `<div class="auto-annotation-box" data-index="${index}" data-json="${encodedJson}" data-ranges='${JSON.stringify(ranges)}'
+                    style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #fef3c7; border: 2px solid #f59e0b; border-radius: 6px; font-size: 0.85em; cursor: pointer; transition: all 0.15s;">
+                    <span style="color: #b45309; font-weight: 600;">${escapeHtml(obsText)}</span>
                 </div>`;
             });
+            html += '</div>';
             container.innerHTML = html;
+
+            // Add hover handlers for highlighting and popup
+            container.querySelectorAll('.auto-annotation-box').forEach(box => {
+                box.addEventListener('mouseenter', (e) => {
+                    // Highlight all word ranges
+                    const ranges = JSON.parse(box.dataset.ranges || '[]');
+                    ranges.forEach(r => {
+                        highlightWordRange(r.start, r.end, r.color);
+                    });
+                    box.style.boxShadow = '0 2px 8px rgba(245, 158, 11, 0.3)';
+                    box.style.transform = 'translateY(-1px)';
+
+                    // Show JSON popup
+                    showAnnotationPopup(box, decodeURIComponent(box.dataset.json));
+                });
+                box.addEventListener('mouseleave', () => {
+                    clearWordHighlights();
+                    box.style.boxShadow = '';
+                    box.style.transform = '';
+                    hideAnnotationPopup();
+                });
+            });
         }
 
         // Run entity extraction (LLM) - Legacy
