@@ -49,6 +49,8 @@
             grid-row: 1;
             background: #fafafa;
             min-width: 0;
+            display: flex;
+            flex-direction: column;
         }
 
         .panel-right {
@@ -488,106 +490,96 @@
                     </button>
                 </div>
 
-                <!-- CSV Upload Section -->
-                <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 20px;">
-                    <div style="font-weight: 500; color: #374151; margin-bottom: 12px;">
+                <!-- Report Viewer Section -->
+                <div style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
+                    <!-- Header row: CSV info + Replace button + Entry navigation -->
+                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 12px; flex-wrap: wrap;">
+                        <input type="file" id="large-file-upload" accept=".csv" style="display: none;" />
                         {% if csv_metadata %}
-                            CSV File: {{ csv_metadata.filename }} ({{ csv_metadata.row_count }} entries)
-                        {% else %}
-                            Upload CSV File
-                        {% endif %}
-                    </div>
-                    <input type="file" id="large-file-upload" accept=".csv" style="display: none;" />
-                    <label for="large-file-upload" class="upload-label" style="display: inline-block; padding: 8px 16px; background: #3b82f6; color: white; border-radius: 6px; cursor: pointer; font-size: 0.9em;">
-                        {% if csv_metadata %}Replace CSV{% else %}Import CSV{% endif %}
-                    </label>
-                    <div id="large-upload-status" style="margin-top: 10px; font-size: 0.9em;"></div>
-                </div>
-
-                {% if csv_metadata %}
-                    <!-- CSV Entry Navigator -->
-                    <div style="background: #f8f9fa; padding: 20px; border-radius: 6px; border: 1px solid #e5e7eb;">
-                        <div style="font-weight: 400; color: #374151; margin-bottom: 12px; font-size: 1.05em;">
-                            Report Viewer
-                        </div>
-
-                        <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-wrap: wrap;">
-                            <label for="entry-number" style="color: #6b7280; font-size: 0.9em;">Entry #:</label>
+                            <span style="font-size: 0.9em; color: #374151; font-weight: 500;">{{ csv_metadata.filename }}</span>
+                            <label for="large-file-upload" style="padding: 4px 10px; background: #e5e7eb; color: #374151; border-radius: 4px; cursor: pointer; font-size: 0.8em;">Replace</label>
+                            <span style="color: #d1d5db;">|</span>
+                            <label for="entry-number" style="color: #6b7280; font-size: 0.85em;">Entry</label>
                             <input
                                 type="number"
                                 id="entry-number"
                                 min="1"
                                 max="{{ csv_metadata.row_count }}"
                                 value="1"
-                                style="padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 0.9em; width: 100px;"
+                                style="padding: 4px 8px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 0.85em; width: 70px;"
                                 onkeypress="if(event.key === 'Enter') loadCsvEntry()"
                             />
-                            <span style="color: #6b7280; font-size: 0.85em;">of {{ csv_metadata.row_count }}</span>
-                        </div>
-
-                            <!-- View Toggle Buttons -->
-                            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                                <button
-                                    id="json-view-btn"
-                                    onclick="switchEntryView('json')"
-                                    style="padding: 6px 12px; background: #e5e7eb; color: #6b7280; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s;"
-                                >
-                                    JSON View
-                                </button>
-                                <button
-                                    id="text-view-btn"
-                                    onclick="switchEntryView('text')"
-                                    style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 400; transition: background 0.2s;"
-                                >
-                                    Report View
-                                </button>
-                                <label style="display: flex; align-items: center; gap: 6px; margin-left: 15px; cursor: pointer; font-size: 0.85em; color: #6b7280;">
-                                    <input type="checkbox" id="show-word-indices" onchange="toggleWordIndices()" style="cursor: pointer;">
-                                    Show Word Indices
-                                    <button onclick="clearWordSelection()" style="margin-left: 10px; padding: 2px 8px; font-size: 0.85em; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer;">Clear Selection</button>
-                                    <span id="selection-info" style="margin-left: 10px; color: #6b7280; font-size: 0.85em;"></span>
-                                </label>
-                            </div>
-
-                            <div id="json-view-label" style="font-size: 0.85em; color: #6b7280; margin-bottom: 10px; display: none;">Entry Data (JSON):</div>
-                            <div id="text-view-label" style="font-size: 0.85em; color: #6b7280; margin-bottom: 10px;">Entry Data (Report): <span id="word-selection-hint" style="color: #3b82f6; font-size: 0.9em;"></span></div>
-
-                            <pre id="csv-entry-display" style="display: none; background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 0.85em; line-height: 1.5; height: 400px; overflow-y: scroll; overflow-x: hidden; color: #1f2937; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;">No entry loaded</pre>
-
-                            <div id="csv-entry-text-display" onmouseup="handleTextSelection()" style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 1.02em; line-height: 1.6; height: 400px; overflow-y: scroll; overflow-x: hidden; color: #1f2937; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word; user-select: none;">No entry loaded</div>
+                            <span style="color: #6b7280; font-size: 0.8em;">of {{ csv_metadata.row_count }}</span>
+                        {% else %}
+                            <label for="large-file-upload" style="padding: 6px 14px; background: #3b82f6; color: white; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Import CSV</label>
+                        {% endif %}
+                        <div id="large-upload-status" style="font-size: 0.85em;"></div>
                     </div>
-                {% endif %}
+
+                    {% if csv_metadata %}
+                    <!-- View controls row -->
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px; align-items: center; flex-wrap: wrap;">
+                        <button
+                            id="json-view-btn"
+                            onclick="switchEntryView('json')"
+                            style="padding: 4px 10px; background: #e5e7eb; color: #6b7280; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;"
+                        >JSON</button>
+                        <button
+                            id="text-view-btn"
+                            onclick="switchEntryView('text')"
+                            style="padding: 4px 10px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;"
+                        >Report</button>
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 0.8em; color: #6b7280;">
+                            <input type="checkbox" id="show-word-indices" onchange="toggleWordIndices()" style="cursor: pointer;">
+                            Indices
+                        </label>
+                        <button onclick="clearWordSelection()" style="padding: 2px 6px; font-size: 0.75em; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 3px; cursor: pointer;">Clear</button>
+                        <span id="selection-info" style="color: #6b7280; font-size: 0.8em;"></span>
+                        <span id="word-selection-hint" style="color: #3b82f6; font-size: 0.8em;"></span>
+                    </div>
+
+                    <!-- Report display area - fills remaining space -->
+                    <div id="json-view-label" style="font-size: 0.8em; color: #6b7280; margin-bottom: 5px; display: none;">JSON:</div>
+                    <div id="text-view-label" style="font-size: 0.8em; color: #6b7280; margin-bottom: 5px;">Report:</div>
+
+                    <pre id="csv-entry-display" style="display: none; flex: 1; background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 0.85em; line-height: 1.5; overflow-y: auto; color: #1f2937; white-space: pre-wrap; word-wrap: break-word; margin: 0;">No entry loaded</pre>
+
+                    <div id="csv-entry-text-display" onmouseup="handleTextSelection()" style="flex: 1; background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 1em; line-height: 1.6; overflow-y: auto; color: #1f2937; white-space: pre-wrap; word-wrap: break-word; user-select: none;">No entry loaded</div>
+                    {% else %}
+                    <div style="flex: 1; display: flex; align-items: center; justify-content: center; background: #f9fafb; border-radius: 6px; border: 1px dashed #d1d5db;">
+                        <span style="color: #9ca3af; font-size: 0.9em;">Import a CSV file to view reports</span>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
 
             <!-- Right Panel: Annotations & Metrics -->
             <div class="panel panel-right">
-                <h2 class="panel-title">Annotations</h2>
-
                 <!-- Tab Navigation -->
                 <div id="method-tabs-container" style="display: flex; border-bottom: 2px solid #e5e7eb; margin-bottom: 15px; gap: 4px;">
                     <button
                         id="ground-truth-tab-btn"
                         class="annotation-tab-btn"
                         onclick="switchAnnotationTab('ground-truth')"
-                        style="padding: 10px 20px; background: none; border: none; border-bottom: 2px solid #3b82f6; color: #3b82f6; cursor: pointer; font-size: 0.95em; font-weight: 500; margin-bottom: -2px;"
+                        style="padding: 10px 16px; background: none; border: none; border-bottom: 2px solid #3b82f6; color: #3b82f6; cursor: pointer; font-size: 0.85em; font-weight: 500; margin-bottom: -2px;"
                     >
-                        Ground Truth Annotations
+                        Ground Truth
                     </button>
                     <button
                         id="auto-extracted-tab-btn"
                         class="annotation-tab-btn"
                         onclick="switchAnnotationTab('auto-extracted')"
-                        style="padding: 10px 20px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; cursor: pointer; font-size: 0.95em; font-weight: 400; margin-bottom: -2px;"
+                        style="padding: 10px 16px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; cursor: pointer; font-size: 0.85em; font-weight: 400; margin-bottom: -2px;"
                     >
-                        A1
+                        Auto-Extracted
                     </button>
                     <button
-                        id="auto-extracted-2-tab-btn"
+                        id="test-evaluate-tab-btn"
                         class="annotation-tab-btn"
-                        onclick="switchAnnotationTab('auto-extracted-2')"
-                        style="padding: 10px 20px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; cursor: pointer; font-size: 0.95em; font-weight: 400; margin-bottom: -2px;"
+                        onclick="switchAnnotationTab('test-evaluate')"
+                        style="padding: 10px 16px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; cursor: pointer; font-size: 0.85em; font-weight: 400; margin-bottom: -2px;"
                     >
-                        A2
+                        Test & Evaluate
                     </button>
                 </div>
 
@@ -654,44 +646,10 @@
                     </div>
                 </div>
 
-                <!-- A2 Tab Content (One-shot extraction) -->
-                <div id="auto-extracted-2-tab" class="annotation-tab-content" style="display: none;">
-                    <!-- One-shot extraction button -->
-                    <div style="margin-bottom: 15px;">
-                        <button
-                            id="extract-oneshot-btn"
-                            onclick="runOneShotExtraction()"
-                            style="width: 100%; padding: 12px 16px; background: #8b5cf6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.95em; font-weight: 500; transition: background 0.2s;"
-                            onmouseover="this.style.background='#7c3aed'"
-                            onmouseout="this.style.background='#8b5cf6'"
-                        >
-                            Extract Entities & Relations (One-Shot)
-                        </button>
-                    </div>
-
-                    <!-- Extracted Entities Display -->
-                    <div style="margin-bottom: 15px;">
-                        <div style="font-weight: 500; color: #374151; margin-bottom: 8px; font-size: 0.9em;">
-                            Extracted Entities (<span id="auto-2-entity-count">0</span>)
-                        </div>
-                        <div id="auto-2-entities-container" style="display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; background: #f9fafb; border-radius: 6px; min-height: 40px; max-height: 150px; overflow-y: auto;">
-                            <div style="color: #6b7280; font-size: 0.85em;">No entities extracted yet. Click "Extract Entities & Relations" to start.</div>
-                        </div>
-                    </div>
-
-                    <!-- Extracted Relations Display -->
-                    <div style="margin-bottom: 15px;">
-                        <div style="font-weight: 500; color: #374151; margin-bottom: 8px; font-size: 0.9em;">
-                            Extracted Relations (<span id="auto-2-relation-count">0</span>)
-                        </div>
-                        <div id="auto-2-relations-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto;">
-                            <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">No relations extracted yet. Click "Extract Entities & Relations" to start.</div>
-                        </div>
-                    </div>
-
-                    <!-- Metrics Display -->
-                    <div id="auto-extracted-2-metrics-container" style="display: none;">
-                        <!-- Metrics will be populated here by JavaScript -->
+                <!-- Test & Evaluate Tab Content -->
+                <div id="test-evaluate-tab" class="annotation-tab-content" style="display: none;">
+                    <div style="display: flex; align-items: center; justify-content: center; height: 200px; color: #9ca3af; font-size: 0.9em;">
+                        Test & Evaluate functionality coming soon...
                     </div>
                 </div>
             </div>
@@ -2138,8 +2096,8 @@
                 activeBtn = document.getElementById('ground-truth-tab-btn');
             } else if (tabName === 'auto-extracted') {
                 activeBtn = document.getElementById('auto-extracted-tab-btn');
-            } else if (tabName === 'auto-extracted-2') {
-                activeBtn = document.getElementById('auto-extracted-2-tab-btn');
+            } else if (tabName === 'test-evaluate') {
+                activeBtn = document.getElementById('test-evaluate-tab-btn');
             }
 
             if (activeBtn) {
@@ -2151,16 +2109,15 @@
             // Show/hide tab content
             document.getElementById('ground-truth-tab').style.display = tabName === 'ground-truth' ? 'block' : 'none';
             document.getElementById('auto-extracted-tab').style.display = tabName === 'auto-extracted' ? 'block' : 'none';
-            document.getElementById('auto-extracted-2-tab').style.display = tabName === 'auto-extracted-2' ? 'block' : 'none';
+            document.getElementById('test-evaluate-tab').style.display = tabName === 'test-evaluate' ? 'block' : 'none';
 
             // Render content for active tab
             if (tabName === 'ground-truth') {
                 renderGroundTruthTab();
             } else if (tabName === 'auto-extracted') {
                 await renderAutoExtractedTab();
-            } else if (tabName === 'auto-extracted-2') {
-                await renderAutoExtracted2Tab();
             }
+            // test-evaluate tab has no dynamic content yet
         }
 
         // Save default method to server
@@ -2497,7 +2454,7 @@
             }
         }
 
-        // Render annotations as compact observation boxes with hover popup
+        // Render annotations as line-by-line list with expandable JSON dropdown
         function renderAnnotations() {
             const container = document.getElementById('annotations-container');
             const countSpan = document.getElementById('annotation-count');
@@ -2514,12 +2471,20 @@
                 return;
             }
 
-            let html = '<div style="display: flex; flex-wrap: wrap; gap: 6px;">';
+            let html = '<div style="display: flex; flex-direction: column; gap: 4px;">';
             annotations.forEach((ann, index) => {
                 const obs = ann.observation;
                 const obsText = obs ? obs[0] : '?';
+                const obsRange = obs && obs[1] ? `[${obs[1][0]}-${obs[1][1]}]` : '';
 
-                // Store JSON data for popup
+                // Location info
+                let locInfo = '';
+                if (ann.anatomical_location && ann.anatomical_location[0]) {
+                    const locRange = ann.anatomical_location[1] ? `[${ann.anatomical_location[1][0]}-${ann.anatomical_location[1][1]}]` : '';
+                    locInfo = ` @ ${ann.anatomical_location[0]} ${locRange}`;
+                }
+
+                // Store JSON data
                 const jsonData = JSON.stringify(ann, null, 2);
                 const encodedJson = encodeURIComponent(jsonData);
 
@@ -2535,35 +2500,40 @@
                     });
                 }
 
-                html += `<div class="annotation-box" data-index="${index}" data-json="${encodedJson}" data-ranges='${JSON.stringify(ranges)}'
-                    style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: white; border: 2px solid #3b82f6; border-radius: 6px; font-size: 0.85em; cursor: pointer; transition: all 0.15s; position: relative;">
-                    <span style="color: #3b82f6; font-weight: 600;">${escapeHtml(obsText)}</span>
-                    <button onclick="event.stopPropagation(); deleteAnnotation(${index})" style="background: none; border: none; color: #dc2626; cursor: pointer; padding: 0; font-size: 0.9em; line-height: 1; opacity: 0.6; transition: opacity 0.15s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">&times;</button>
+                html += `<div class="annotation-row" data-index="${index}" data-ranges='${JSON.stringify(ranges)}' style="background: #f9fafb; border-radius: 4px; overflow: hidden;">
+                    <div style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; cursor: pointer;" onmouseenter="highlightAnnotationRanges(this.parentElement)" onmouseleave="clearWordHighlights()">
+                        <button class="json-toggle-btn" onclick="event.stopPropagation(); toggleAnnotationJson(${index})" style="background: none; border: none; color: #6b7280; cursor: pointer; padding: 0; font-size: 0.8em; width: 16px;">▶</button>
+                        <span style="color: #3b82f6; font-weight: 500; font-size: 0.85em;">${escapeHtml(obsText)}</span>
+                        <span style="color: #9ca3af; font-size: 0.75em;">${obsRange}</span>
+                        <span style="color: #10b981; font-size: 0.8em;">${escapeHtml(locInfo)}</span>
+                        <span style="flex: 1;"></span>
+                        <button onclick="event.stopPropagation(); deleteAnnotation(${index})" style="background: none; border: none; color: #dc2626; cursor: pointer; padding: 2px 4px; font-size: 0.8em; opacity: 0.6;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">&times;</button>
+                    </div>
+                    <div id="annotation-json-${index}" class="annotation-json-dropdown" style="display: none; padding: 8px 10px; background: #1f2937; border-top: 1px solid #e5e7eb;">
+                        <pre style="margin: 0; font-size: 0.75em; color: #e5e7eb; white-space: pre-wrap; word-break: break-all;">${escapeHtml(jsonData)}</pre>
+                    </div>
                 </div>`;
             });
             html += '</div>';
             container.innerHTML = html;
+        }
 
-            // Add hover handlers for highlighting and popup
-            container.querySelectorAll('.annotation-box').forEach(box => {
-                box.addEventListener('mouseenter', (e) => {
-                    // Highlight all word ranges
-                    const ranges = JSON.parse(box.dataset.ranges || '[]');
-                    ranges.forEach(r => {
-                        highlightWordRange(r.start, r.end, r.color);
-                    });
-                    box.style.boxShadow = '0 2px 8px rgba(59, 130, 246, 0.3)';
-                    box.style.transform = 'translateY(-1px)';
+        // Toggle JSON dropdown for annotation
+        function toggleAnnotationJson(index) {
+            const dropdown = document.getElementById(`annotation-json-${index}`);
+            const btn = dropdown?.parentElement?.querySelector('.json-toggle-btn');
+            if (dropdown) {
+                const isHidden = dropdown.style.display === 'none';
+                dropdown.style.display = isHidden ? 'block' : 'none';
+                if (btn) btn.textContent = isHidden ? '▼' : '▶';
+            }
+        }
 
-                    // Show JSON popup
-                    showAnnotationPopup(box, decodeURIComponent(box.dataset.json));
-                });
-                box.addEventListener('mouseleave', () => {
-                    clearWordHighlights();
-                    box.style.boxShadow = '';
-                    box.style.transform = '';
-                    hideAnnotationPopup();
-                });
+        // Highlight word ranges for an annotation row
+        function highlightAnnotationRanges(rowElement) {
+            const ranges = JSON.parse(rowElement.dataset.ranges || '[]');
+            ranges.forEach(r => {
+                highlightWordRange(r.start, r.end, r.color);
             });
         }
 
@@ -2707,7 +2677,7 @@
             }
         }
 
-        // Render auto-extracted annotations as compact boxes with hover popup
+        // Render auto-extracted annotations as line-by-line list with expandable JSON dropdown
         function renderAutoExtractedAnnotations() {
             const container = document.getElementById('auto-annotations-container');
             const countSpan = document.getElementById('auto-annotation-count');
@@ -2723,55 +2693,66 @@
                 return;
             }
 
-            let html = '<div style="display: flex; flex-wrap: wrap; gap: 6px;">';
+            let html = '<div style="display: flex; flex-direction: column; gap: 4px;">';
             annotations.forEach((ann, index) => {
                 const obs = ann.observation;
                 const obsText = obs ? obs[0] : '?';
+                const obsRange = obs && obs[1] ? `[${obs[1][0]}-${obs[1][1]}]` : '';
 
-                // Store JSON data for popup
+                // Location info
+                let locInfo = '';
+                if (ann.anatomical_location && ann.anatomical_location[0]) {
+                    const locRange = ann.anatomical_location[1] ? `[${ann.anatomical_location[1][0]}-${ann.anatomical_location[1][1]}]` : '';
+                    locInfo = ` @ ${ann.anatomical_location[0]} ${locRange}`;
+                }
+
+                // Store JSON data
                 const jsonData = JSON.stringify(ann, null, 2);
-                const encodedJson = encodeURIComponent(jsonData);
 
                 // Collect all word ranges for highlighting
                 const ranges = [];
-                if (obs && obs[1]) ranges.push({start: obs[1][0], end: obs[1][1], color: '#dbeafe'});
+                if (obs && obs[1]) ranges.push({start: obs[1][0], end: obs[1][1], color: '#fef3c7'});
                 if (ann.anatomical_location && ann.anatomical_location[1]) {
                     ranges.push({start: ann.anatomical_location[1][0], end: ann.anatomical_location[1][1], color: '#d1fae5'});
                 }
                 if (ann.properties && Array.isArray(ann.properties)) {
                     ann.properties.forEach(prop => {
-                        if (prop && prop[1]) ranges.push({start: prop[1][0], end: prop[1][1], color: '#fef3c7'});
+                        if (prop && prop[1]) ranges.push({start: prop[1][0], end: prop[1][1], color: '#dbeafe'});
                     });
                 }
 
-                html += `<div class="auto-annotation-box" data-index="${index}" data-json="${encodedJson}" data-ranges='${JSON.stringify(ranges)}'
-                    style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #fef3c7; border: 2px solid #f59e0b; border-radius: 6px; font-size: 0.85em; cursor: pointer; transition: all 0.15s;">
-                    <span style="color: #b45309; font-weight: 600;">${escapeHtml(obsText)}</span>
+                html += `<div class="auto-annotation-row" data-index="${index}" data-ranges='${JSON.stringify(ranges)}' style="background: #fffbeb; border-radius: 4px; overflow: hidden;">
+                    <div style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; cursor: pointer;" onmouseenter="highlightAutoAnnotationRanges(this.parentElement)" onmouseleave="clearWordHighlights()">
+                        <button class="json-toggle-btn" onclick="event.stopPropagation(); toggleAutoAnnotationJson(${index})" style="background: none; border: none; color: #6b7280; cursor: pointer; padding: 0; font-size: 0.8em; width: 16px;">▶</button>
+                        <span style="color: #b45309; font-weight: 500; font-size: 0.85em;">${escapeHtml(obsText)}</span>
+                        <span style="color: #9ca3af; font-size: 0.75em;">${obsRange}</span>
+                        <span style="color: #10b981; font-size: 0.8em;">${escapeHtml(locInfo)}</span>
+                    </div>
+                    <div id="auto-annotation-json-${index}" class="auto-annotation-json-dropdown" style="display: none; padding: 8px 10px; background: #1f2937; border-top: 1px solid #fbbf24;">
+                        <pre style="margin: 0; font-size: 0.75em; color: #e5e7eb; white-space: pre-wrap; word-break: break-all;">${escapeHtml(jsonData)}</pre>
+                    </div>
                 </div>`;
             });
             html += '</div>';
             container.innerHTML = html;
+        }
 
-            // Add hover handlers for highlighting and popup
-            container.querySelectorAll('.auto-annotation-box').forEach(box => {
-                box.addEventListener('mouseenter', (e) => {
-                    // Highlight all word ranges
-                    const ranges = JSON.parse(box.dataset.ranges || '[]');
-                    ranges.forEach(r => {
-                        highlightWordRange(r.start, r.end, r.color);
-                    });
-                    box.style.boxShadow = '0 2px 8px rgba(245, 158, 11, 0.3)';
-                    box.style.transform = 'translateY(-1px)';
+        // Toggle JSON dropdown for auto-extracted annotation
+        function toggleAutoAnnotationJson(index) {
+            const dropdown = document.getElementById(`auto-annotation-json-${index}`);
+            const btn = dropdown?.parentElement?.querySelector('.json-toggle-btn');
+            if (dropdown) {
+                const isHidden = dropdown.style.display === 'none';
+                dropdown.style.display = isHidden ? 'block' : 'none';
+                if (btn) btn.textContent = isHidden ? '▼' : '▶';
+            }
+        }
 
-                    // Show JSON popup
-                    showAnnotationPopup(box, decodeURIComponent(box.dataset.json));
-                });
-                box.addEventListener('mouseleave', () => {
-                    clearWordHighlights();
-                    box.style.boxShadow = '';
-                    box.style.transform = '';
-                    hideAnnotationPopup();
-                });
+        // Highlight word ranges for an auto-annotation row
+        function highlightAutoAnnotationRanges(rowElement) {
+            const ranges = JSON.parse(rowElement.dataset.ranges || '[]');
+            ranges.forEach(r => {
+                highlightWordRange(r.start, r.end, r.color);
             });
         }
 
