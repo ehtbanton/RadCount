@@ -1935,6 +1935,65 @@
             return entryData;
         }
 
+        // Helper functions to parse annotation fields (supports both old and new formats)
+        // Old format: ["combined text", [start, end]]
+        // New format: [["word1", index1], ["word2", index2], ...]
+        function parseAnnotationField(field) {
+            if (!field) return { text: '', range: null, words: [] };
+
+            // Check if it's the new per-word format (array of arrays where first element is also array)
+            if (Array.isArray(field) && field.length > 0 && Array.isArray(field[0])) {
+                // New format: [[word, index], ...]
+                const words = field.map(w => ({ word: w[0], index: w[1] }));
+                const text = words.map(w => w.word).join(' ');
+                const indices = words.map(w => w.index).filter(i => typeof i === 'number');
+                const range = indices.length > 0 ? [Math.min(...indices), Math.max(...indices)] : null;
+                return { text, range, words };
+            } else if (Array.isArray(field) && field.length >= 2) {
+                // Old format: [text, [start, end]]
+                const text = field[0] || '';
+                const range = Array.isArray(field[1]) ? field[1] : null;
+                return { text, range, words: [] };
+            }
+            return { text: '', range: null, words: [] };
+        }
+
+        // Parse properties field (supports both old and new formats)
+        // Old format: [["prop1", [start, end]], ["prop2", [start, end]], ...]
+        // New format: [[["word1", index1], ...], [["word2", index2], ...], ...]
+        function parsePropertiesField(props) {
+            if (!props || !Array.isArray(props)) return [];
+
+            return props.map(prop => {
+                // Check if it's the new per-word format for this property
+                if (Array.isArray(prop) && prop.length > 0 && Array.isArray(prop[0]) && Array.isArray(prop[0][0])) {
+                    // New format: [[[word, index], ...]] - unwrap the extra array level
+                    const wordPairs = prop[0];
+                    const words = wordPairs.map(w => ({ word: w[0], index: w[1] }));
+                    const text = words.map(w => w.word).join(' ');
+                    const indices = words.map(w => w.index).filter(i => typeof i === 'number');
+                    const range = indices.length > 0 ? [Math.min(...indices), Math.max(...indices)] : null;
+                    return { text, range, words };
+                } else if (Array.isArray(prop) && prop.length > 0 && Array.isArray(prop[0])) {
+                    // Could be new format [[word, index], ...] without extra wrapping
+                    if (typeof prop[0][0] === 'string' && typeof prop[0][1] === 'number') {
+                        const words = prop.map(w => ({ word: w[0], index: w[1] }));
+                        const text = words.map(w => w.word).join(' ');
+                        const indices = words.map(w => w.index).filter(i => typeof i === 'number');
+                        const range = indices.length > 0 ? [Math.min(...indices), Math.max(...indices)] : null;
+                        return { text, range, words };
+                    }
+                }
+                // Old format: [text, [start, end]]
+                if (Array.isArray(prop) && prop.length >= 2) {
+                    const text = prop[0] || '';
+                    const range = Array.isArray(prop[1]) ? prop[1] : null;
+                    return { text, range, words: [] };
+                }
+                return { text: '', range: null, words: [] };
+            });
+        }
+
         // State for annotation tabs
         let activeAnnotationTab = 'ground-truth';
         let activeMethodId = null;
@@ -2473,32 +2532,32 @@
 
             let html = '<div style="display: flex; flex-direction: column; gap: 4px;">';
             annotations.forEach((ann, index) => {
-                const obs = ann.observation;
-                const obsText = obs ? obs[0] : '?';
-                const obsRange = obs && obs[1] ? `[${obs[1][0]}-${obs[1][1]}]` : '';
+                // Parse observation using helper (supports both old and new formats)
+                const obsParsed = parseAnnotationField(ann.observation);
+                const obsText = obsParsed.text || '?';
+                const obsRange = obsParsed.range ? `[${obsParsed.range[0]}-${obsParsed.range[1]}]` : '';
 
-                // Location info
+                // Parse location using helper
+                const locParsed = parseAnnotationField(ann.anatomical_location);
                 let locInfo = '';
-                if (ann.anatomical_location && ann.anatomical_location[0]) {
-                    const locRange = ann.anatomical_location[1] ? `[${ann.anatomical_location[1][0]}-${ann.anatomical_location[1][1]}]` : '';
-                    locInfo = ` @ ${ann.anatomical_location[0]} ${locRange}`;
+                if (locParsed.text) {
+                    const locRange = locParsed.range ? `[${locParsed.range[0]}-${locParsed.range[1]}]` : '';
+                    locInfo = ` @ ${locParsed.text} ${locRange}`;
                 }
 
                 // Store JSON data
                 const jsonData = JSON.stringify(ann, null, 2);
-                const encodedJson = encodeURIComponent(jsonData);
 
                 // Collect all word ranges for highlighting
                 const ranges = [];
-                if (obs && obs[1]) ranges.push({start: obs[1][0], end: obs[1][1], color: '#dbeafe'});
-                if (ann.anatomical_location && ann.anatomical_location[1]) {
-                    ranges.push({start: ann.anatomical_location[1][0], end: ann.anatomical_location[1][1], color: '#d1fae5'});
-                }
-                if (ann.properties && Array.isArray(ann.properties)) {
-                    ann.properties.forEach(prop => {
-                        if (prop && prop[1]) ranges.push({start: prop[1][0], end: prop[1][1], color: '#fef3c7'});
-                    });
-                }
+                if (obsParsed.range) ranges.push({start: obsParsed.range[0], end: obsParsed.range[1], color: '#dbeafe'});
+                if (locParsed.range) ranges.push({start: locParsed.range[0], end: locParsed.range[1], color: '#d1fae5'});
+
+                // Parse properties using helper
+                const propsParsed = parsePropertiesField(ann.properties);
+                propsParsed.forEach(prop => {
+                    if (prop.range) ranges.push({start: prop.range[0], end: prop.range[1], color: '#fef3c7'});
+                });
 
                 html += `<div class="annotation-row" data-index="${index}" data-ranges='${JSON.stringify(ranges)}' style="background: #f9fafb; border-radius: 4px; overflow: hidden;">
                     <div style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; cursor: pointer;" onmouseenter="highlightAnnotationRanges(this.parentElement)" onmouseleave="clearWordHighlights()">
@@ -2695,15 +2754,17 @@
 
             let html = '<div style="display: flex; flex-direction: column; gap: 4px;">';
             annotations.forEach((ann, index) => {
-                const obs = ann.observation;
-                const obsText = obs ? obs[0] : '?';
-                const obsRange = obs && obs[1] ? `[${obs[1][0]}-${obs[1][1]}]` : '';
+                // Parse observation using helper (supports both old and new formats)
+                const obsParsed = parseAnnotationField(ann.observation);
+                const obsText = obsParsed.text || '?';
+                const obsRange = obsParsed.range ? `[${obsParsed.range[0]}-${obsParsed.range[1]}]` : '';
 
-                // Location info
+                // Parse location using helper
+                const locParsed = parseAnnotationField(ann.anatomical_location);
                 let locInfo = '';
-                if (ann.anatomical_location && ann.anatomical_location[0]) {
-                    const locRange = ann.anatomical_location[1] ? `[${ann.anatomical_location[1][0]}-${ann.anatomical_location[1][1]}]` : '';
-                    locInfo = ` @ ${ann.anatomical_location[0]} ${locRange}`;
+                if (locParsed.text) {
+                    const locRange = locParsed.range ? `[${locParsed.range[0]}-${locParsed.range[1]}]` : '';
+                    locInfo = ` @ ${locParsed.text} ${locRange}`;
                 }
 
                 // Store JSON data
@@ -2711,15 +2772,14 @@
 
                 // Collect all word ranges for highlighting
                 const ranges = [];
-                if (obs && obs[1]) ranges.push({start: obs[1][0], end: obs[1][1], color: '#fef3c7'});
-                if (ann.anatomical_location && ann.anatomical_location[1]) {
-                    ranges.push({start: ann.anatomical_location[1][0], end: ann.anatomical_location[1][1], color: '#d1fae5'});
-                }
-                if (ann.properties && Array.isArray(ann.properties)) {
-                    ann.properties.forEach(prop => {
-                        if (prop && prop[1]) ranges.push({start: prop[1][0], end: prop[1][1], color: '#dbeafe'});
-                    });
-                }
+                if (obsParsed.range) ranges.push({start: obsParsed.range[0], end: obsParsed.range[1], color: '#fef3c7'});
+                if (locParsed.range) ranges.push({start: locParsed.range[0], end: locParsed.range[1], color: '#d1fae5'});
+
+                // Parse properties using helper
+                const propsParsed = parsePropertiesField(ann.properties);
+                propsParsed.forEach(prop => {
+                    if (prop.range) ranges.push({start: prop.range[0], end: prop.range[1], color: '#dbeafe'});
+                });
 
                 html += `<div class="auto-annotation-row" data-index="${index}" data-ranges='${JSON.stringify(ranges)}' style="background: #fffbeb; border-radius: 4px; overflow: hidden;">
                     <div style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; cursor: pointer;" onmouseenter="highlightAutoAnnotationRanges(this.parentElement)" onmouseleave="clearWordHighlights()">
