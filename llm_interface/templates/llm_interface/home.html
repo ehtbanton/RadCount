@@ -648,8 +648,62 @@
 
                 <!-- Test & Evaluate Tab Content -->
                 <div id="test-evaluate-tab" class="annotation-tab-content" style="display: none;">
-                    <div style="display: flex; align-items: center; justify-content: center; height: 200px; color: #9ca3af; font-size: 0.9em;">
-                        Test & Evaluate functionality coming soon...
+                    <div style="padding: 15px;">
+                        <!-- Calculate Metrics Button -->
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
+                            <button
+                                id="calculate-obs-metrics-btn"
+                                onclick="calculateObservationMetrics()"
+                                style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 500;"
+                            >
+                                Calculate Metrics
+                            </button>
+                            <span id="metrics-status" style="color: #6b7280; font-size: 0.85em;"></span>
+                        </div>
+
+                        <!-- Metrics Display -->
+                        <div id="observation-metrics-display" style="display: none; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px;">
+                                <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                                    <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">Precision</div>
+                                    <div id="metric-precision" style="font-size: 1.5em; font-weight: 600; color: #059669;">-</div>
+                                </div>
+                                <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                                    <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">Recall</div>
+                                    <div id="metric-recall" style="font-size: 1.5em; font-weight: 600; color: #2563eb;">-</div>
+                                </div>
+                                <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                                    <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">F1 Score</div>
+                                    <div id="metric-f1" style="font-size: 1.5em; font-weight: 600; color: #7c3aed;">-</div>
+                                </div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 0.8em; color: #6b7280;">
+                                <div>TP: <span id="metric-tp">-</span> | FP: <span id="metric-fp">-</span> | FN: <span id="metric-fn">-</span></div>
+                                <div>GT Count: <span id="metric-gt-count">-</span></div>
+                                <div>Pred Count: <span id="metric-pred-count">-</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Save Results Section -->
+                        <div id="save-results-section" style="display: none; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 15px;">
+                            <div style="font-size: 0.9em; font-weight: 500; color: #166534; margin-bottom: 10px;">Save to Results</div>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input
+                                    type="text"
+                                    id="version-name-input"
+                                    placeholder="Version name (e.g., v1.0, baseline)"
+                                    style="flex: 1; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.85em;"
+                                />
+                                <button
+                                    id="save-results-btn"
+                                    onclick="saveTestResults()"
+                                    style="padding: 8px 16px; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 500;"
+                                >
+                                    Save to Results
+                                </button>
+                            </div>
+                            <div id="save-results-message" style="margin-top: 8px; font-size: 0.8em; color: #166534;"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2814,6 +2868,114 @@
             ranges.forEach(r => {
                 highlightWordRange(r.start, r.end, r.color);
             });
+        }
+
+        // Store current observation metrics for saving
+        let currentObservationMetrics = null;
+
+        // Calculate observation metrics (precision, recall, F1)
+        async function calculateObservationMetrics() {
+            if (!currentEntry) {
+                document.getElementById('metrics-status').textContent = 'Please select a CSV entry first';
+                return;
+            }
+
+            const btn = document.getElementById('calculate-obs-metrics-btn');
+            const statusSpan = document.getElementById('metrics-status');
+            const originalText = btn.textContent;
+            btn.textContent = 'Calculating...';
+            btn.disabled = true;
+            statusSpan.textContent = '';
+
+            try {
+                const response = await fetch('/llm/calculate-observation-metrics/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ entry_number: currentEntry })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const metrics = result.metrics;
+                    currentObservationMetrics = { entry: currentEntry, ...metrics };
+
+                    // Update display
+                    document.getElementById('metric-precision').textContent = metrics.precision.toFixed(4);
+                    document.getElementById('metric-recall').textContent = metrics.recall.toFixed(4);
+                    document.getElementById('metric-f1').textContent = metrics.f1.toFixed(4);
+                    document.getElementById('metric-tp').textContent = metrics.true_positives;
+                    document.getElementById('metric-fp').textContent = metrics.false_positives;
+                    document.getElementById('metric-fn').textContent = metrics.false_negatives;
+                    document.getElementById('metric-gt-count').textContent = metrics.ground_truth_count;
+                    document.getElementById('metric-pred-count').textContent = metrics.predicted_count;
+
+                    document.getElementById('observation-metrics-display').style.display = 'block';
+                    document.getElementById('save-results-section').style.display = 'block';
+                    statusSpan.textContent = 'Metrics calculated successfully';
+                } else {
+                    statusSpan.textContent = 'Error: ' + result.error;
+                    document.getElementById('observation-metrics-display').style.display = 'none';
+                    document.getElementById('save-results-section').style.display = 'none';
+                }
+            } catch (error) {
+                statusSpan.textContent = 'Error: ' + error.message;
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // Save test results to file
+        async function saveTestResults() {
+            const versionName = document.getElementById('version-name-input').value.trim();
+            if (!versionName) {
+                alert('Please enter a version name');
+                return;
+            }
+
+            if (!currentObservationMetrics) {
+                alert('Please calculate metrics first');
+                return;
+            }
+
+            const btn = document.getElementById('save-results-btn');
+            const messageDiv = document.getElementById('save-results-message');
+            const originalText = btn.textContent;
+            btn.textContent = 'Saving...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/llm/save-test-results/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        version_name: versionName,
+                        results: [{
+                            entry: currentObservationMetrics.entry,
+                            precision: currentObservationMetrics.precision,
+                            recall: currentObservationMetrics.recall,
+                            f1: currentObservationMetrics.f1
+                        }]
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    messageDiv.textContent = result.message;
+                    messageDiv.style.color = '#166534';
+                } else {
+                    messageDiv.textContent = 'Error: ' + result.error;
+                    messageDiv.style.color = '#dc2626';
+                }
+            } catch (error) {
+                messageDiv.textContent = 'Error: ' + error.message;
+                messageDiv.style.color = '#dc2626';
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
         }
 
         // Run entity extraction (LLM) - Legacy

@@ -3991,3 +3991,242 @@ def migrate_entity_ids(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def calculate_observation_metrics(request):
+    """Calculate precision, recall, and F1 for observation extraction."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        entry_number = data.get('entry_number')
+
+        if entry_number is None:
+            return JsonResponse({'success': False, 'error': 'entry_number is required'}, status=400)
+
+        # Load entities data
+        entities_file = PROJECT_ROOT / "entities.json"
+        if not entities_file.exists():
+            return JsonResponse({'success': False, 'error': 'entities.json not found'}, status=404)
+
+        with open(entities_file, 'r', encoding='utf-8') as f:
+            entities_data = json.load(f)
+
+        # Find the entry
+        target_entry = None
+        for entry in entities_data:
+            if entry.get('entry') == entry_number:
+                target_entry = entry
+                break
+
+        if not target_entry:
+            return JsonResponse({'success': False, 'error': f'Entry {entry_number} not found'}, status=404)
+
+        ground_truth = target_entry.get('annotations', [])
+        auto_extracted = target_entry.get('auto_extracted', [])
+
+        if not ground_truth:
+            return JsonResponse({'success': False, 'error': 'No ground truth annotations found'}, status=400)
+
+        if not auto_extracted:
+            return JsonResponse({'success': False, 'error': 'No auto-extracted annotations found'}, status=400)
+
+        # Build observation signatures from ground truth: (word, index) pairs
+        gt_observations = set()
+        for annotation in ground_truth:
+            obs = annotation.get('observation', [])
+            for word_pair in obs:
+                if isinstance(word_pair, list) and len(word_pair) == 2:
+                    word, idx = word_pair
+                    gt_observations.add((word.lower().strip(), idx))
+
+        # Build observation signatures from auto-extracted
+        pred_observations = set()
+        for annotation in auto_extracted:
+            obs = annotation.get('observation', [])
+            for word_pair in obs:
+                if isinstance(word_pair, list) and len(word_pair) == 2:
+                    word, idx = word_pair
+                    pred_observations.add((word.lower().strip(), idx))
+
+        # Calculate metrics
+        true_positives = len(gt_observations & pred_observations)
+        false_positives = len(pred_observations - gt_observations)
+        false_negatives = len(gt_observations - pred_observations)
+
+        precision = true_positives / (true_positives + false_positives) if (true_positives + false_positives) > 0 else 0
+        recall = true_positives / (true_positives + false_negatives) if (true_positives + false_negatives) > 0 else 0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+
+        return JsonResponse({
+            'success': True,
+            'metrics': {
+                'precision': round(precision, 4),
+                'recall': round(recall, 4),
+                'f1': round(f1, 4),
+                'true_positives': true_positives,
+                'false_positives': false_positives,
+                'false_negatives': false_negatives,
+                'ground_truth_count': len(gt_observations),
+                'predicted_count': len(pred_observations),
+                'matched': list(gt_observations & pred_observations),
+                'unmatched_gt': list(gt_observations - pred_observations),
+                'unmatched_pred': list(pred_observations - gt_observations)
+            }
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Failed to calculate metrics: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def save_test_results(request):
+    """Save test results to tests directory with version info."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        version_name = data.get('version_name', '')
+        results = data.get('results', [])  # List of {entry, precision, recall, f1}
+
+        if not version_name:
+            return JsonResponse({'success': False, 'error': 'version_name is required'}, status=400)
+
+        if not results:
+            return JsonResponse({'success': False, 'error': 'results is required'}, status=400)
+
+        tests_dir = PROJECT_ROOT / "tests"
+        tests_dir.mkdir(exist_ok=True)
+
+        # Get current model and context info
+        model_file = PROJECT_ROOT / "llama_server.model"
+        current_model = ""
+        if model_file.exists():
+            with open(model_file, 'r') as f:
+                current_model = f.read().strip()
+
+        context_size_file = PROJECT_ROOT / "llama_server.context_size"
+        current_context_size = 0
+        if context_size_file.exists():
+            with open(context_size_file, 'r') as f:
+                try:
+                    current_context_size = int(f.read().strip())
+                except ValueError:
+                    pass
+
+        # Get active extraction prompt
+        prompts_file = PROJECT_ROOT / "extraction_prompts.json"
+        active_prompt = ""
+        prompt_template = ""
+        if prompts_file.exists():
+            with open(prompts_file, 'r', encoding='utf-8') as f:
+                prompts_data = json.load(f)
+                active_prompt = prompts_data.get('active_prompt', '')
+                prompt_template = prompts_data.get('prompts', {}).get(active_prompt, {}).get('template', '')
+
+        # Update versions.json
+        versions_file = tests_dir / "versions.json"
+        if versions_file.exists():
+            with open(versions_file, 'r', encoding='utf-8') as f:
+                versions_data = json.load(f)
+        else:
+            versions_data = {'versions': [], 'current_version': None}
+
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+
+        version_info = {
+            'name': version_name,
+            'timestamp': timestamp,
+            'model': current_model,
+            'context_size': current_context_size,
+            'extraction_prompt': active_prompt,
+            'prompt_template': prompt_template
+        }
+
+        # Check if version already exists
+        existing_idx = None
+        for i, v in enumerate(versions_data['versions']):
+            if v['name'] == version_name:
+                existing_idx = i
+                break
+
+        if existing_idx is not None:
+            versions_data['versions'][existing_idx] = version_info
+        else:
+            versions_data['versions'].append(version_info)
+
+        versions_data['current_version'] = version_name
+
+        with open(versions_file, 'w', encoding='utf-8') as f:
+            json.dump(versions_data, f, indent=2)
+
+        # Generate results table file
+        results_file = tests_dir / f"results_{timestamp}.txt"
+
+        # Build table
+        lines = []
+        lines.append(f"# Test Results - {version_name}")
+        lines.append(f"# Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        lines.append(f"# Model: {current_model}")
+        lines.append(f"# Prompt: {active_prompt}")
+        lines.append("")
+
+        # Table header
+        header = "| Entry | Precision | Recall | F1 |"
+        separator = "|-------|-----------|--------|------|"
+        lines.append(header)
+        lines.append(separator)
+
+        # Table rows
+        total_precision = 0
+        total_recall = 0
+        total_f1 = 0
+        for result in results:
+            entry = result.get('entry', '')
+            precision = result.get('precision', 0)
+            recall = result.get('recall', 0)
+            f1 = result.get('f1', 0)
+            total_precision += precision
+            total_recall += recall
+            total_f1 += f1
+            lines.append(f"| {entry} | {precision:.4f} | {recall:.4f} | {f1:.4f} |")
+
+        # Average row
+        n = len(results)
+        if n > 0:
+            lines.append(separator)
+            lines.append(f"| **Avg** | **{total_precision/n:.4f}** | **{total_recall/n:.4f}** | **{total_f1/n:.4f}** |")
+
+        with open(results_file, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(lines))
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Results saved to {results_file.name}',
+            'results_file': str(results_file),
+            'version_info': version_info
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Failed to save results: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_test_versions(request):
+    """Get list of test versions."""
+    try:
+        versions_file = PROJECT_ROOT / "tests" / "versions.json"
+        if not versions_file.exists():
+            return JsonResponse({'success': True, 'versions': [], 'current_version': None})
+
+        with open(versions_file, 'r', encoding='utf-8') as f:
+            versions_data = json.load(f)
+
+        return JsonResponse({
+            'success': True,
+            'versions': versions_data.get('versions', []),
+            'current_version': versions_data.get('current_version')
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

@@ -51,4 +51,8 @@ urlpatterns = [
     path('save-entity-extraction-prompt/', views.save_entity_extraction_prompt, name='save_entity_extraction_prompt'),
     path('save-relation-extraction-prompt/', views.save_relation_extraction_prompt, name='save_relation_extraction_prompt'),
     path('execute-extraction/', views.execute_extraction_function, name='execute_extraction_function'),
+    # Test & Evaluation
+    path('calculate-observation-metrics/', views.calculate_observation_metrics, name='calculate_observation_metrics'),
+    path('save-test-results/', views.save_test_results, name='save_test_results'),
+    path('get-test-versions/', views.get_test_versions, name='get_test_versions'),
 ]
