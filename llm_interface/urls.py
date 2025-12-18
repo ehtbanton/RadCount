@@ -55,4 +55,5 @@ urlpatterns = [
     path('calculate-observation-metrics/', views.calculate_observation_metrics, name='calculate_observation_metrics'),
     path('save-test-results/', views.save_test_results, name='save_test_results'),
     path('get-test-versions/', views.get_test_versions, name='get_test_versions'),
+    path('get-current-version-info/', views.get_current_version_info, name='get_current_version_info'),
 ]

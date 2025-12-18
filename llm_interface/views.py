@@ -4079,17 +4079,114 @@ def calculate_observation_metrics(request):
         return JsonResponse({'success': False, 'error': f'Failed to calculate metrics: {str(e)}'}, status=500)
 
 
+def get_current_config():
+    """Helper to get current model and prompt configuration."""
+    model_file = PROJECT_ROOT / "llama_server.model"
+    current_model = ""
+    if model_file.exists():
+        with open(model_file, 'r') as f:
+            current_model = f.read().strip()
+
+    context_size_file = PROJECT_ROOT / "llama_server.context_size"
+    current_context_size = 0
+    if context_size_file.exists():
+        with open(context_size_file, 'r') as f:
+            try:
+                current_context_size = int(f.read().strip())
+            except ValueError:
+                pass
+
+    prompts_file = PROJECT_ROOT / "extraction_prompts.json"
+    active_prompt = ""
+    prompt_template = ""
+    if prompts_file.exists():
+        with open(prompts_file, 'r', encoding='utf-8') as f:
+            prompts_data = json.load(f)
+            active_prompt = prompts_data.get('active_prompt', '')
+            prompt_template = prompts_data.get('prompts', {}).get(active_prompt, {}).get('template', '')
+
+    return {
+        'model': current_model,
+        'context_size': current_context_size,
+        'extraction_prompt': active_prompt,
+        'prompt_template': prompt_template
+    }
+
+
+def detect_or_create_version(versions_data, current_config):
+    """
+    Auto-detect version based on model + prompt_template.
+    Returns (version_name, is_new, version_info).
+    """
+    current_model = current_config['model']
+    current_prompt_template = current_config['prompt_template']
+
+    # Check if a matching configuration exists
+    for v in versions_data.get('versions', []):
+        if v.get('model') == current_model and v.get('prompt_template') == current_prompt_template:
+            return v['name'], False, v
+
+    # No match - create new version with auto-incremented number
+    existing_names = [v.get('name', '') for v in versions_data.get('versions', [])]
+    max_num = 0
+    for name in existing_names:
+        try:
+            num = int(name)
+            max_num = max(max_num, num)
+        except ValueError:
+            pass
+
+    new_version_name = str(max_num + 1)
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+
+    version_info = {
+        'name': new_version_name,
+        'timestamp': timestamp,
+        'model': current_model,
+        'context_size': current_config['context_size'],
+        'extraction_prompt': current_config['extraction_prompt'],
+        'prompt_template': current_prompt_template
+    }
+
+    return new_version_name, True, version_info
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_current_version_info(request):
+    """Get current configuration and detected version."""
+    try:
+        current_config = get_current_config()
+
+        tests_dir = PROJECT_ROOT / "tests"
+        versions_file = tests_dir / "versions.json"
+
+        if versions_file.exists():
+            with open(versions_file, 'r', encoding='utf-8') as f:
+                versions_data = json.load(f)
+        else:
+            versions_data = {'versions': [], 'current_version': None}
+
+        version_name, is_new, version_info = detect_or_create_version(versions_data, current_config)
+
+        return JsonResponse({
+            'success': True,
+            'version_name': version_name,
+            'is_new_version': is_new,
+            'config': current_config
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
 @csrf_exempt
 @require_http_methods(["POST"])
 def save_test_results(request):
     """Save test results to tests directory with version info."""
     try:
         data = json.loads(request.body) if request.body else {}
-        version_name = data.get('version_name', '')
         results = data.get('results', [])  # List of {entry, precision, recall, f1}
-
-        if not version_name:
-            return JsonResponse({'success': False, 'error': 'version_name is required'}, status=400)
 
         if not results:
             return JsonResponse({'success': False, 'error': 'results is required'}, status=400)
@@ -4097,33 +4194,10 @@ def save_test_results(request):
         tests_dir = PROJECT_ROOT / "tests"
         tests_dir.mkdir(exist_ok=True)
 
-        # Get current model and context info
-        model_file = PROJECT_ROOT / "llama_server.model"
-        current_model = ""
-        if model_file.exists():
-            with open(model_file, 'r') as f:
-                current_model = f.read().strip()
+        # Get current configuration
+        current_config = get_current_config()
 
-        context_size_file = PROJECT_ROOT / "llama_server.context_size"
-        current_context_size = 0
-        if context_size_file.exists():
-            with open(context_size_file, 'r') as f:
-                try:
-                    current_context_size = int(f.read().strip())
-                except ValueError:
-                    pass
-
-        # Get active extraction prompt
-        prompts_file = PROJECT_ROOT / "extraction_prompts.json"
-        active_prompt = ""
-        prompt_template = ""
-        if prompts_file.exists():
-            with open(prompts_file, 'r', encoding='utf-8') as f:
-                prompts_data = json.load(f)
-                active_prompt = prompts_data.get('active_prompt', '')
-                prompt_template = prompts_data.get('prompts', {}).get(active_prompt, {}).get('template', '')
-
-        # Update versions.json
+        # Load or initialize versions data
         versions_file = tests_dir / "versions.json"
         if versions_file.exists():
             with open(versions_file, 'r', encoding='utf-8') as f:
@@ -4131,28 +4205,21 @@ def save_test_results(request):
         else:
             versions_data = {'versions': [], 'current_version': None}
 
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        # Auto-detect or create version
+        version_name, is_new, version_info = detect_or_create_version(versions_data, current_config)
 
-        version_info = {
-            'name': version_name,
-            'timestamp': timestamp,
-            'model': current_model,
-            'context_size': current_context_size,
-            'extraction_prompt': active_prompt,
-            'prompt_template': prompt_template
-        }
+        # Update timestamp if reusing existing version
+        if not is_new:
+            version_info['timestamp'] = datetime.now().strftime('%Y%m%d_%H%M%S')
 
-        # Check if version already exists
-        existing_idx = None
-        for i, v in enumerate(versions_data['versions']):
-            if v['name'] == version_name:
-                existing_idx = i
-                break
-
-        if existing_idx is not None:
-            versions_data['versions'][existing_idx] = version_info
-        else:
+        # Update versions data
+        if is_new:
             versions_data['versions'].append(version_info)
+        else:
+            for i, v in enumerate(versions_data['versions']):
+                if v['name'] == version_name:
+                    versions_data['versions'][i] = version_info
+                    break
 
         versions_data['current_version'] = version_name
 
@@ -4160,14 +4227,15 @@ def save_test_results(request):
             json.dump(versions_data, f, indent=2)
 
         # Generate results table file
+        timestamp = version_info['timestamp']
         results_file = tests_dir / f"results_{timestamp}.txt"
 
         # Build table
         lines = []
-        lines.append(f"# Test Results - {version_name}")
+        lines.append(f"# Test Results - Version {version_name}")
         lines.append(f"# Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        lines.append(f"# Model: {current_model}")
-        lines.append(f"# Prompt: {active_prompt}")
+        lines.append(f"# Model: {current_config['model']}")
+        lines.append(f"# Prompt: {current_config['extraction_prompt']}")
         lines.append("")
 
         # Table header
