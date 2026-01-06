@@ -555,79 +555,15 @@
 
             <!-- Right Panel: Annotations & Metrics -->
             <div class="panel panel-right">
-                <!-- Tab Navigation -->
-                <div id="method-tabs-container" style="display: flex; border-bottom: 2px solid #e5e7eb; margin-bottom: 15px; gap: 4px;">
-                    <button
-                        id="ground-truth-tab-btn"
-                        class="annotation-tab-btn"
-                        onclick="switchAnnotationTab('ground-truth')"
-                        style="padding: 10px 16px; background: none; border: none; border-bottom: 2px solid #3b82f6; color: #3b82f6; cursor: pointer; font-size: 0.85em; font-weight: 500; margin-bottom: -2px;"
-                    >
-                        Ground Truth
-                    </button>
-                    <button
-                        id="auto-extracted-tab-btn"
-                        class="annotation-tab-btn"
-                        onclick="switchAnnotationTab('auto-extracted')"
-                        style="padding: 10px 16px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; cursor: pointer; font-size: 0.85em; font-weight: 400; margin-bottom: -2px;"
-                    >
-                        Auto-Extracted
-                    </button>
-                    <button
-                        id="test-evaluate-tab-btn"
-                        class="annotation-tab-btn"
-                        onclick="switchAnnotationTab('test-evaluate')"
-                        style="padding: 10px 16px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; cursor: pointer; font-size: 0.85em; font-weight: 400; margin-bottom: -2px;"
-                    >
-                        Test & Evaluate
-                    </button>
-                </div>
-
-                <!-- Ground Truth Tab Content -->
-                <div id="ground-truth-tab" class="annotation-tab-content" style="display: block;">
-                    <!-- Add Annotation Form -->
-                    <div style="background: #f9fafb; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
-                        <div style="font-weight: 500; color: #374151; margin-bottom: 12px; font-size: 0.9em;">Add Annotation</div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
-                            <div>
-                                <label style="display: block; font-size: 0.8em; color: #3b82f6; margin-bottom: 4px; font-weight: 500;">Observation (start-end)</label>
-                                <input type="text" id="obs-tokens-input" placeholder="e.g., 5-5" style="width: 100%; padding: 8px; border: 1px solid #3b82f6; border-radius: 4px; font-size: 0.9em;">
-                            </div>
-                            <div>
-                                <label style="display: block; font-size: 0.8em; color: #10b981; margin-bottom: 4px; font-weight: 500;">Location (start-end)</label>
-                                <input type="text" id="loc-tokens-input" placeholder="e.g., 12-15" style="width: 100%; padding: 8px; border: 1px solid #10b981; border-radius: 4px; font-size: 0.9em;">
-                            </div>
-                            <div>
-                                <label style="display: block; font-size: 0.8em; color: #f59e0b; margin-bottom: 4px; font-weight: 500;">Properties (ranges)</label>
-                                <input type="text" id="props-tokens-input" placeholder="e.g., 3-3, 4-4" style="width: 100%; padding: 8px; border: 1px solid #f59e0b; border-radius: 4px; font-size: 0.9em;">
-                            </div>
-                        </div>
-                        <div style="display: flex; gap: 8px;">
-                            <button onclick="addAnnotationFromInputs()" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Add Annotation</button>
-                            <button onclick="addAnnotationFromSelection()" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Add from Selection</button>
-                        </div>
-                        <div style="font-size: 0.75em; color: #6b7280; margin-top: 8px;">Word indices are 0-based. Properties: comma-separated ranges for modifiers/descriptors.</div>
-                    </div>
-
-                    <!-- Annotations Display -->
-                    <div>
-                        <div style="font-weight: 500; color: #374151; margin-bottom: 8px; font-size: 0.9em;">
-                            Annotations (<span id="annotation-count">0</span>)
-                        </div>
-                        <div id="annotations-container" style="min-height: 40px; padding: 10px; background: white; border: 1px solid #e5e7eb; border-radius: 6px;">
-                            <div style="color: #6b7280; font-size: 0.85em; text-align: center;">No annotations yet.</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Auto-Extracted Tab Content -->
-                <div id="auto-extracted-tab" class="annotation-tab-content" style="display: none;">
-                    <!-- Single extraction button -->
-                    <div style="margin-bottom: 15px;">
+                <!-- Side-by-side controls -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <!-- Auto-Extracted Controls (Left) -->
+                    <div style="background: #fffbeb; padding: 12px; border-radius: 6px; border: 1px solid #fbbf24;">
+                        <div style="font-weight: 500; color: #b45309; margin-bottom: 10px; font-size: 0.9em;">Auto-Extracted</div>
                         <button
                             id="extract-observations-btn"
                             onclick="runObservationExtraction()"
-                            style="width: 100%; padding: 12px 20px; background: #f59e0b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.95em; font-weight: 500; transition: background 0.2s;"
+                            style="width: 100%; padding: 10px 16px; background: #f59e0b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: 500; transition: background 0.2s;"
                             onmouseover="this.style.background='#d97706'"
                             onmouseout="this.style.background='#f59e0b'"
                         >
@@ -635,74 +571,93 @@
                         </button>
                     </div>
 
-                    <!-- Extracted Annotations Display -->
-                    <div>
-                        <div style="font-weight: 500; color: #374151; margin-bottom: 8px; font-size: 0.9em;">
-                            Auto-Extracted (<span id="auto-annotation-count">0</span>)
+                    <!-- Ground Truth Controls (Right) -->
+                    <div style="background: #f0f9ff; padding: 12px; border-radius: 6px; border: 1px solid #3b82f6;">
+                        <div style="font-weight: 500; color: #1d4ed8; margin-bottom: 10px; font-size: 0.9em;">Ground Truth</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 8px;">
+                            <input type="text" id="obs-tokens-input" placeholder="Obs 5-5" title="Observation (start-end)" style="width: 100%; padding: 6px; border: 1px solid #3b82f6; border-radius: 4px; font-size: 0.8em;">
+                            <input type="text" id="loc-tokens-input" placeholder="Loc 12-15" title="Location (start-end)" style="width: 100%; padding: 6px; border: 1px solid #10b981; border-radius: 4px; font-size: 0.8em;">
+                            <input type="text" id="props-tokens-input" placeholder="Props 3-3" title="Properties (ranges)" style="width: 100%; padding: 6px; border: 1px solid #f59e0b; border-radius: 4px; font-size: 0.8em;">
                         </div>
-                        <div id="auto-annotations-container" style="min-height: 40px; padding: 10px; background: white; border: 1px solid #e5e7eb; border-radius: 6px;">
-                            <div style="color: #6b7280; font-size: 0.85em; text-align: center;">Click "Extract Observations" to start.</div>
+                        <div style="display: flex; gap: 6px;">
+                            <button onclick="addAnnotationFromInputs()" style="flex: 1; padding: 6px 10px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;">Add</button>
+                            <button onclick="addAnnotationFromSelection()" style="flex: 1; padding: 6px 10px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;">From Selection</button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Test & Evaluate Tab Content -->
-                <div id="test-evaluate-tab" class="annotation-tab-content" style="display: none;">
-                    <div style="padding: 15px;">
-                        <!-- Calculate Metrics Button -->
-                        <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
+                <!-- Side-by-side column headers -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 8px;">
+                    <div style="font-weight: 500; color: #b45309; font-size: 0.85em;">
+                        Auto-Extracted (<span id="auto-annotation-count">0</span>)
+                    </div>
+                    <div style="font-weight: 500; color: #1d4ed8; font-size: 0.85em;">
+                        Ground Truth (<span id="annotation-count">0</span>)
+                    </div>
+                </div>
+
+                <!-- Aligned Annotations Container -->
+                <div id="aligned-annotations-container" style="background: white; border: 1px solid #e5e7eb; border-radius: 6px; min-height: 100px; margin-bottom: 20px;">
+                    <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 20px;">No annotations yet.</div>
+                </div>
+
+                <!-- Test & Evaluate Section -->
+                <div id="test-evaluate-section" style="border-top: 2px solid #e5e7eb; padding-top: 15px;">
+                    <div style="font-weight: 500; color: #374151; margin-bottom: 12px; font-size: 0.9em;">Test & Evaluate</div>
+
+                    <!-- Calculate Metrics Button -->
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
+                        <button
+                            id="calculate-obs-metrics-btn"
+                            onclick="calculateObservationMetrics()"
+                            style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 500;"
+                        >
+                            Calculate Metrics
+                        </button>
+                        <span id="metrics-status" style="color: #6b7280; font-size: 0.85em;"></span>
+                    </div>
+
+                    <!-- Metrics Display -->
+                    <div id="observation-metrics-display" style="display: none; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px;">
+                            <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                                <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">Precision</div>
+                                <div id="metric-precision" style="font-size: 1.5em; font-weight: 600; color: #059669;">-</div>
+                            </div>
+                            <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                                <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">Recall</div>
+                                <div id="metric-recall" style="font-size: 1.5em; font-weight: 600; color: #2563eb;">-</div>
+                            </div>
+                            <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                                <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">F1 Score</div>
+                                <div id="metric-f1" style="font-size: 1.5em; font-weight: 600; color: #7c3aed;">-</div>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 0.8em; color: #6b7280;">
+                            <div>TP: <span id="metric-tp">-</span> | FP: <span id="metric-fp">-</span> | FN: <span id="metric-fn">-</span></div>
+                            <div>GT Count: <span id="metric-gt-count">-</span></div>
+                            <div>Pred Count: <span id="metric-pred-count">-</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Save Results Section -->
+                    <div id="save-results-section" style="display: none; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <div>
+                                <span style="font-size: 0.9em; font-weight: 500; color: #166534;">Version: </span>
+                                <span id="detected-version-name" style="font-size: 0.9em; font-weight: 600; color: #166534;">-</span>
+                                <span id="version-status-badge" style="display: none; margin-left: 8px; padding: 2px 8px; border-radius: 10px; font-size: 0.7em; font-weight: 500;"></span>
+                            </div>
                             <button
-                                id="calculate-obs-metrics-btn"
-                                onclick="calculateObservationMetrics()"
-                                style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 500;"
+                                id="save-results-btn"
+                                onclick="saveTestResults()"
+                                style="padding: 8px 16px; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 500;"
                             >
-                                Calculate Metrics
+                                Save to Results
                             </button>
-                            <span id="metrics-status" style="color: #6b7280; font-size: 0.85em;"></span>
                         </div>
-
-                        <!-- Metrics Display -->
-                        <div id="observation-metrics-display" style="display: none; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
-                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px;">
-                                <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
-                                    <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">Precision</div>
-                                    <div id="metric-precision" style="font-size: 1.5em; font-weight: 600; color: #059669;">-</div>
-                                </div>
-                                <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
-                                    <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">Recall</div>
-                                    <div id="metric-recall" style="font-size: 1.5em; font-weight: 600; color: #2563eb;">-</div>
-                                </div>
-                                <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
-                                    <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">F1 Score</div>
-                                    <div id="metric-f1" style="font-size: 1.5em; font-weight: 600; color: #7c3aed;">-</div>
-                                </div>
-                            </div>
-                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 0.8em; color: #6b7280;">
-                                <div>TP: <span id="metric-tp">-</span> | FP: <span id="metric-fp">-</span> | FN: <span id="metric-fn">-</span></div>
-                                <div>GT Count: <span id="metric-gt-count">-</span></div>
-                                <div>Pred Count: <span id="metric-pred-count">-</span></div>
-                            </div>
-                        </div>
-
-                        <!-- Save Results Section -->
-                        <div id="save-results-section" style="display: none; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 15px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                <div>
-                                    <span style="font-size: 0.9em; font-weight: 500; color: #166534;">Version: </span>
-                                    <span id="detected-version-name" style="font-size: 0.9em; font-weight: 600; color: #166534;">-</span>
-                                    <span id="version-status-badge" style="display: none; margin-left: 8px; padding: 2px 8px; border-radius: 10px; font-size: 0.7em; font-weight: 500;"></span>
-                                </div>
-                                <button
-                                    id="save-results-btn"
-                                    onclick="saveTestResults()"
-                                    style="padding: 8px 16px; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 500;"
-                                >
-                                    Save to Results
-                                </button>
-                            </div>
-                            <div id="version-config-info" style="font-size: 0.75em; color: #6b7280; margin-bottom: 8px;"></div>
-                            <div id="save-results-message" style="font-size: 0.8em; color: #166534;"></div>
-                        </div>
+                        <div id="version-config-info" style="font-size: 0.75em; color: #6b7280; margin-bottom: 8px;"></div>
+                        <div id="save-results-message" style="font-size: 0.8em; color: #166534;"></div>
                     </div>
                 </div>
             </div>
@@ -1389,9 +1344,8 @@
                         // Clear selection hint
                         document.getElementById('word-selection-hint').textContent = '';
 
-                        // Render annotation UI
-                        renderAnnotations();
-                        await renderAutoExtractedTab();
+                        // Render aligned annotations UI
+                        renderAlignedAnnotations();
                     } else {
                         textDisplayArea.textContent = 'No fields found';
                         textDisplayArea.style.color = '#6b7280';
@@ -2191,45 +2145,11 @@
 
         // ===== Tab and Annotation Functions =====
 
-        // Switch between annotation tabs
+        // Switch between annotation tabs (legacy function - now just re-renders aligned view)
         async function switchAnnotationTab(tabName) {
             activeAnnotationTab = tabName;
-
-            // Update all tab button styles
-            document.querySelectorAll('.annotation-tab-btn').forEach(btn => {
-                btn.style.borderBottom = '2px solid transparent';
-                btn.style.color = '#6b7280';
-                btn.style.fontWeight = '400';
-            });
-
-            // Highlight active tab
-            let activeBtn;
-            if (tabName === 'ground-truth') {
-                activeBtn = document.getElementById('ground-truth-tab-btn');
-            } else if (tabName === 'auto-extracted') {
-                activeBtn = document.getElementById('auto-extracted-tab-btn');
-            } else if (tabName === 'test-evaluate') {
-                activeBtn = document.getElementById('test-evaluate-tab-btn');
-            }
-
-            if (activeBtn) {
-                activeBtn.style.borderBottom = '2px solid #3b82f6';
-                activeBtn.style.color = '#3b82f6';
-                activeBtn.style.fontWeight = '500';
-            }
-
-            // Show/hide tab content
-            document.getElementById('ground-truth-tab').style.display = tabName === 'ground-truth' ? 'block' : 'none';
-            document.getElementById('auto-extracted-tab').style.display = tabName === 'auto-extracted' ? 'block' : 'none';
-            document.getElementById('test-evaluate-tab').style.display = tabName === 'test-evaluate' ? 'block' : 'none';
-
-            // Render content for active tab
-            if (tabName === 'ground-truth') {
-                renderGroundTruthTab();
-            } else if (tabName === 'auto-extracted') {
-                await renderAutoExtractedTab();
-            }
-            // test-evaluate tab has no dynamic content yet
+            // Since we now use a unified aligned view, just re-render it
+            renderAlignedAnnotations();
         }
 
         // Save default method to server
@@ -2305,8 +2225,10 @@
                 }
             }
 
-            // Render tabs
+            // Render tabs (if container exists - may not exist in new UI)
             const container = document.getElementById('method-tabs-container');
+            if (!container) return; // Container removed in new unified layout
+
             const addButton = document.getElementById('add-method-tab-btn');
 
             // Remove old method tabs
@@ -2512,7 +2434,7 @@
                     document.getElementById('loc-tokens-input').value = '';
                     document.getElementById('props-tokens-input').value = '';
                     clearWordSelection();
-                    renderAnnotations();
+                    renderAlignedAnnotations();
                 } else {
                     alert('Error: ' + result.error);
                 }
@@ -2557,7 +2479,7 @@
                 if (result.success) {
                     // Reload entities data to get updated annotations
                     await loadEntities();
-                    renderAnnotations();
+                    renderAlignedAnnotations();
                 } else {
                     alert('Error: ' + result.error);
                 }
@@ -2566,7 +2488,7 @@
             }
         }
 
-        // Render annotations as line-by-line list with expandable JSON dropdown
+        // Render annotations as line-by-line list with expandable JSON dropdown (legacy, kept for compatibility)
         function renderAnnotations() {
             const container = document.getElementById('annotations-container');
             const countSpan = document.getElementById('annotation-count');
@@ -2776,7 +2698,7 @@
                 if (result.success) {
                     // Reload entities data to get updated auto_extracted
                     await loadEntities();
-                    renderAutoExtractedAnnotations();
+                    renderAlignedAnnotations();
                     alert(`Extracted ${result.count} observation-location pairs`);
                 } else {
                     alert('Error: ' + result.error);
@@ -2789,7 +2711,7 @@
             }
         }
 
-        // Render auto-extracted annotations as line-by-line list with expandable JSON dropdown
+        // Render auto-extracted annotations as line-by-line list with expandable JSON dropdown (legacy, kept for compatibility)
         function renderAutoExtractedAnnotations() {
             const container = document.getElementById('auto-annotations-container');
             const countSpan = document.getElementById('auto-annotation-count');
@@ -2867,6 +2789,196 @@
             ranges.forEach(r => {
                 highlightWordRange(r.start, r.end, r.color);
             });
+        }
+
+        // Render aligned annotations side-by-side (auto-extracted left, ground truth right)
+        function renderAlignedAnnotations() {
+            const container = document.getElementById('aligned-annotations-container');
+            const gtCountSpan = document.getElementById('annotation-count');
+            const autoCountSpan = document.getElementById('auto-annotation-count');
+            if (!container) return;
+
+            const entryData = getEntityEntryData(currentEntry);
+            const groundTruth = entryData?.annotations || [];
+            const autoExtracted = entryData?.auto_extracted || [];
+
+            // Update counts
+            if (gtCountSpan) gtCountSpan.textContent = groundTruth.length;
+            if (autoCountSpan) autoCountSpan.textContent = autoExtracted.length;
+
+            if (groundTruth.length === 0 && autoExtracted.length === 0) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 20px;">No annotations yet.</div>';
+                return;
+            }
+
+            // Helper to get observation start position from annotation
+            function getObsStart(ann) {
+                const obsParsed = parseAnnotationField(ann.observation);
+                return obsParsed.range ? obsParsed.range[0] : Infinity;
+            }
+
+            // Sort both arrays by observation start position
+            const sortedGT = [...groundTruth].map((ann, idx) => ({...ann, originalIndex: idx})).sort((a, b) => getObsStart(a) - getObsStart(b));
+            const sortedAuto = [...autoExtracted].map((ann, idx) => ({...ann, originalIndex: idx})).sort((a, b) => getObsStart(a) - getObsStart(b));
+
+            // Create position-aligned rows
+            // Collect all unique positions
+            const positions = new Set();
+            sortedGT.forEach(ann => positions.add(getObsStart(ann)));
+            sortedAuto.forEach(ann => positions.add(getObsStart(ann)));
+            const sortedPositions = [...positions].filter(p => p !== Infinity).sort((a, b) => a - b);
+
+            // Group annotations by position
+            const gtByPos = {};
+            const autoByPos = {};
+            sortedGT.forEach(ann => {
+                const pos = getObsStart(ann);
+                if (!gtByPos[pos]) gtByPos[pos] = [];
+                gtByPos[pos].push(ann);
+            });
+            sortedAuto.forEach(ann => {
+                const pos = getObsStart(ann);
+                if (!autoByPos[pos]) autoByPos[pos] = [];
+                autoByPos[pos].push(ann);
+            });
+
+            // Build aligned rows
+            let html = '<div style="display: flex; flex-direction: column; gap: 2px;">';
+
+            sortedPositions.forEach(pos => {
+                const gtAnns = gtByPos[pos] || [];
+                const autoAnns = autoByPos[pos] || [];
+                const maxRows = Math.max(gtAnns.length, autoAnns.length);
+
+                for (let i = 0; i < maxRows; i++) {
+                    const gtAnn = gtAnns[i];
+                    const autoAnn = autoAnns[i];
+
+                    html += `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; min-height: 32px;">`;
+
+                    // Auto-extracted cell (left)
+                    if (autoAnn) {
+                        html += renderAutoAnnotationCell(autoAnn);
+                    } else {
+                        html += `<div style="background: #fefce8; border-radius: 4px; opacity: 0.3;"></div>`;
+                    }
+
+                    // Ground truth cell (right)
+                    if (gtAnn) {
+                        html += renderGTAnnotationCell(gtAnn);
+                    } else {
+                        html += `<div style="background: #eff6ff; border-radius: 4px; opacity: 0.3;"></div>`;
+                    }
+
+                    html += `</div>`;
+                }
+            });
+
+            // Handle annotations without valid position (at Infinity)
+            const gtNoPos = sortedGT.filter(ann => getObsStart(ann) === Infinity);
+            const autoNoPos = sortedAuto.filter(ann => getObsStart(ann) === Infinity);
+            const maxNoPos = Math.max(gtNoPos.length, autoNoPos.length);
+
+            for (let i = 0; i < maxNoPos; i++) {
+                const gtAnn = gtNoPos[i];
+                const autoAnn = autoNoPos[i];
+
+                html += `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; min-height: 32px;">`;
+
+                if (autoAnn) {
+                    html += renderAutoAnnotationCell(autoAnn);
+                } else {
+                    html += `<div style="background: #fefce8; border-radius: 4px; opacity: 0.3;"></div>`;
+                }
+
+                if (gtAnn) {
+                    html += renderGTAnnotationCell(gtAnn);
+                } else {
+                    html += `<div style="background: #eff6ff; border-radius: 4px; opacity: 0.3;"></div>`;
+                }
+
+                html += `</div>`;
+            }
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // Render a single ground truth annotation cell
+        function renderGTAnnotationCell(ann) {
+            const index = ann.originalIndex;
+            const obsParsed = parseAnnotationField(ann.observation);
+            const obsText = obsParsed.text || '?';
+            const obsRange = obsParsed.range ? `[${obsParsed.range[0]}-${obsParsed.range[1]}]` : '';
+
+            const locParsed = parseAnnotationField(ann.anatomical_location);
+            let locInfo = '';
+            if (locParsed.text) {
+                const locRange = locParsed.range ? `[${locParsed.range[0]}-${locParsed.range[1]}]` : '';
+                locInfo = ` @ ${locParsed.text} ${locRange}`;
+            }
+
+            const jsonData = JSON.stringify(ann, null, 2);
+
+            const ranges = [];
+            if (obsParsed.range) ranges.push({start: obsParsed.range[0], end: obsParsed.range[1], color: '#dbeafe'});
+            if (locParsed.range) ranges.push({start: locParsed.range[0], end: locParsed.range[1], color: '#d1fae5'});
+
+            const propsParsed = parsePropertiesField(ann.properties);
+            propsParsed.forEach(prop => {
+                if (prop.range) ranges.push({start: prop.range[0], end: prop.range[1], color: '#fef3c7'});
+            });
+
+            return `<div class="annotation-row" data-index="${index}" data-ranges='${JSON.stringify(ranges)}' style="background: #eff6ff; border-radius: 4px; overflow: hidden; border-left: 3px solid #3b82f6;">
+                <div style="display: flex; align-items: center; gap: 6px; padding: 5px 8px; cursor: pointer;" onmouseenter="highlightAnnotationRanges(this.parentElement)" onmouseleave="clearWordHighlights()">
+                    <button class="json-toggle-btn" onclick="event.stopPropagation(); toggleAnnotationJson(${index})" style="background: none; border: none; color: #6b7280; cursor: pointer; padding: 0; font-size: 0.75em; width: 14px;">▶</button>
+                    <span style="color: #1d4ed8; font-weight: 500; font-size: 0.8em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px;" title="${escapeHtml(obsText)}">${escapeHtml(obsText)}</span>
+                    <span style="color: #9ca3af; font-size: 0.7em;">${obsRange}</span>
+                    <span style="color: #10b981; font-size: 0.75em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;" title="${escapeHtml(locInfo)}">${escapeHtml(locInfo)}</span>
+                    <button onclick="event.stopPropagation(); deleteAnnotation(${index})" style="background: none; border: none; color: #dc2626; cursor: pointer; padding: 2px; font-size: 0.75em; opacity: 0.6;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">&times;</button>
+                </div>
+                <div id="annotation-json-${index}" class="annotation-json-dropdown" style="display: none; padding: 6px 8px; background: #1f2937; border-top: 1px solid #3b82f6;">
+                    <pre style="margin: 0; font-size: 0.7em; color: #e5e7eb; white-space: pre-wrap; word-break: break-all;">${escapeHtml(jsonData)}</pre>
+                </div>
+            </div>`;
+        }
+
+        // Render a single auto-extracted annotation cell
+        function renderAutoAnnotationCell(ann) {
+            const index = ann.originalIndex;
+            const obsParsed = parseAnnotationField(ann.observation);
+            const obsText = obsParsed.text || '?';
+            const obsRange = obsParsed.range ? `[${obsParsed.range[0]}-${obsParsed.range[1]}]` : '';
+
+            const locParsed = parseAnnotationField(ann.anatomical_location);
+            let locInfo = '';
+            if (locParsed.text) {
+                const locRange = locParsed.range ? `[${locParsed.range[0]}-${locParsed.range[1]}]` : '';
+                locInfo = ` @ ${locParsed.text} ${locRange}`;
+            }
+
+            const jsonData = JSON.stringify(ann, null, 2);
+
+            const ranges = [];
+            if (obsParsed.range) ranges.push({start: obsParsed.range[0], end: obsParsed.range[1], color: '#fef3c7'});
+            if (locParsed.range) ranges.push({start: locParsed.range[0], end: locParsed.range[1], color: '#d1fae5'});
+
+            const propsParsed = parsePropertiesField(ann.properties);
+            propsParsed.forEach(prop => {
+                if (prop.range) ranges.push({start: prop.range[0], end: prop.range[1], color: '#dbeafe'});
+            });
+
+            return `<div class="auto-annotation-row" data-index="${index}" data-ranges='${JSON.stringify(ranges)}' style="background: #fefce8; border-radius: 4px; overflow: hidden; border-left: 3px solid #f59e0b;">
+                <div style="display: flex; align-items: center; gap: 6px; padding: 5px 8px; cursor: pointer;" onmouseenter="highlightAutoAnnotationRanges(this.parentElement)" onmouseleave="clearWordHighlights()">
+                    <button class="json-toggle-btn" onclick="event.stopPropagation(); toggleAutoAnnotationJson(${index})" style="background: none; border: none; color: #6b7280; cursor: pointer; padding: 0; font-size: 0.75em; width: 14px;">▶</button>
+                    <span style="color: #b45309; font-weight: 500; font-size: 0.8em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px;" title="${escapeHtml(obsText)}">${escapeHtml(obsText)}</span>
+                    <span style="color: #9ca3af; font-size: 0.7em;">${obsRange}</span>
+                    <span style="color: #10b981; font-size: 0.75em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;" title="${escapeHtml(locInfo)}">${escapeHtml(locInfo)}</span>
+                </div>
+                <div id="auto-annotation-json-${index}" class="auto-annotation-json-dropdown" style="display: none; padding: 6px 8px; background: #1f2937; border-top: 1px solid #f59e0b;">
+                    <pre style="margin: 0; font-size: 0.7em; color: #e5e7eb; white-space: pre-wrap; word-break: break-all;">${escapeHtml(jsonData)}</pre>
+                </div>
+            </div>`;
         }
 
         // Store current observation metrics for saving
@@ -3945,10 +4057,10 @@
             }
         }
 
-        // Render ground truth tab
+        // Render ground truth tab (now uses aligned view)
         function renderGroundTruthTab() {
-            // Render the simplified annotation list
-            renderAnnotations();
+            // Render aligned annotations (both auto-extracted and ground truth)
+            renderAlignedAnnotations();
         }
 
         // Populate extraction prompt dropdown
@@ -4063,10 +4175,10 @@
             }
         }
 
-        // Render auto-extracted tab
+        // Render auto-extracted tab (now uses aligned view)
         async function renderAutoExtractedTab() {
-            // Render simplified auto-extracted annotations
-            renderAutoExtractedAnnotations();
+            // Render aligned annotations (both auto-extracted and ground truth)
+            renderAlignedAnnotations();
         }
 
         // Calculate metrics
