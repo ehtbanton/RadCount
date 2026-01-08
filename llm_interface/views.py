@@ -2279,6 +2279,129 @@ def extract_observations(request):
         return JsonResponse({'success': False, 'error': f'Failed to extract observations: {str(e)}'}, status=500)
 
 
+# Binary Classification Extraction
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def extract_binary_classification(request):
+    """Extract binary classifications for given labels using LLM."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        entry_number = data.get('entry_number')
+        labels = data.get('labels', [])
+        report_text = data.get('report_text', '')
+
+        if entry_number is None:
+            return JsonResponse({'success': False, 'error': 'entry_number is required'}, status=400)
+
+        if not labels:
+            return JsonResponse({'success': False, 'error': 'labels are required'}, status=400)
+
+        if not report_text:
+            return JsonResponse({'success': False, 'error': 'report_text is required'}, status=400)
+
+        # Check if LLM server is running
+        llm_service = LlamaService()
+        if not llm_service.is_server_running():
+            return JsonResponse({'success': False, 'error': 'LLM server is not running'}, status=503)
+
+        # Build prompt for binary classification
+        labels_str = ', '.join(labels)
+        prompt = f"""Analyze the following radiology report and classify it for each of these factors: {labels_str}
+
+For each factor, respond with exactly one of: YES, NO, or UNCERTAIN
+
+Report:
+{report_text}
+
+Respond in JSON format like this:
+{{
+  "classifications": {{
+    "FactorName1": "yes",
+    "FactorName2": "no",
+    "FactorName3": "uncertain"
+  }}
+}}
+
+Only use lowercase "yes", "no", or "uncertain" as values. Now classify for: {labels_str}"""
+
+        # Build messages
+        messages = [
+            {
+                'role': 'user',
+                'content': prompt
+            }
+        ]
+
+        # Call LLM
+        response = requests.post(
+            f"{llm_service.base_url}/v1/chat/completions",
+            headers={'Content-Type': 'application/json'},
+            json={
+                'messages': messages,
+                'temperature': 0.1,
+                'max_tokens': 1000
+            },
+            timeout=120
+        )
+
+        if response.status_code != 200:
+            return JsonResponse({'success': False, 'error': f'LLM request failed: {response.text}'}, status=500)
+
+        result = response.json()
+        generated_text = result['choices'][0]['message']['content']
+
+        # Parse JSON response
+        import re
+        json_match = re.search(r'\{[\s\S]*\}', generated_text)
+        if json_match:
+            try:
+                parsed = json.loads(json_match.group())
+                classifications = parsed.get('classifications', {})
+
+                # If no 'classifications' key, try the parsed object directly
+                if not classifications and isinstance(parsed, dict):
+                    classifications = parsed
+
+                # Build case-insensitive lookup map
+                classifications_lower = {k.lower(): v for k, v in classifications.items()}
+
+                # Normalize values to lowercase with case-insensitive key matching
+                normalized = {}
+                for label in labels:
+                    # Try exact match first, then case-insensitive
+                    value = classifications.get(label) or classifications_lower.get(label.lower(), '')
+                    if isinstance(value, str):
+                        value = value.lower().strip()
+                    else:
+                        value = ''
+                    if value in ['yes', 'no', 'uncertain']:
+                        normalized[label] = value
+                    else:
+                        normalized[label] = None
+
+                return JsonResponse({
+                    'success': True,
+                    'classifications': normalized,
+                    'debug_raw': generated_text[:500]  # Include for debugging
+                })
+            except json.JSONDecodeError as e:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Failed to parse LLM JSON response: {str(e)}',
+                    'raw_response': generated_text
+                }, status=400)
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'No JSON found in LLM response',
+                'raw_response': generated_text
+            }, status=400)
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Failed to extract binary classification: {str(e)}'}, status=500)
+
+
 # LLM Extraction Endpoints (Legacy)
 
 @csrf_exempt

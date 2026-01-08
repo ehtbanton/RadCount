@@ -555,54 +555,129 @@
 
             <!-- Right Panel: Annotations & Metrics -->
             <div class="panel panel-right">
-                <!-- Side-by-side controls -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                    <!-- Auto-Extracted Controls (Left) -->
-                    <div style="background: #fffbeb; padding: 12px; border-radius: 6px; border: 1px solid #fbbf24;">
-                        <div style="font-weight: 500; color: #b45309; margin-bottom: 10px; font-size: 0.9em;">Auto-Extracted</div>
+                <!-- Schema Tab Bar -->
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 15px; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">
+                    <span style="font-weight: 500; color: #374151; font-size: 0.85em;">Annotation schema:</span>
+                    <button
+                        id="schema-tab-binary"
+                        onclick="switchAnnotationSchema('binary')"
+                        style="padding: 6px 14px; background: none; border: none; border-bottom: 2px solid #8b5cf6; color: #8b5cf6; cursor: pointer; font-size: 0.85em; font-weight: 500; margin-bottom: -12px;"
+                    >
+                        Binary Classification
+                    </button>
+                    <button
+                        id="schema-tab-triplets"
+                        onclick="switchAnnotationSchema('triplets')"
+                        style="padding: 6px 14px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; cursor: pointer; font-size: 0.85em; font-weight: 400; margin-bottom: -12px;"
+                    >
+                        Triplet Annotations
+                    </button>
+                </div>
+
+                <!-- Binary Classification Schema Content -->
+                <div id="schema-content-binary" style="display: block;">
+                    <!-- Label Management -->
+                    <div style="background: #faf5ff; padding: 12px; border-radius: 6px; border: 1px solid #c4b5fd; margin-bottom: 15px;">
+                        <div style="font-weight: 500; color: #6d28d9; margin-bottom: 10px; font-size: 0.85em;">Classification Labels</div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;" id="classification-labels-container">
+                            <!-- Labels will be rendered here -->
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <input type="text" id="new-label-input" placeholder="New label name..." style="flex: 1; padding: 6px 10px; border: 1px solid #c4b5fd; border-radius: 4px; font-size: 0.8em;">
+                            <button onclick="addClassificationLabel()" style="padding: 6px 12px; background: #8b5cf6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;">Add Label</button>
+                        </div>
+                    </div>
+
+                    <!-- Classification Inputs (side-by-side) -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 8px;">
+                        <div style="font-weight: 500; color: #b45309; font-size: 0.85em;">Auto-Extracted</div>
+                        <div style="font-weight: 500; color: #1d4ed8; font-size: 0.85em;">Ground Truth</div>
+                    </div>
+                    <div id="binary-classifications-container" style="background: white; border: 1px solid #e5e7eb; border-radius: 6px; min-height: 60px; margin-bottom: 15px; padding: 10px;">
+                        <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">Add classification labels above to start.</div>
+                    </div>
+
+                    <!-- Extract Button -->
+                    <div style="margin-bottom: 15px;">
                         <button
-                            id="extract-observations-btn"
-                            onclick="runObservationExtraction()"
-                            style="width: 100%; padding: 10px 16px; background: #f59e0b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: 500; transition: background 0.2s;"
-                            onmouseover="this.style.background='#d97706'"
-                            onmouseout="this.style.background='#f59e0b'"
+                            id="extract-binary-btn"
+                            onclick="runBinaryExtraction()"
+                            style="width: 100%; padding: 10px 16px; background: #8b5cf6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: 500; transition: background 0.2s;"
+                            onmouseover="this.style.background='#7c3aed'"
+                            onmouseout="this.style.background='#8b5cf6'"
                         >
-                            Extract Observations
+                            Extract Classifications (LLM)
                         </button>
                     </div>
 
-                    <!-- Ground Truth Controls (Right) -->
-                    <div style="background: #f0f9ff; padding: 12px; border-radius: 6px; border: 1px solid #3b82f6;">
-                        <div style="font-weight: 500; color: #1d4ed8; margin-bottom: 10px; font-size: 0.9em;">Ground Truth</div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 8px;">
-                            <input type="text" id="obs-tokens-input" placeholder="Obs 5-5" title="Observation (start-end)" style="width: 100%; padding: 6px; border: 1px solid #3b82f6; border-radius: 4px; font-size: 0.8em;">
-                            <input type="text" id="loc-tokens-input" placeholder="Loc 12-15" title="Location (start-end)" style="width: 100%; padding: 6px; border: 1px solid #10b981; border-radius: 4px; font-size: 0.8em;">
-                            <input type="text" id="props-tokens-input" placeholder="Props 3-3" title="Properties (ranges)" style="width: 100%; padding: 6px; border: 1px solid #f59e0b; border-radius: 4px; font-size: 0.8em;">
+                    <!-- Binary Metrics Section -->
+                    <div id="binary-metrics-section" style="border-top: 2px solid #e5e7eb; padding-top: 15px;">
+                        <div style="font-weight: 500; color: #374151; margin-bottom: 12px; font-size: 0.9em;">Evaluation</div>
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
+                            <button
+                                onclick="calculateBinaryMetrics()"
+                                style="padding: 8px 16px; background: #8b5cf6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 500;"
+                            >
+                                Calculate Metrics
+                            </button>
+                            <span id="binary-metrics-status" style="color: #6b7280; font-size: 0.85em;"></span>
                         </div>
-                        <div style="display: flex; gap: 6px;">
-                            <button onclick="addAnnotationFromInputs()" style="flex: 1; padding: 6px 10px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;">Add</button>
-                            <button onclick="addAnnotationFromSelection()" style="flex: 1; padding: 6px 10px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;">From Selection</button>
+                        <div id="binary-metrics-display" style="display: none; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px;">
+                            <!-- Metrics will be rendered here -->
                         </div>
                     </div>
                 </div>
 
-                <!-- Side-by-side column headers -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 8px;">
-                    <div style="font-weight: 500; color: #b45309; font-size: 0.85em;">
-                        Auto-Extracted (<span id="auto-annotation-count">0</span>)
-                    </div>
-                    <div style="font-weight: 500; color: #1d4ed8; font-size: 0.85em;">
-                        Ground Truth (<span id="annotation-count">0</span>)
-                    </div>
-                </div>
+                <!-- Triplet Annotations Schema Content -->
+                <div id="schema-content-triplets" style="display: none;">
+                    <!-- Side-by-side controls -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <!-- Auto-Extracted Controls (Left) -->
+                        <div style="background: #fffbeb; padding: 12px; border-radius: 6px; border: 1px solid #fbbf24;">
+                            <div style="font-weight: 500; color: #b45309; margin-bottom: 10px; font-size: 0.9em;">Auto-Extracted</div>
+                            <button
+                                id="extract-observations-btn"
+                                onclick="runObservationExtraction()"
+                                style="width: 100%; padding: 10px 16px; background: #f59e0b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: 500; transition: background 0.2s;"
+                                onmouseover="this.style.background='#d97706'"
+                                onmouseout="this.style.background='#f59e0b'"
+                            >
+                                Extract Observations
+                            </button>
+                        </div>
 
-                <!-- Aligned Annotations Container -->
-                <div id="aligned-annotations-container" style="background: white; border: 1px solid #e5e7eb; border-radius: 6px; min-height: 100px; margin-bottom: 20px;">
-                    <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 20px;">No annotations yet.</div>
-                </div>
+                        <!-- Ground Truth Controls (Right) -->
+                        <div style="background: #f0f9ff; padding: 12px; border-radius: 6px; border: 1px solid #3b82f6;">
+                            <div style="font-weight: 500; color: #1d4ed8; margin-bottom: 10px; font-size: 0.9em;">Ground Truth</div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 8px;">
+                                <input type="text" id="obs-tokens-input" placeholder="Obs 5-5" title="Observation (start-end)" style="width: 100%; padding: 6px; border: 1px solid #3b82f6; border-radius: 4px; font-size: 0.8em;">
+                                <input type="text" id="loc-tokens-input" placeholder="Loc 12-15" title="Location (start-end)" style="width: 100%; padding: 6px; border: 1px solid #10b981; border-radius: 4px; font-size: 0.8em;">
+                                <input type="text" id="props-tokens-input" placeholder="Props 3-3" title="Properties (ranges)" style="width: 100%; padding: 6px; border: 1px solid #f59e0b; border-radius: 4px; font-size: 0.8em;">
+                            </div>
+                            <div style="display: flex; gap: 6px;">
+                                <button onclick="addAnnotationFromInputs()" style="flex: 1; padding: 6px 10px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;">Add</button>
+                                <button onclick="addAnnotationFromSelection()" style="flex: 1; padding: 6px 10px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;">From Selection</button>
+                            </div>
+                        </div>
+                    </div>
 
-                <!-- Test & Evaluate Section -->
-                <div id="test-evaluate-section" style="border-top: 2px solid #e5e7eb; padding-top: 15px;">
+                    <!-- Side-by-side column headers -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 8px;">
+                        <div style="font-weight: 500; color: #b45309; font-size: 0.85em;">
+                            Auto-Extracted (<span id="auto-annotation-count">0</span>)
+                        </div>
+                        <div style="font-weight: 500; color: #1d4ed8; font-size: 0.85em;">
+                            Ground Truth (<span id="annotation-count">0</span>)
+                        </div>
+                    </div>
+
+                    <!-- Aligned Annotations Container -->
+                    <div id="aligned-annotations-container" style="background: white; border: 1px solid #e5e7eb; border-radius: 6px; min-height: 100px; margin-bottom: 20px;">
+                        <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 20px;">No annotations yet.</div>
+                    </div>
+
+                    <!-- Test & Evaluate Section -->
+                    <div id="test-evaluate-section" style="border-top: 2px solid #e5e7eb; padding-top: 15px;">
                     <div style="font-weight: 500; color: #374151; margin-bottom: 12px; font-size: 0.9em;">Test & Evaluate</div>
 
                     <!-- Calculate Metrics Button -->
@@ -660,6 +735,8 @@
                         <div id="save-results-message" style="font-size: 0.8em; color: #166534;"></div>
                     </div>
                 </div>
+                </div><!-- End test-evaluate-section -->
+                </div><!-- End schema-content-triplets -->
             </div>
         </div>
     </div>
@@ -2005,6 +2082,360 @@
         let activeAnnotationTab = 'ground-truth';
         let activeMethodId = null;
 
+        // State for annotation schema
+        let activeAnnotationSchema = 'binary'; // 'binary' or 'triplets'
+
+        // Switch between annotation schemas (binary vs triplets)
+        function switchAnnotationSchema(schemaName) {
+            activeAnnotationSchema = schemaName;
+
+            // Update tab button styles
+            const binaryTab = document.getElementById('schema-tab-binary');
+            const tripletsTab = document.getElementById('schema-tab-triplets');
+
+            if (schemaName === 'binary') {
+                binaryTab.style.borderBottom = '2px solid #8b5cf6';
+                binaryTab.style.color = '#8b5cf6';
+                binaryTab.style.fontWeight = '500';
+                tripletsTab.style.borderBottom = '2px solid transparent';
+                tripletsTab.style.color = '#6b7280';
+                tripletsTab.style.fontWeight = '400';
+
+                document.getElementById('schema-content-binary').style.display = 'block';
+                document.getElementById('schema-content-triplets').style.display = 'none';
+
+                // Render binary classification UI
+                renderBinaryClassificationUI();
+            } else {
+                tripletsTab.style.borderBottom = '2px solid #8b5cf6';
+                tripletsTab.style.color = '#8b5cf6';
+                tripletsTab.style.fontWeight = '500';
+                binaryTab.style.borderBottom = '2px solid transparent';
+                binaryTab.style.color = '#6b7280';
+                binaryTab.style.fontWeight = '400';
+
+                document.getElementById('schema-content-binary').style.display = 'none';
+                document.getElementById('schema-content-triplets').style.display = 'block';
+
+                // Render triplet annotations
+                renderAlignedAnnotations();
+            }
+        }
+
+        // ===== Binary Classification Functions =====
+
+        // Global classification labels (shared across all entries)
+        let globalClassificationLabels = [];
+
+        // Get global classification labels from entitiesData config
+        function getGlobalClassificationLabels() {
+            // Look for a config entry (entry 0 or _config)
+            if (entitiesData && entitiesData.length > 0) {
+                const configEntry = entitiesData.find(e => e.entry === 0 || e._config);
+                if (configEntry && configEntry.classification_labels) {
+                    return configEntry.classification_labels;
+                }
+            }
+            return globalClassificationLabels;
+        }
+
+        // Save global classification labels to config entry
+        function setGlobalClassificationLabels(labels) {
+            globalClassificationLabels = labels;
+            // Ensure config entry exists (entry 0)
+            let configEntry = entitiesData.find(e => e.entry === 0);
+            if (!configEntry) {
+                configEntry = { entry: 0, _config: true, classification_labels: [] };
+                entitiesData.unshift(configEntry);
+            }
+            configEntry.classification_labels = labels;
+        }
+
+        // Get binary classifications for current entry (labels are global, values are per-entry)
+        function getBinaryClassifications() {
+            const labels = getGlobalClassificationLabels();
+
+            if (!currentEntry) return { labels, ground_truth: {}, auto_extracted: {} };
+
+            const entryData = getEntityEntryData(currentEntry);
+            if (!entryData) return { labels, ground_truth: {}, auto_extracted: {} };
+
+            if (!entryData.binary_classifications) {
+                entryData.binary_classifications = {
+                    ground_truth: {},
+                    auto_extracted: {}
+                };
+            }
+
+            return {
+                labels,
+                ground_truth: entryData.binary_classifications.ground_truth || {},
+                auto_extracted: entryData.binary_classifications.auto_extracted || {}
+            };
+        }
+
+        // Add a new classification label (global)
+        async function addClassificationLabel() {
+            const input = document.getElementById('new-label-input');
+            const labelName = input.value.trim();
+
+            if (!labelName) {
+                alert('Please enter a label name');
+                return;
+            }
+
+            const labels = getGlobalClassificationLabels();
+
+            if (labels.includes(labelName)) {
+                alert('This label already exists');
+                return;
+            }
+
+            labels.push(labelName);
+            setGlobalClassificationLabels(labels);
+            input.value = '';
+
+            await saveEntitiesToServer();
+            renderBinaryClassificationUI();
+        }
+
+        // Remove a classification label (global)
+        async function removeClassificationLabel(labelName) {
+            if (!confirm(`Remove label "${labelName}" from all reports?`)) return;
+
+            const labels = getGlobalClassificationLabels();
+            const idx = labels.indexOf(labelName);
+            if (idx > -1) {
+                labels.splice(idx, 1);
+                setGlobalClassificationLabels(labels);
+
+                // Also remove values from current entry
+                const entryData = getEntityEntryData(currentEntry);
+                if (entryData?.binary_classifications) {
+                    delete entryData.binary_classifications.ground_truth[labelName];
+                    delete entryData.binary_classifications.auto_extracted[labelName];
+                }
+
+                await saveEntitiesToServer();
+                renderBinaryClassificationUI();
+            }
+        }
+
+        // Set a classification value (ground_truth or auto_extracted) - per entry
+        async function setClassificationValue(labelName, value, type) {
+            if (!currentEntry) {
+                alert('Please select a report first');
+                return;
+            }
+
+            const entryData = ensureEntityEntryExists(currentEntry);
+            if (!entryData.binary_classifications) {
+                entryData.binary_classifications = { ground_truth: {}, auto_extracted: {} };
+            }
+
+            // Toggle off if clicking the same value
+            if (entryData.binary_classifications[type][labelName] === value) {
+                entryData.binary_classifications[type][labelName] = null;
+            } else {
+                entryData.binary_classifications[type][labelName] = value;
+            }
+
+            await saveEntitiesToServer();
+            renderBinaryClassificationUI();
+        }
+
+        // Render the binary classification UI
+        function renderBinaryClassificationUI() {
+            const classifications = getBinaryClassifications();
+            console.log('Rendering binary classifications:', classifications);
+            const labels = classifications.labels || [];
+
+            // Render label chips
+            const labelsContainer = document.getElementById('classification-labels-container');
+            if (labelsContainer) {
+                if (labels.length === 0) {
+                    labelsContainer.innerHTML = '<span style="color: #9ca3af; font-size: 0.8em;">No labels yet</span>';
+                } else {
+                    labelsContainer.innerHTML = labels.map(label => `
+                        <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #8b5cf6; color: white; border-radius: 15px; font-size: 0.8em;">
+                            ${escapeHtml(label)}
+                            <button onclick="removeClassificationLabel('${escapeHtml(label)}')" style="background: none; border: none; color: white; cursor: pointer; padding: 0; font-size: 1.1em; line-height: 1; opacity: 0.8;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">&times;</button>
+                        </span>
+                    `).join('');
+                }
+            }
+
+            // Render classification inputs
+            const inputsContainer = document.getElementById('binary-classifications-container');
+            if (inputsContainer) {
+                if (labels.length === 0) {
+                    inputsContainer.innerHTML = '<div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">Add classification labels above to start.</div>';
+                } else {
+                    inputsContainer.innerHTML = labels.map(label => {
+                        const gtValue = classifications.ground_truth[label];
+                        const autoValue = classifications.auto_extracted[label];
+
+                        return `
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 8px 0; border-bottom: 1px solid #f3f4f6;">
+                                <!-- Auto-Extracted (left) - READ ONLY -->
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 0.8em; color: #6b7280; min-width: 80px; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(label)}">${escapeHtml(label)}</span>
+                                    <div style="display: flex; gap: 4px;">
+                                        ${renderClassificationButton(label, 'yes', autoValue, 'auto_extracted', '#10b981', true)}
+                                        ${renderClassificationButton(label, 'no', autoValue, 'auto_extracted', '#ef4444', true)}
+                                        ${renderClassificationButton(label, 'uncertain', autoValue, 'auto_extracted', '#6b7280', true)}
+                                    </div>
+                                </div>
+                                <!-- Ground Truth (right) - EDITABLE -->
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 0.8em; color: #6b7280; min-width: 80px; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(label)}">${escapeHtml(label)}</span>
+                                    <div style="display: flex; gap: 4px;">
+                                        ${renderClassificationButton(label, 'yes', gtValue, 'ground_truth', '#10b981', false)}
+                                        ${renderClassificationButton(label, 'no', gtValue, 'ground_truth', '#ef4444', false)}
+                                        ${renderClassificationButton(label, 'uncertain', gtValue, 'ground_truth', '#6b7280', false)}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+        }
+
+        // Helper to render a classification button
+        function renderClassificationButton(label, value, currentValue, type, activeColor, readOnly = false) {
+            const isActive = currentValue === value;
+            const displayText = value === 'yes' ? 'Y' : value === 'no' ? 'N' : '?';
+            const bgColor = isActive ? activeColor : '#f3f4f6';
+            const textColor = isActive ? 'white' : '#9ca3af';
+            const cursor = readOnly ? 'default' : 'pointer';
+            const opacity = readOnly && !isActive ? '0.5' : '1';
+
+            if (readOnly) {
+                return `<span
+                    style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px; background: ${bgColor}; color: ${textColor}; font-size: 0.75em; font-weight: 600; opacity: ${opacity};"
+                    title="${value}">${displayText}</span>`;
+            }
+
+            return `<button onclick="setClassificationValue('${escapeHtml(label)}', '${value}', '${type}')"
+                style="width: 28px; height: 28px; border-radius: 4px; border: none; background: ${bgColor}; color: ${textColor}; cursor: ${cursor}; font-size: 0.75em; font-weight: 600;"
+                title="${value}">${displayText}</button>`;
+        }
+
+        // Run binary extraction using LLM
+        async function runBinaryExtraction() {
+            if (!currentEntry) {
+                alert('Please select a CSV entry first');
+                return;
+            }
+
+            const classifications = getBinaryClassifications();
+            if (classifications.labels.length === 0) {
+                alert('Please add classification labels first');
+                return;
+            }
+
+            const btn = document.getElementById('extract-binary-btn');
+            const originalText = btn.textContent;
+            btn.textContent = 'Extracting...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/llm/extract-binary-classification/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        labels: classifications.labels,
+                        report_text: currentReportText
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    console.log('Extraction result:', result);
+                    console.log('Classifications received:', result.classifications);
+
+                    // Update auto_extracted values - ensure structure exists (no labels - those are global)
+                    const entryData = ensureEntityEntryExists(currentEntry);
+                    if (!entryData.binary_classifications) {
+                        entryData.binary_classifications = { ground_truth: {}, auto_extracted: {} };
+                    }
+                    entryData.binary_classifications.auto_extracted = result.classifications;
+                    console.log('Updated binary_classifications:', entryData.binary_classifications);
+
+                    await saveEntitiesToServer();
+                    renderBinaryClassificationUI();
+                    alert('Classifications extracted: ' + JSON.stringify(result.classifications));
+                } else {
+                    console.error('Extraction error:', result);
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error extracting classifications: ' + error.message);
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // Calculate binary classification metrics
+        function calculateBinaryMetrics() {
+            const classifications = getBinaryClassifications();
+            const labels = classifications.labels;
+
+            if (labels.length === 0) {
+                alert('No classification labels to evaluate');
+                return;
+            }
+
+            let correct = 0;
+            let total = 0;
+            const perLabel = {};
+
+            labels.forEach(label => {
+                const gt = classifications.ground_truth[label];
+                const auto = classifications.auto_extracted[label];
+
+                if (gt && auto) {
+                    total++;
+                    const match = gt === auto;
+                    if (match) correct++;
+                    perLabel[label] = { gt, auto, match };
+                } else {
+                    perLabel[label] = { gt: gt || 'N/A', auto: auto || 'N/A', match: null };
+                }
+            });
+
+            const accuracy = total > 0 ? (correct / total * 100).toFixed(1) : 'N/A';
+
+            // Render metrics
+            const display = document.getElementById('binary-metrics-display');
+            display.style.display = 'block';
+            display.innerHTML = `
+                <div style="text-align: center; margin-bottom: 15px;">
+                    <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase;">Overall Accuracy</div>
+                    <div style="font-size: 2em; font-weight: 600; color: #8b5cf6;">${accuracy}${accuracy !== 'N/A' ? '%' : ''}</div>
+                    <div style="font-size: 0.8em; color: #9ca3af;">${correct}/${total} correct</div>
+                </div>
+                <div style="font-size: 0.8em;">
+                    <div style="font-weight: 500; margin-bottom: 8px; color: #374151;">Per-Label Results:</div>
+                    ${labels.map(label => {
+                        const info = perLabel[label];
+                        const icon = info.match === true ? '✓' : info.match === false ? '✗' : '-';
+                        const color = info.match === true ? '#10b981' : info.match === false ? '#ef4444' : '#9ca3af';
+                        return `<div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f3f4f6;">
+                            <span>${escapeHtml(label)}</span>
+                            <span style="color: ${color};">${icon} GT: ${info.gt} | Auto: ${info.auto}</span>
+                        </div>`;
+                    }).join('')}
+                </div>
+            `;
+
+            document.getElementById('binary-metrics-status').textContent = 'Calculated';
+        }
+
         // Render entities and relations for current entry (routes to tab-specific renderers)
         async function renderEntities() {
             if (!currentEntry) {
@@ -2014,13 +2445,18 @@
             // Populate extraction prompt dropdown for auto-extracted tab
             populateExtractionPromptDropdown();
 
-            // Render the active tab content
-            if (activeAnnotationTab === 'ground-truth') {
-                renderGroundTruthTab();
-            } else if (activeAnnotationTab === 'auto-extracted') {
-                await renderAutoExtractedTab();
-            } else if (activeAnnotationTab === 'auto-extracted-2') {
-                await renderAutoExtracted2Tab();
+            // Render based on active annotation schema
+            if (activeAnnotationSchema === 'binary') {
+                renderBinaryClassificationUI();
+            } else {
+                // Render the active tab content (triplets schema)
+                if (activeAnnotationTab === 'ground-truth') {
+                    renderGroundTruthTab();
+                } else if (activeAnnotationTab === 'auto-extracted') {
+                    await renderAutoExtractedTab();
+                } else if (activeAnnotationTab === 'auto-extracted-2') {
+                    await renderAutoExtracted2Tab();
+                }
             }
         }
 

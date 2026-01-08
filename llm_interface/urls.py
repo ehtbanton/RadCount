@@ -28,6 +28,8 @@ urlpatterns = [
     path('delete-annotation/', views.delete_annotation, name='delete_annotation'),
     # Simplified LLM extraction
     path('extract-observations/', views.extract_observations, name='extract_observations'),
+    # Binary classification extraction
+    path('extract-binary-classification/', views.extract_binary_classification, name='extract_binary_classification'),
     # Extraction Methods
     path('create-extraction-method/', views.create_extraction_method, name='create_extraction_method'),
     path('run-extraction-method/', views.run_extraction_method, name='run_extraction_method'),
