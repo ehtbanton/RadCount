@@ -2380,60 +2380,283 @@
             }
         }
 
-        // Calculate binary classification metrics
-        function calculateBinaryMetrics() {
-            const classifications = getBinaryClassifications();
-            const labels = classifications.labels;
+        // Helper function to get report text for a given entry number
+        async function getReportTextForEntry(entryNumber) {
+            try {
+                const response = await fetch(`/llm/csv-entry/?entry=${entryNumber}`);
+                const data = await response.json();
+                if (data.success) {
+                    const keys = Object.keys(data.data);
+                    if (keys.length > 0) {
+                        const lastKey = keys[keys.length - 1];
+                        let textContent = data.data[lastKey];
+                        if (typeof textContent === 'string') {
+                            textContent = textContent.replace(/\\n/g, '\n');
+                            textContent = textContent.replace(/\n\n+/g, '\n\n');
+                        }
+                        return textContent || '';
+                    }
+                }
+                return null;
+            } catch (error) {
+                console.error(`Error fetching report text for entry ${entryNumber}:`, error);
+                return null;
+            }
+        }
+
+        // Run binary extraction for a specific entry
+        async function runBinaryExtractionForEntry(entryNumber, labels, reportText) {
+            try {
+                const response = await fetch('/llm/extract-binary-classification/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: entryNumber,
+                        labels: labels,
+                        report_text: reportText
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Update auto_extracted values
+                    const entryData = ensureEntityEntryExists(entryNumber);
+                    if (!entryData.binary_classifications) {
+                        entryData.binary_classifications = { ground_truth: {}, auto_extracted: {} };
+                    }
+                    entryData.binary_classifications.auto_extracted = result.classifications;
+                    return { success: true, classifications: result.classifications };
+                } else {
+                    return { success: false, error: result.error };
+                }
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        // Calculate binary classification metrics across all reports with ground truth
+        async function calculateBinaryMetrics() {
+            const labels = getGlobalClassificationLabels();
 
             if (labels.length === 0) {
                 alert('No classification labels to evaluate');
                 return;
             }
 
-            let correct = 0;
-            let total = 0;
-            const perLabel = {};
+            // Find all entries with ground truth
+            const entriesWithGT = entitiesData.filter(entry => {
+                if (entry.entry === 0 || entry._config) return false;
+                const bc = entry.binary_classifications;
+                if (!bc || !bc.ground_truth) return false;
+                return labels.some(label => bc.ground_truth[label]);
+            });
 
-            labels.forEach(label => {
-                const gt = classifications.ground_truth[label];
-                const auto = classifications.auto_extracted[label];
+            if (entriesWithGT.length === 0) {
+                alert('No reports found with ground truth classifications');
+                return;
+            }
 
-                if (gt && auto) {
-                    total++;
-                    const match = gt === auto;
-                    if (match) correct++;
-                    perLabel[label] = { gt, auto, match };
+            // Show progress in the display area
+            const display = document.getElementById('binary-metrics-display');
+            const statusEl = document.getElementById('binary-metrics-status');
+            display.style.display = 'block';
+
+            // Run extractions for all entries with ground truth
+            let completed = 0;
+            const total = entriesWithGT.length;
+            const errors = [];
+
+            display.innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                    <div style="font-size: 0.85em; color: #6b7280; margin-bottom: 10px;">Extracting classifications...</div>
+                    <div style="font-size: 1.5em; font-weight: 600; color: #8b5cf6;">${completed}/${total}</div>
+                    <div style="margin-top: 10px; background: #e5e7eb; border-radius: 4px; height: 8px; overflow: hidden;">
+                        <div id="extraction-progress-bar" style="background: #8b5cf6; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                    </div>
+                </div>
+            `;
+            statusEl.textContent = 'Extracting...';
+
+            // Process entries sequentially to avoid overwhelming the API
+            for (const entry of entriesWithGT) {
+                const reportText = await getReportTextForEntry(entry.entry);
+                if (reportText) {
+                    const result = await runBinaryExtractionForEntry(entry.entry, labels, reportText);
+                    if (!result.success) {
+                        errors.push({ entry: entry.entry, error: result.error });
+                    }
                 } else {
-                    perLabel[label] = { gt: gt || 'N/A', auto: auto || 'N/A', match: null };
+                    errors.push({ entry: entry.entry, error: 'Could not fetch report text' });
+                }
+
+                completed++;
+                const progressBar = document.getElementById('extraction-progress-bar');
+                if (progressBar) {
+                    progressBar.style.width = `${(completed / total) * 100}%`;
+                }
+                display.querySelector('div > div:nth-child(2)').textContent = `${completed}/${total}`;
+            }
+
+            // Save all updates
+            await saveEntitiesToServer();
+
+            // If currently viewing one of the entries, refresh the UI
+            if (currentEntry && entriesWithGT.some(e => e.entry === currentEntry)) {
+                renderBinaryClassificationUI();
+            }
+
+            // Now calculate metrics from the updated data
+            let totalCorrect = 0;
+            let totalComparisons = 0;
+            let reportsWithGT = 0;
+            const perLabel = {};
+            const perReportResults = [];
+
+            // Initialize per-label tracking
+            labels.forEach(label => {
+                perLabel[label] = { correct: 0, total: 0, tp: 0, fp: 0, fn: 0, tn: 0 };
+            });
+
+            // Iterate through all entries (skip config entry)
+            entitiesData.forEach(entry => {
+                if (entry.entry === 0 || entry._config) return;
+
+                const bc = entry.binary_classifications;
+                if (!bc || !bc.ground_truth) return;
+
+                // Check if this entry has any ground truth values
+                const hasAnyGT = labels.some(label => bc.ground_truth[label]);
+                if (!hasAnyGT) return;
+
+                reportsWithGT++;
+                let reportCorrect = 0;
+                let reportTotal = 0;
+                const reportDetails = [];
+
+                labels.forEach(label => {
+                    const gt = bc.ground_truth ? bc.ground_truth[label] : null;
+                    const auto = bc.auto_extracted ? bc.auto_extracted[label] : null;
+
+                    if (gt && auto) {
+                        totalComparisons++;
+                        reportTotal++;
+                        perLabel[label].total++;
+
+                        const match = gt === auto;
+                        if (match) {
+                            totalCorrect++;
+                            reportCorrect++;
+                            perLabel[label].correct++;
+                        }
+
+                        // Track TP/FP/FN/TN for "yes" as positive class
+                        if (gt === 'yes' && auto === 'yes') perLabel[label].tp++;
+                        else if (gt !== 'yes' && auto === 'yes') perLabel[label].fp++;
+                        else if (gt === 'yes' && auto !== 'yes') perLabel[label].fn++;
+                        else perLabel[label].tn++;
+
+                        reportDetails.push({ label, gt, auto, match });
+                    } else if (gt && !auto) {
+                        reportDetails.push({ label, gt, auto: 'N/A', match: null });
+                    }
+                });
+
+                if (reportTotal > 0) {
+                    perReportResults.push({
+                        entry: entry.entry,
+                        correct: reportCorrect,
+                        total: reportTotal,
+                        accuracy: (reportCorrect / reportTotal * 100).toFixed(1),
+                        details: reportDetails
+                    });
                 }
             });
 
-            const accuracy = total > 0 ? (correct / total * 100).toFixed(1) : 'N/A';
+            const overallAccuracy = totalComparisons > 0 ? (totalCorrect / totalComparisons * 100).toFixed(1) : 'N/A';
+
+            // Calculate per-label precision, recall, F1
+            const labelMetrics = labels.map(label => {
+                const l = perLabel[label];
+                const precision = (l.tp + l.fp) > 0 ? (l.tp / (l.tp + l.fp) * 100).toFixed(1) : 'N/A';
+                const recall = (l.tp + l.fn) > 0 ? (l.tp / (l.tp + l.fn) * 100).toFixed(1) : 'N/A';
+                const f1 = (precision !== 'N/A' && recall !== 'N/A' && (parseFloat(precision) + parseFloat(recall)) > 0)
+                    ? (2 * parseFloat(precision) * parseFloat(recall) / (parseFloat(precision) + parseFloat(recall))).toFixed(1)
+                    : 'N/A';
+                const accuracy = l.total > 0 ? (l.correct / l.total * 100).toFixed(1) : 'N/A';
+                return { label, ...l, precision, recall, f1, accuracy };
+            }).filter(m => m.total > 0);
 
             // Render metrics
-            const display = document.getElementById('binary-metrics-display');
-            display.style.display = 'block';
+            let errorsHtml = '';
+            if (errors.length > 0) {
+                errorsHtml = `
+                    <div style="margin-bottom: 15px; padding: 10px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; font-size: 0.8em;">
+                        <div style="color: #dc2626; font-weight: 500; margin-bottom: 5px;">⚠ ${errors.length} extraction error(s):</div>
+                        ${errors.map(e => `<div style="color: #7f1d1d;">Report ${e.entry}: ${escapeHtml(e.error)}</div>`).join('')}
+                    </div>
+                `;
+            }
+
             display.innerHTML = `
+                ${errorsHtml}
                 <div style="text-align: center; margin-bottom: 15px;">
-                    <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase;">Overall Accuracy</div>
-                    <div style="font-size: 2em; font-weight: 600; color: #8b5cf6;">${accuracy}${accuracy !== 'N/A' ? '%' : ''}</div>
-                    <div style="font-size: 0.8em; color: #9ca3af;">${correct}/${total} correct</div>
+                    <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase;">Overall Accuracy (All Reports)</div>
+                    <div style="font-size: 2em; font-weight: 600; color: #8b5cf6;">${overallAccuracy}${overallAccuracy !== 'N/A' ? '%' : ''}</div>
+                    <div style="font-size: 0.8em; color: #9ca3af;">${totalCorrect}/${totalComparisons} correct across ${reportsWithGT} reports</div>
                 </div>
-                <div style="font-size: 0.8em;">
-                    <div style="font-weight: 500; margin-bottom: 8px; color: #374151;">Per-Label Results:</div>
-                    ${labels.map(label => {
-                        const info = perLabel[label];
-                        const icon = info.match === true ? '✓' : info.match === false ? '✗' : '-';
-                        const color = info.match === true ? '#10b981' : info.match === false ? '#ef4444' : '#9ca3af';
-                        return `<div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f3f4f6;">
-                            <span>${escapeHtml(label)}</span>
-                            <span style="color: ${color};">${icon} GT: ${info.gt} | Auto: ${info.auto}</span>
-                        </div>`;
-                    }).join('')}
+
+                <div style="font-size: 0.8em; margin-bottom: 15px;">
+                    <div style="font-weight: 500; margin-bottom: 8px; color: #374151;">Per-Label Metrics:</div>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #e5e7eb;">
+                                <th style="text-align: left; padding: 6px 4px;">Label</th>
+                                <th style="text-align: center; padding: 6px 4px;">Acc</th>
+                                <th style="text-align: center; padding: 6px 4px;">Prec</th>
+                                <th style="text-align: center; padding: 6px 4px;">Rec</th>
+                                <th style="text-align: center; padding: 6px 4px;">F1</th>
+                                <th style="text-align: center; padding: 6px 4px;">n</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${labelMetrics.map(m => `
+                                <tr style="border-bottom: 1px solid #f3f4f6;">
+                                    <td style="padding: 6px 4px;">${escapeHtml(m.label)}</td>
+                                    <td style="text-align: center; padding: 6px 4px;">${m.accuracy}%</td>
+                                    <td style="text-align: center; padding: 6px 4px;">${m.precision}%</td>
+                                    <td style="text-align: center; padding: 6px 4px;">${m.recall}%</td>
+                                    <td style="text-align: center; padding: 6px 4px;">${m.f1}%</td>
+                                    <td style="text-align: center; padding: 6px 4px; color: #6b7280;">${m.total}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
                 </div>
+
+                <details style="font-size: 0.8em;">
+                    <summary style="cursor: pointer; font-weight: 500; color: #374151; margin-bottom: 8px;">Per-Report Breakdown (${perReportResults.length} reports)</summary>
+                    <div style="max-height: 200px; overflow-y: auto; margin-top: 8px;">
+                        ${perReportResults.map(r => `
+                            <div style="padding: 8px; margin-bottom: 6px; background: white; border: 1px solid #e5e7eb; border-radius: 4px;">
+                                <div style="display: flex; justify-content: space-between; font-weight: 500;">
+                                    <span>Report ${r.entry}</span>
+                                    <span style="color: ${parseFloat(r.accuracy) >= 80 ? '#10b981' : parseFloat(r.accuracy) >= 50 ? '#f59e0b' : '#ef4444'};">${r.accuracy}% (${r.correct}/${r.total})</span>
+                                </div>
+                                <div style="margin-top: 4px; font-size: 0.9em; color: #6b7280;">
+                                    ${r.details.map(d => {
+                                        const icon = d.match === true ? '✓' : d.match === false ? '✗' : '-';
+                                        const color = d.match === true ? '#10b981' : d.match === false ? '#ef4444' : '#9ca3af';
+                                        return `<span style="color: ${color}; margin-right: 8px;">${icon} ${escapeHtml(d.label)}</span>`;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </details>
             `;
 
-            document.getElementById('binary-metrics-status').textContent = 'Calculated';
+            statusEl.textContent = `Calculated (${reportsWithGT} reports)`;
         }
 
         // Render entities and relations for current entry (routes to tab-specific renderers)
