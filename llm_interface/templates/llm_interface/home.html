@@ -2201,7 +2201,7 @@
 
         // Remove a classification label (global)
         async function removeClassificationLabel(labelName) {
-            if (!confirm(`Remove label "${labelName}" from all reports?`)) return;
+            if (!confirm(`Remove label "${labelName}" from all reports? This will delete all ground truth and auto-extracted values for this label.`)) return;
 
             const labels = getGlobalClassificationLabels();
             const idx = labels.indexOf(labelName);
@@ -2209,12 +2209,18 @@
                 labels.splice(idx, 1);
                 setGlobalClassificationLabels(labels);
 
-                // Also remove values from current entry
-                const entryData = getEntityEntryData(currentEntry);
-                if (entryData?.binary_classifications) {
-                    delete entryData.binary_classifications.ground_truth[labelName];
-                    delete entryData.binary_classifications.auto_extracted[labelName];
-                }
+                // Remove values from ALL entries
+                entitiesData.forEach(entry => {
+                    if (entry.entry === 0 || entry._config) return;
+                    if (entry.binary_classifications) {
+                        if (entry.binary_classifications.ground_truth) {
+                            delete entry.binary_classifications.ground_truth[labelName];
+                        }
+                        if (entry.binary_classifications.auto_extracted) {
+                            delete entry.binary_classifications.auto_extracted[labelName];
+                        }
+                    }
+                });
 
                 await saveEntitiesToServer();
                 renderBinaryClassificationUI();
@@ -2283,7 +2289,6 @@
                                     <div style="display: flex; gap: 4px;">
                                         ${renderClassificationButton(label, 'yes', autoValue, 'auto_extracted', '#10b981', true)}
                                         ${renderClassificationButton(label, 'no', autoValue, 'auto_extracted', '#ef4444', true)}
-                                        ${renderClassificationButton(label, 'uncertain', autoValue, 'auto_extracted', '#6b7280', true)}
                                     </div>
                                 </div>
                                 <!-- Ground Truth (right) - EDITABLE -->
@@ -2292,7 +2297,6 @@
                                     <div style="display: flex; gap: 4px;">
                                         ${renderClassificationButton(label, 'yes', gtValue, 'ground_truth', '#10b981', false)}
                                         ${renderClassificationButton(label, 'no', gtValue, 'ground_truth', '#ef4444', false)}
-                                        ${renderClassificationButton(label, 'uncertain', gtValue, 'ground_truth', '#6b7280', false)}
                                     </div>
                                 </div>
                             </div>
@@ -2600,41 +2604,72 @@
 
             display.innerHTML = `
                 ${errorsHtml}
-                <div style="text-align: center; margin-bottom: 15px;">
-                    <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase;">Overall Accuracy (All Reports)</div>
+                <div style="text-align: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #e5e7eb;">
+                    <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase;">Overall Accuracy (All Labels)</div>
                     <div style="font-size: 2em; font-weight: 600; color: #8b5cf6;">${overallAccuracy}${overallAccuracy !== 'N/A' ? '%' : ''}</div>
                     <div style="font-size: 0.8em; color: #9ca3af;">${totalCorrect}/${totalComparisons} correct across ${reportsWithGT} reports</div>
                 </div>
 
-                <div style="font-size: 0.8em; margin-bottom: 15px;">
-                    <div style="font-weight: 500; margin-bottom: 8px; color: #374151;">Per-Label Metrics:</div>
-                    <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
-                        <thead>
-                            <tr style="border-bottom: 2px solid #e5e7eb;">
-                                <th style="text-align: left; padding: 6px 4px;">Label</th>
-                                <th style="text-align: center; padding: 6px 4px;">Acc</th>
-                                <th style="text-align: center; padding: 6px 4px;">Prec</th>
-                                <th style="text-align: center; padding: 6px 4px;">Rec</th>
-                                <th style="text-align: center; padding: 6px 4px;">F1</th>
-                                <th style="text-align: center; padding: 6px 4px;">n</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${labelMetrics.map(m => `
-                                <tr style="border-bottom: 1px solid #f3f4f6;">
-                                    <td style="padding: 6px 4px;">${escapeHtml(m.label)}</td>
-                                    <td style="text-align: center; padding: 6px 4px;">${m.accuracy}%</td>
-                                    <td style="text-align: center; padding: 6px 4px;">${m.precision}%</td>
-                                    <td style="text-align: center; padding: 6px 4px;">${m.recall}%</td>
-                                    <td style="text-align: center; padding: 6px 4px;">${m.f1}%</td>
-                                    <td style="text-align: center; padding: 6px 4px; color: #6b7280;">${m.total}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
+                <div style="font-size: 0.8em;">
+                    ${labelMetrics.map(m => `
+                        <div style="margin-bottom: 15px; padding: 12px; background: white; border: 1px solid #e5e7eb; border-radius: 8px;">
+                            <div style="font-weight: 600; color: #374151; margin-bottom: 10px; font-size: 1.1em;">${escapeHtml(m.label)}</div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <!-- Metrics -->
+                                <div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                        <div style="text-align: center; padding: 8px; background: #f9fafb; border-radius: 6px;">
+                                            <div style="font-size: 1.4em; font-weight: 600; color: #8b5cf6;">${m.accuracy}%</div>
+                                            <div style="font-size: 0.75em; color: #6b7280;">Accuracy</div>
+                                        </div>
+                                        <div style="text-align: center; padding: 8px; background: #f9fafb; border-radius: 6px;">
+                                            <div style="font-size: 1.4em; font-weight: 600; color: #3b82f6;">${m.f1}%</div>
+                                            <div style="font-size: 0.75em; color: #6b7280;">F1 Score</div>
+                                        </div>
+                                        <div style="text-align: center; padding: 8px; background: #f9fafb; border-radius: 6px;">
+                                            <div style="font-size: 1.4em; font-weight: 600; color: #10b981;">${m.precision}%</div>
+                                            <div style="font-size: 0.75em; color: #6b7280;">Precision</div>
+                                        </div>
+                                        <div style="text-align: center; padding: 8px; background: #f9fafb; border-radius: 6px;">
+                                            <div style="font-size: 1.4em; font-weight: 600; color: #f59e0b;">${m.recall}%</div>
+                                            <div style="font-size: 0.75em; color: #6b7280;">Recall</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Confusion Matrix -->
+                                <div>
+                                    <div style="font-size: 0.75em; color: #6b7280; text-align: center; margin-bottom: 4px;">Confusion Matrix (n=${m.total})</div>
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 0.85em; text-align: center;">
+                                        <tr>
+                                            <td style="padding: 2px;"></td>
+                                            <td style="padding: 2px;"></td>
+                                            <td colspan="2" style="padding: 4px; font-weight: 500; color: #6b7280;">Predicted</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding: 2px;"></td>
+                                            <td style="padding: 2px;"></td>
+                                            <td style="padding: 4px; font-size: 0.85em; color: #10b981;">Yes</td>
+                                            <td style="padding: 4px; font-size: 0.85em; color: #ef4444;">No</td>
+                                        </tr>
+                                        <tr>
+                                            <td rowspan="2" style="padding: 4px; font-weight: 500; color: #6b7280; writing-mode: vertical-rl; transform: rotate(180deg);">Actual</td>
+                                            <td style="padding: 4px; font-size: 0.85em; color: #10b981;">Yes</td>
+                                            <td style="padding: 6px; background: #d1fae5; border-radius: 4px; font-weight: 600;">${m.tp}</td>
+                                            <td style="padding: 6px; background: #fee2e2; border-radius: 4px; font-weight: 600;">${m.fn}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding: 4px; font-size: 0.85em; color: #ef4444;">No</td>
+                                            <td style="padding: 6px; background: #fef3c7; border-radius: 4px; font-weight: 600;">${m.fp}</td>
+                                            <td style="padding: 6px; background: #d1fae5; border-radius: 4px; font-weight: 600;">${m.tn}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
                 </div>
 
-                <details style="font-size: 0.8em;">
+                <details style="font-size: 0.8em; margin-top: 10px;">
                     <summary style="cursor: pointer; font-weight: 500; color: #374151; margin-bottom: 8px;">Per-Report Breakdown (${perReportResults.length} reports)</summary>
                     <div style="max-height: 200px; overflow-y: auto; margin-top: 8px;">
                         ${perReportResults.map(r => `

@@ -2309,7 +2309,7 @@ def extract_binary_classification(request):
         labels_str = ', '.join(labels)
         prompt = f"""Analyze the following radiology report and classify it for each of these factors: {labels_str}
 
-For each factor, respond with exactly one of: YES, NO, or UNCERTAIN
+For each factor, respond with exactly one of: YES or NO
 
 Report:
 {report_text}
@@ -2318,12 +2318,11 @@ Respond in JSON format like this:
 {{
   "classifications": {{
     "FactorName1": "yes",
-    "FactorName2": "no",
-    "FactorName3": "uncertain"
+    "FactorName2": "no"
   }}
 }}
 
-Only use lowercase "yes", "no", or "uncertain" as values. Now classify for: {labels_str}"""
+Only use lowercase "yes" or "no" as values. Now classify for: {labels_str}"""
 
         # Build messages
         messages = [
@@ -2375,7 +2374,7 @@ Only use lowercase "yes", "no", or "uncertain" as values. Now classify for: {lab
                         value = value.lower().strip()
                     else:
                         value = ''
-                    if value in ['yes', 'no', 'uncertain']:
+                    if value in ['yes', 'no']:
                         normalized[label] = value
                     else:
                         normalized[label] = None
