@@ -2430,7 +2430,11 @@
                         entryData.binary_classifications = { ground_truth: {}, auto_extracted: {} };
                     }
                     entryData.binary_classifications.auto_extracted = result.classifications;
-                    return { success: true, classifications: result.classifications };
+                    return {
+                        success: true,
+                        classifications: result.classifications,
+                        debug_info: result.debug_info
+                    };
                 } else {
                     return { success: false, error: result.error };
                 }
@@ -2453,11 +2457,17 @@
                 if (entry.entry === 0 || entry._config) return false;
                 const bc = entry.binary_classifications;
                 if (!bc || !bc.ground_truth) return false;
-                return labels.some(label => bc.ground_truth[label]);
+                // Check if any label has a ground truth value set
+                return labels.some(label => {
+                    const val = bc.ground_truth[label];
+                    return val === 'yes' || val === 'no';
+                });
             });
 
+            console.log('Entries with ground truth:', entriesWithGT.map(e => e.entry));
+
             if (entriesWithGT.length === 0) {
-                alert('No reports found with ground truth classifications');
+                alert('No reports found with ground truth classifications. Make sure you have set Yes/No values for at least one label on some reports.');
                 return;
             }
 
@@ -2470,11 +2480,13 @@
             let completed = 0;
             const total = entriesWithGT.length;
             const errors = [];
+            const successful = [];
 
             display.innerHTML = `
                 <div style="text-align: center; padding: 20px;">
                     <div style="font-size: 0.85em; color: #6b7280; margin-bottom: 10px;">Extracting classifications...</div>
-                    <div style="font-size: 1.5em; font-weight: 600; color: #8b5cf6;">${completed}/${total}</div>
+                    <div style="font-size: 1.5em; font-weight: 600; color: #8b5cf6;"><span id="extraction-completed">0</span>/${total}</div>
+                    <div id="extraction-current" style="font-size: 0.8em; color: #9ca3af; margin-top: 5px;">Starting...</div>
                     <div style="margin-top: 10px; background: #e5e7eb; border-radius: 4px; height: 8px; overflow: hidden;">
                         <div id="extraction-progress-bar" style="background: #8b5cf6; height: 100%; width: 0%; transition: width 0.3s;"></div>
                     </div>
@@ -2484,14 +2496,27 @@
 
             // Process entries sequentially to avoid overwhelming the API
             for (const entry of entriesWithGT) {
+                // Update current entry indicator
+                const currentEl = document.getElementById('extraction-current');
+                if (currentEl) currentEl.textContent = `Processing report ${entry.entry}...`;
+
                 const reportText = await getReportTextForEntry(entry.entry);
-                if (reportText) {
+                console.log(`Report ${entry.entry}: text length = ${reportText ? reportText.length : 'null'}`);
+
+                if (reportText !== null && reportText !== undefined) {
                     const result = await runBinaryExtractionForEntry(entry.entry, labels, reportText);
-                    if (!result.success) {
+                    if (result.success) {
+                        successful.push(entry.entry);
+                        // Count non-null values
+                        const validCount = Object.values(result.classifications).filter(v => v !== null).length;
+                        console.log(`Report ${entry.entry}: extraction successful (${validCount}/${labels.length} valid)`, result.classifications);
+                    } else {
                         errors.push({ entry: entry.entry, error: result.error });
+                        console.error(`Report ${entry.entry}: extraction failed`, result.error);
                     }
                 } else {
                     errors.push({ entry: entry.entry, error: 'Could not fetch report text' });
+                    console.error(`Report ${entry.entry}: could not fetch report text`);
                 }
 
                 completed++;
@@ -2499,8 +2524,11 @@
                 if (progressBar) {
                     progressBar.style.width = `${(completed / total) * 100}%`;
                 }
-                display.querySelector('div > div:nth-child(2)').textContent = `${completed}/${total}`;
+                const completedEl = document.getElementById('extraction-completed');
+                if (completedEl) completedEl.textContent = completed;
             }
+
+            console.log(`Extraction complete: ${successful.length} successful, ${errors.length} errors`);
 
             // Save all updates
             await saveEntitiesToServer();
@@ -2592,18 +2620,21 @@
             }).filter(m => m.total > 0);
 
             // Render metrics
-            let errorsHtml = '';
-            if (errors.length > 0) {
-                errorsHtml = `
-                    <div style="margin-bottom: 15px; padding: 10px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; font-size: 0.8em;">
-                        <div style="color: #dc2626; font-weight: 500; margin-bottom: 5px;">⚠ ${errors.length} extraction error(s):</div>
-                        ${errors.map(e => `<div style="color: #7f1d1d;">Report ${e.entry}: ${escapeHtml(e.error)}</div>`).join('')}
+            let statusHtml = '';
+            if (errors.length > 0 || successful.length > 0) {
+                statusHtml = `
+                    <div style="margin-bottom: 15px; padding: 10px; background: ${errors.length > 0 ? '#fef2f2' : '#f0fdf4'}; border: 1px solid ${errors.length > 0 ? '#fecaca' : '#bbf7d0'}; border-radius: 6px; font-size: 0.8em;">
+                        <div style="color: #059669; margin-bottom: 5px;">✓ Extracted ${successful.length} of ${total} reports</div>
+                        ${errors.length > 0 ? `
+                            <div style="color: #dc2626; font-weight: 500; margin-top: 8px; margin-bottom: 5px;">⚠ ${errors.length} extraction error(s):</div>
+                            ${errors.map(e => `<div style="color: #7f1d1d;">Report ${e.entry}: ${escapeHtml(e.error)}</div>`).join('')}
+                        ` : ''}
                     </div>
                 `;
             }
 
             display.innerHTML = `
-                ${errorsHtml}
+                ${statusHtml}
                 <div style="text-align: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #e5e7eb;">
                     <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase;">Overall Accuracy (All Labels)</div>
                     <div style="font-size: 2em; font-weight: 600; color: #8b5cf6;">${overallAccuracy}${overallAccuracy !== 'N/A' ? '%' : ''}</div>

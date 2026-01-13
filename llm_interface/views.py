@@ -2305,97 +2305,77 @@ def extract_binary_classification(request):
         if not llm_service.is_server_running():
             return JsonResponse({'success': False, 'error': 'LLM server is not running'}, status=503)
 
-        # Build prompt for binary classification
-        labels_str = ', '.join(labels)
-        prompt = f"""Analyze the following radiology report and classify it for each of these factors: {labels_str}
+        # Process one label at a time for more reliable results
+        normalized = {}
+        debug_info = {}
 
-For each factor, respond with exactly one of: YES or NO
+        for label in labels:
+            # Build prompt for single label classification
+            prompt = f"""Analyze the following radiology report and determine: {label}
 
 Report:
 {report_text}
 
-Respond in JSON format like this:
-{{
-  "classifications": {{
-    "FactorName1": "yes",
-    "FactorName2": "no"
-  }}
-}}
+Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" or "no" (lowercase, no other text)."""
 
-Only use lowercase "yes" or "no" as values. Now classify for: {labels_str}"""
+            # Build messages
+            messages = [
+                {
+                    'role': 'user',
+                    'content': prompt
+                }
+            ]
 
-        # Build messages
-        messages = [
-            {
-                'role': 'user',
-                'content': prompt
-            }
-        ]
-
-        # Call LLM
-        response = requests.post(
-            f"{llm_service.base_url}/v1/chat/completions",
-            headers={'Content-Type': 'application/json'},
-            json={
-                'messages': messages,
-                'temperature': 0.1,
-                'max_tokens': 1000
-            },
-            timeout=120
-        )
-
-        if response.status_code != 200:
-            return JsonResponse({'success': False, 'error': f'LLM request failed: {response.text}'}, status=500)
-
-        result = response.json()
-        generated_text = result['choices'][0]['message']['content']
-
-        # Parse JSON response
-        import re
-        json_match = re.search(r'\{[\s\S]*\}', generated_text)
-        if json_match:
+            # Call LLM
             try:
-                parsed = json.loads(json_match.group())
-                classifications = parsed.get('classifications', {})
+                response = requests.post(
+                    f"{llm_service.base_url}/v1/chat/completions",
+                    headers={'Content-Type': 'application/json'},
+                    json={
+                        'messages': messages,
+                        'temperature': 0.1,
+                        'max_tokens': 50
+                    },
+                    timeout=60
+                )
 
-                # If no 'classifications' key, try the parsed object directly
-                if not classifications and isinstance(parsed, dict):
-                    classifications = parsed
+                if response.status_code != 200:
+                    debug_info[label] = {'error': f'LLM request failed: {response.status_code}'}
+                    normalized[label] = None
+                    continue
 
-                # Build case-insensitive lookup map
-                classifications_lower = {k.lower(): v for k, v in classifications.items()}
+                result = response.json()
+                generated_text = result['choices'][0]['message']['content'].strip().lower()
+                debug_info[label] = {'raw': generated_text}
 
-                # Normalize values to lowercase with case-insensitive key matching
-                normalized = {}
-                for label in labels:
-                    # Try exact match first, then case-insensitive
-                    value = classifications.get(label) or classifications_lower.get(label.lower(), '')
-                    if isinstance(value, str):
-                        value = value.lower().strip()
-                    else:
-                        value = ''
-                    if value in ['yes', 'no']:
-                        normalized[label] = value
+                # Extract yes/no from response
+                if 'yes' in generated_text and 'no' not in generated_text:
+                    normalized[label] = 'yes'
+                elif 'no' in generated_text and 'yes' not in generated_text:
+                    normalized[label] = 'no'
+                elif generated_text in ['yes', 'no']:
+                    normalized[label] = generated_text
+                else:
+                    # Try to find yes/no at the start of response
+                    if generated_text.startswith('yes'):
+                        normalized[label] = 'yes'
+                    elif generated_text.startswith('no'):
+                        normalized[label] = 'no'
                     else:
                         normalized[label] = None
+                        debug_info[label]['parse_error'] = 'Could not extract yes/no'
 
-                return JsonResponse({
-                    'success': True,
-                    'classifications': normalized,
-                    'debug_raw': generated_text[:500]  # Include for debugging
-                })
-            except json.JSONDecodeError as e:
-                return JsonResponse({
-                    'success': False,
-                    'error': f'Failed to parse LLM JSON response: {str(e)}',
-                    'raw_response': generated_text
-                }, status=400)
-        else:
-            return JsonResponse({
-                'success': False,
-                'error': 'No JSON found in LLM response',
-                'raw_response': generated_text
-            }, status=400)
+            except Exception as e:
+                debug_info[label] = {'error': str(e)}
+                normalized[label] = None
+
+        print(f"[BinaryClassification] Entry {data.get('entry_number')}: Results: {normalized}")
+
+        return JsonResponse({
+            'success': True,
+            'classifications': normalized,
+            'debug_info': debug_info
+        })
 
     except Exception as e:
         return JsonResponse({'success': False, 'error': f'Failed to extract binary classification: {str(e)}'}, status=500)
