@@ -2305,71 +2305,126 @@ def extract_binary_classification(request):
         if not llm_service.is_server_running():
             return JsonResponse({'success': False, 'error': 'LLM server is not running'}, status=503)
 
-        # Process one label at a time for more reliable results
+        # Process one label at a time with 5 calls each for majority voting
+        import random
         normalized = {}
         debug_info = {}
+        NUM_VOTES = 5
+
+        def extract_yes_no(text):
+            """Extract yes/no from LLM response"""
+            text = text.strip().lower()
+            if 'yes' in text and 'no' not in text:
+                return 'yes'
+            elif 'no' in text and 'yes' not in text:
+                return 'no'
+            elif text in ['yes', 'no']:
+                return text
+            elif text.startswith('yes'):
+                return 'yes'
+            elif text.startswith('no'):
+                return 'no'
+            return None
 
         for label in labels:
-            # Build prompt for single label classification
-            prompt = f"""Analyze the following radiology report and determine: {label}
+            # Make multiple calls and collect votes
+            votes = []
+            raw_responses = []
+
+            for vote_num in range(NUM_VOTES):
+                # Vary the prompt slightly to prevent caching
+                prompt_variants = [
+                    f"""Analyze the following radiology report and determine: {label}
 
 Report:
 {report_text}
 
-Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" or "no" (lowercase, no other text)."""
+Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" or "no" (lowercase, no other text).""",
+                    f"""Review this radiology report and classify: {label}
 
-            # Build messages
-            messages = [
-                {
-                    'role': 'user',
-                    'content': prompt
-                }
-            ]
+Report:
+{report_text}
 
-            # Call LLM
-            try:
-                response = requests.post(
-                    f"{llm_service.base_url}/v1/chat/completions",
-                    headers={'Content-Type': 'application/json'},
-                    json={
-                        'messages': messages,
-                        'temperature': 0.1,
-                        'max_tokens': 50
-                    },
-                    timeout=60
-                )
+Is "{label}" indicated in this report? Respond with only "yes" or "no".""",
+                    f"""Examine the radiology report below for: {label}
 
-                if response.status_code != 200:
-                    debug_info[label] = {'error': f'LLM request failed: {response.status_code}'}
-                    normalized[label] = None
-                    continue
+Report:
+{report_text}
 
-                result = response.json()
-                generated_text = result['choices'][0]['message']['content'].strip().lower()
-                debug_info[label] = {'raw': generated_text}
+Does this report indicate "{label}"? Answer only "yes" or "no".""",
+                    f"""Based on this radiology report, determine if the following applies: {label}
 
-                # Extract yes/no from response
-                if 'yes' in generated_text and 'no' not in generated_text:
+Report:
+{report_text}
+
+Is "{label}" present? Reply with just "yes" or "no".""",
+                    f"""Read the following radiology report and assess: {label}
+
+Report:
+{report_text}
+
+Does "{label}" apply to this report? Answer "yes" or "no" only.""",
+                ]
+
+                prompt = prompt_variants[vote_num % len(prompt_variants)]
+                messages = [{'role': 'user', 'content': prompt}]
+
+                try:
+                    # Vary temperature slightly for each call
+                    temp = 0.2 + (vote_num * 0.1)  # 0.2, 0.3, 0.4, 0.5, 0.6
+
+                    response = requests.post(
+                        f"{llm_service.base_url}/v1/chat/completions",
+                        headers={'Content-Type': 'application/json'},
+                        json={
+                            'messages': messages,
+                            'temperature': temp,
+                            'max_tokens': 50
+                        },
+                        timeout=60
+                    )
+
+                    if response.status_code != 200:
+                        raw_responses.append(f'error: {response.status_code}')
+                        continue
+
+                    result = response.json()
+                    generated_text = result['choices'][0]['message']['content']
+                    raw_responses.append(generated_text.strip())
+
+                    vote = extract_yes_no(generated_text)
+                    if vote:
+                        votes.append(vote)
+
+                except Exception as e:
+                    raw_responses.append(f'error: {str(e)}')
+
+            # Determine majority vote
+            debug_info[label] = {
+                'votes': votes,
+                'raw_responses': raw_responses
+            }
+
+            if votes:
+                yes_count = votes.count('yes')
+                no_count = votes.count('no')
+                if yes_count > no_count:
                     normalized[label] = 'yes'
-                elif 'no' in generated_text and 'yes' not in generated_text:
+                    debug_info[label]['majority'] = f'yes ({yes_count}/{len(votes)})'
+                elif no_count > yes_count:
                     normalized[label] = 'no'
-                elif generated_text in ['yes', 'no']:
-                    normalized[label] = generated_text
+                    debug_info[label]['majority'] = f'no ({no_count}/{len(votes)})'
                 else:
-                    # Try to find yes/no at the start of response
-                    if generated_text.startswith('yes'):
-                        normalized[label] = 'yes'
-                    elif generated_text.startswith('no'):
-                        normalized[label] = 'no'
-                    else:
-                        normalized[label] = None
-                        debug_info[label]['parse_error'] = 'Could not extract yes/no'
-
-            except Exception as e:
-                debug_info[label] = {'error': str(e)}
+                    # Tie - use first valid vote
+                    normalized[label] = votes[0] if votes else None
+                    debug_info[label]['majority'] = f'tie, used first: {votes[0] if votes else None}'
+            else:
                 normalized[label] = None
+                debug_info[label]['majority'] = 'no valid votes'
 
-        print(f"[BinaryClassification] Entry {data.get('entry_number')}: Results: {normalized}")
+            print(f"[BinaryClassification] Entry {data.get('entry_number')}, Label '{label}': votes={votes} -> {normalized[label]}")
+
+        print(f"[BinaryClassification] Entry {data.get('entry_number')}: Final results: {normalized}")
 
         return JsonResponse({
             'success': True,
