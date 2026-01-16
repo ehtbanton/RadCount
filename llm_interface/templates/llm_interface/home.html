@@ -473,7 +473,7 @@
                         <span class="status-dot {% if server_running %}online{% else %}offline{% endif %}" id="status-dot"></span>
                         <span id="status-text" style="color: #6b7280;">{% if server_running %}Online{% else %}Offline{% endif %}</span>
                     </div>
-                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 8px; margin-bottom: 8px;">
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; margin-bottom: 8px;">
                         <select id="model-select" class="model-dropdown" style="padding: 6px 10px; font-size: 0.85em;">
                             {% if available_models %}
                                 {% for model in available_models %}
@@ -483,7 +483,16 @@
                                 <option value="">No models found</option>
                             {% endif %}
                         </select>
-                        <input type="number" id="context-size" class="context-size-input" placeholder="Context" value="{% if current_context_size %}{{ current_context_size }}{% else %}4096{% endif %}" min="512" max="32768" step="512" style="padding: 6px 10px; font-size: 0.85em;">
+                        <input type="number" id="context-size" class="context-size-input" placeholder="Context" value="{% if current_context_size %}{{ current_context_size }}{% else %}4096{% endif %}" min="512" max="32768" step="512" style="padding: 6px 10px; font-size: 0.85em;" title="Context window size">
+                        <select id="temperature-select" style="padding: 6px 10px; font-size: 0.85em; border: 1px solid #e5e7eb; border-radius: 4px;" title="Temperature">
+                            <option value="0.0">T: 0.0</option>
+                            <option value="0.1" selected>T: 0.1</option>
+                            <option value="0.2">T: 0.2</option>
+                            <option value="0.3">T: 0.3</option>
+                            <option value="0.5">T: 0.5</option>
+                            <option value="0.7">T: 0.7</option>
+                            <option value="1.0">T: 1.0</option>
+                        </select>
                     </div>
                     <button id="server-toggle-btn" class="server-toggle-btn" style="width: 100%; padding: 8px;" {% if not available_models %}disabled{% endif %}>
                         {% if server_running %}Stop{% else %}Start{% endif %}
@@ -597,17 +606,24 @@
                         <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">Add classification labels above to start.</div>
                     </div>
 
-                    <!-- Extract Button -->
-                    <div style="margin-bottom: 15px;">
+                    <!-- Extract Button with Voter Count -->
+                    <div style="margin-bottom: 15px; display: flex; gap: 8px; align-items: center;">
                         <button
                             id="extract-binary-btn"
                             onclick="runBinaryExtraction()"
-                            style="width: 100%; padding: 10px 16px; background: #8b5cf6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: 500; transition: background 0.2s;"
+                            style="flex: 1; padding: 10px 16px; background: #8b5cf6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: 500; transition: background 0.2s;"
                             onmouseover="this.style.background='#7c3aed'"
                             onmouseout="this.style.background='#8b5cf6'"
                         >
                             Extract Classifications (LLM)
                         </button>
+                        <select id="voter-count-select" style="padding: 10px 8px; font-size: 0.85em; border: 1px solid #e5e7eb; border-radius: 4px;" title="Number of votes for majority voting">
+                            <option value="1">1 vote</option>
+                            <option value="3">3 votes</option>
+                            <option value="5" selected>5 votes</option>
+                            <option value="7">7 votes</option>
+                            <option value="9">9 votes</option>
+                        </select>
                     </div>
 
                     <!-- Binary Metrics Section -->
@@ -2409,7 +2425,7 @@
         }
 
         // Run binary extraction for a specific entry
-        async function runBinaryExtractionForEntry(entryNumber, labels, reportText) {
+        async function runBinaryExtractionForEntry(entryNumber, labels, reportText, temperature, voterCount) {
             try {
                 const response = await fetch('/llm/extract-binary-classification/', {
                     method: 'POST',
@@ -2417,7 +2433,9 @@
                     body: JSON.stringify({
                         entry_number: entryNumber,
                         labels: labels,
-                        report_text: reportText
+                        report_text: reportText,
+                        temperature: temperature,
+                        num_votes: voterCount
                     })
                 });
 
@@ -2476,6 +2494,10 @@
             const statusEl = document.getElementById('binary-metrics-status');
             display.style.display = 'block';
 
+            // Get temperature and voter count from UI
+            const temperature = parseFloat(document.getElementById('temperature-select').value) || 0.1;
+            const voterCount = parseInt(document.getElementById('voter-count-select').value) || 5;
+
             // Run extractions for all entries with ground truth
             let completed = 0;
             const total = entriesWithGT.length;
@@ -2484,7 +2506,7 @@
 
             display.innerHTML = `
                 <div style="text-align: center; padding: 20px;">
-                    <div style="font-size: 0.85em; color: #6b7280; margin-bottom: 10px;">Extracting classifications...</div>
+                    <div style="font-size: 0.85em; color: #6b7280; margin-bottom: 10px;">Extracting classifications (T=${temperature}, ${voterCount} votes)...</div>
                     <div style="font-size: 1.5em; font-weight: 600; color: #8b5cf6;"><span id="extraction-completed">0</span>/${total}</div>
                     <div id="extraction-current" style="font-size: 0.8em; color: #9ca3af; margin-top: 5px;">Starting...</div>
                     <div style="margin-top: 10px; background: #e5e7eb; border-radius: 4px; height: 8px; overflow: hidden;">
@@ -2504,7 +2526,7 @@
                 console.log(`Report ${entry.entry}: text length = ${reportText ? reportText.length : 'null'}`);
 
                 if (reportText !== null && reportText !== undefined) {
-                    const result = await runBinaryExtractionForEntry(entry.entry, labels, reportText);
+                    const result = await runBinaryExtractionForEntry(entry.entry, labels, reportText, temperature, voterCount);
                     if (result.success) {
                         successful.push(entry.entry);
                         // Count non-null values
@@ -6504,6 +6526,29 @@
                 // Escape key clears word selection
                 if (e.key === 'Escape') {
                     clearWordSelection();
+                }
+
+                // Ctrl+Left/Right arrow to navigate between reports
+                if (e.ctrlKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+                    e.preventDefault();
+                    const entryInput = document.getElementById('entry-number');
+                    if (!entryInput) return;
+
+                    const currentVal = parseInt(entryInput.value) || 1;
+                    const minVal = parseInt(entryInput.min) || 1;
+                    const maxVal = parseInt(entryInput.max) || 9999;
+
+                    let newVal;
+                    if (e.key === 'ArrowLeft') {
+                        newVal = Math.max(minVal, currentVal - 1);
+                    } else {
+                        newVal = Math.min(maxVal, currentVal + 1);
+                    }
+
+                    if (newVal !== currentVal) {
+                        entryInput.value = newVal;
+                        loadCsvEntry();
+                    }
                 }
             });
 

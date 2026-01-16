@@ -2305,11 +2305,13 @@ def extract_binary_classification(request):
         if not llm_service.is_server_running():
             return JsonResponse({'success': False, 'error': 'LLM server is not running'}, status=503)
 
-        # Process one label at a time with 5 calls each for majority voting
-        import random
+        # Get temperature and voter count from request
+        temperature = float(data.get('temperature', 0.1))
+        num_votes = int(data.get('num_votes', 5))
+
+        # Process one label at a time with majority voting
         normalized = {}
         debug_info = {}
-        NUM_VOTES = 5
 
         def extract_yes_no(text):
             """Extract yes/no from LLM response"""
@@ -2331,7 +2333,7 @@ def extract_binary_classification(request):
             votes = []
             raw_responses = []
 
-            for vote_num in range(NUM_VOTES):
+            for vote_num in range(num_votes):
                 # Vary the prompt slightly to prevent caching
                 prompt_variants = [
                     f"""Analyze the following radiology report and determine: {label}
@@ -2370,15 +2372,12 @@ Does "{label}" apply to this report? Answer "yes" or "no" only.""",
                 messages = [{'role': 'user', 'content': prompt}]
 
                 try:
-                    # Vary temperature slightly for each call
-                    temp = 0.2 + (vote_num * 0.1)  # 0.2, 0.3, 0.4, 0.5, 0.6
-
                     response = requests.post(
                         f"{llm_service.base_url}/v1/chat/completions",
                         headers={'Content-Type': 'application/json'},
                         json={
                             'messages': messages,
-                            'temperature': temp,
+                            'temperature': temperature,
                             'max_tokens': 50
                         },
                         timeout=60
@@ -2424,7 +2423,7 @@ Does "{label}" apply to this report? Answer "yes" or "no" only.""",
 
             print(f"[BinaryClassification] Entry {data.get('entry_number')}, Label '{label}': votes={votes} -> {normalized[label]}")
 
-        print(f"[BinaryClassification] Entry {data.get('entry_number')}: Final results: {normalized}")
+        print(f"[BinaryClassification] Entry {data.get('entry_number')}: Final results: {normalized} (T={temperature}, votes={num_votes})")
 
         return JsonResponse({
             'success': True,
