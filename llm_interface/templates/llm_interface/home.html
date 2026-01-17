@@ -1912,6 +1912,10 @@
         // Global entities data storage
         let entitiesData = []; // Array of { entry: N, triplets: [{entity1_text, entity1_type, relation_type, entity2_text, entity2_type}, ...] }
 
+        // Binary metrics calculation state (for restart functionality)
+        let binaryMetricsRunning = false;
+        let binaryMetricsCancelled = false;
+
         // Legacy compatibility - stub variables and functions for old property code
         let propertiesData = []; // Empty array for legacy code compatibility
 
@@ -2463,10 +2467,22 @@
 
         // Calculate binary classification metrics across all reports with ground truth
         async function calculateBinaryMetrics() {
+            // If already running, cancel and restart
+            if (binaryMetricsRunning) {
+                console.log('Binary metrics calculation already running - cancelling and restarting...');
+                binaryMetricsCancelled = true;
+                // Wait a moment for the current loop to detect cancellation
+                await new Promise(resolve => setTimeout(resolve, 100));
+                binaryMetricsCancelled = false;
+            }
+
+            binaryMetricsRunning = true;
+
             const labels = getGlobalClassificationLabels();
 
             if (labels.length === 0) {
                 alert('No classification labels to evaluate');
+                binaryMetricsRunning = false;
                 return;
             }
 
@@ -2486,6 +2502,7 @@
 
             if (entriesWithGT.length === 0) {
                 alert('No reports found with ground truth classifications. Make sure you have set Yes/No values for at least one label on some reports.');
+                binaryMetricsRunning = false;
                 return;
             }
 
@@ -2518,6 +2535,13 @@
 
             // Process entries sequentially to avoid overwhelming the API
             for (const entry of entriesWithGT) {
+                // Check if cancelled (restart requested)
+                if (binaryMetricsCancelled) {
+                    console.log('Binary metrics calculation cancelled - restarting...');
+                    binaryMetricsRunning = false;
+                    return;
+                }
+
                 // Update current entry indicator
                 const currentEl = document.getElementById('extraction-current');
                 if (currentEl) currentEl.textContent = `Processing report ${entry.entry}...`;
@@ -2745,6 +2769,7 @@
             `;
 
             statusEl.textContent = `Calculated (${reportsWithGT} reports)`;
+            binaryMetricsRunning = false;
         }
 
         // Render entities and relations for current entry (routes to tab-specific renderers)
