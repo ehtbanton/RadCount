@@ -624,6 +624,15 @@
                             <option value="7">7 votes</option>
                             <option value="9">9 votes</option>
                         </select>
+                        <button
+                            onclick="openBinaryClassificationPromptEditor()"
+                            style="padding: 10px 12px; background: #6366f1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; transition: background 0.2s;"
+                            onmouseover="this.style.background='#4f46e5'"
+                            onmouseout="this.style.background='#6366f1'"
+                            title="Edit binary classification extraction prompt"
+                        >
+                            Edit Prompt
+                        </button>
                     </div>
 
                     <!-- Binary Metrics Section -->
@@ -2247,6 +2256,46 @@
             }
         }
 
+        // Rename a classification label (global) - preserves all ground truth and auto-extracted values
+        async function renameClassificationLabel(oldName) {
+            const newName = prompt(`Rename label "${oldName}" to:`, oldName);
+            if (!newName || newName.trim() === '' || newName.trim() === oldName) return;
+
+            const trimmedNewName = newName.trim();
+            const labels = getGlobalClassificationLabels();
+
+            // Check if new name already exists
+            if (labels.includes(trimmedNewName)) {
+                alert('A label with this name already exists.');
+                return;
+            }
+
+            // Update the label name in the global list
+            const idx = labels.indexOf(oldName);
+            if (idx > -1) {
+                labels[idx] = trimmedNewName;
+                setGlobalClassificationLabels(labels);
+
+                // Update values in ALL entries - transfer values from old key to new key
+                entitiesData.forEach(entry => {
+                    if (entry.entry === 0 || entry._config) return;
+                    if (entry.binary_classifications) {
+                        if (entry.binary_classifications.ground_truth && oldName in entry.binary_classifications.ground_truth) {
+                            entry.binary_classifications.ground_truth[trimmedNewName] = entry.binary_classifications.ground_truth[oldName];
+                            delete entry.binary_classifications.ground_truth[oldName];
+                        }
+                        if (entry.binary_classifications.auto_extracted && oldName in entry.binary_classifications.auto_extracted) {
+                            entry.binary_classifications.auto_extracted[trimmedNewName] = entry.binary_classifications.auto_extracted[oldName];
+                            delete entry.binary_classifications.auto_extracted[oldName];
+                        }
+                    }
+                });
+
+                await saveEntitiesToServer();
+                renderBinaryClassificationUI();
+            }
+        }
+
         // Set a classification value (ground_truth or auto_extracted) - per entry
         async function setClassificationValue(labelName, value, type) {
             if (!currentEntry) {
@@ -2285,7 +2334,8 @@
                     labelsContainer.innerHTML = labels.map(label => `
                         <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #8b5cf6; color: white; border-radius: 15px; font-size: 0.8em;">
                             ${escapeHtml(label)}
-                            <button onclick="removeClassificationLabel('${escapeHtml(label)}')" style="background: none; border: none; color: white; cursor: pointer; padding: 0; font-size: 1.1em; line-height: 1; opacity: 0.8;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">&times;</button>
+                            <button onclick="renameClassificationLabel('${escapeHtml(label).replace(/'/g, "\\'")}')" style="background: none; border: none; color: white; cursor: pointer; padding: 0; font-size: 0.85em; line-height: 1; opacity: 0.7;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'" title="Rename label">&#9998;</button>
+                            <button onclick="removeClassificationLabel('${escapeHtml(label).replace(/'/g, "\\'")}')" style="background: none; border: none; color: white; cursor: pointer; padding: 0; font-size: 1.1em; line-height: 1; opacity: 0.8;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'" title="Remove label">&times;</button>
                         </span>
                     `).join('');
                 }
@@ -2463,6 +2513,91 @@
             } catch (error) {
                 return { success: false, error: error.message };
             }
+        }
+
+        // ===== Binary Classification Prompt Editor =====
+
+        // Open binary classification prompt editor modal
+        async function openBinaryClassificationPromptEditor() {
+            const modal = document.getElementById('binary-classification-prompt-modal');
+            const textarea = document.getElementById('binary-prompt-template');
+
+            try {
+                // Load current prompt from server
+                const response = await fetch('/llm/get-binary-classification-prompt/');
+                const data = await response.json();
+
+                if (data.success) {
+                    textarea.value = data.template;
+                } else {
+                    alert('Error loading prompt: ' + data.error);
+                    return;
+                }
+            } catch (error) {
+                alert('Error loading prompt: ' + error.message);
+                return;
+            }
+
+            modal.classList.add('active');
+        }
+
+        // Close binary classification prompt editor modal
+        function closeBinaryClassificationPromptEditor() {
+            document.getElementById('binary-classification-prompt-modal').classList.remove('active');
+        }
+
+        // Save binary classification prompt
+        async function saveBinaryClassificationPrompt() {
+            const textarea = document.getElementById('binary-prompt-template');
+            const template = textarea.value.trim();
+
+            if (!template) {
+                alert('Please enter a prompt template');
+                return;
+            }
+
+            // Validate placeholders
+            if (!template.includes('{label}')) {
+                alert('Template must contain {label} placeholder');
+                return;
+            }
+            if (!template.includes('{report_text}')) {
+                alert('Template must contain {report_text} placeholder');
+                return;
+            }
+
+            try {
+                const response = await fetch('/llm/save-binary-classification-prompt/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ template })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Prompt saved successfully');
+                    closeBinaryClassificationPromptEditor();
+                } else {
+                    alert('Error saving prompt: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error saving prompt: ' + error.message);
+            }
+        }
+
+        // Reset binary classification prompt to default
+        async function resetBinaryClassificationPrompt() {
+            if (!confirm('Reset to default prompt? This will overwrite your current prompt.')) return;
+
+            const defaultTemplate = `Analyze the following radiology report and determine: {label}
+
+Report:
+{report_text}
+
+Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" or "no" (lowercase, no other text).`;
+
+            document.getElementById('binary-prompt-template').value = defaultTemplate;
         }
 
         // Calculate binary classification metrics across all reports with ground truth
@@ -6591,6 +6726,48 @@
             console.log('Initialization complete');
         });
     </script>
+
+    <!-- Binary Classification Prompt Editor Modal -->
+    <div id="binary-classification-prompt-modal" class="modal">
+        <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3>Binary Classification Prompt Editor</h3>
+                <button class="close-modal" onclick="closeBinaryClassificationPromptEditor()">&times;</button>
+            </div>
+            <div style="padding: 20px;">
+                <!-- Help Text -->
+                <div style="margin-bottom: 20px; padding: 15px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px;">
+                    <div style="font-weight: 500; color: #92400e; margin-bottom: 8px; font-size: 0.9em;">Required Placeholders:</div>
+                    <div style="font-size: 0.85em; color: #78350f;">
+                        <ul style="margin: 5px 0; padding-left: 20px;">
+                            <li><code>{label}</code> - The classification label being evaluated (e.g., "Disease progression")</li>
+                            <li><code>{report_text}</code> - The full radiology report text</li>
+                        </ul>
+                        <div style="margin-top: 8px; font-style: italic;">The prompt should instruct the LLM to respond with only "yes" or "no".</div>
+                    </div>
+                </div>
+
+                <!-- Prompt Template -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 5px;">Prompt Template</label>
+                    <textarea id="binary-prompt-template" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 4px; min-height: 300px; font-family: 'Courier New', monospace; font-size: 0.85em; line-height: 1.5;"></textarea>
+                </div>
+
+                <!-- Actions -->
+                <div style="display: flex; gap: 10px; justify-content: flex-end; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                    <button onclick="resetBinaryClassificationPrompt()" style="margin-right: auto; padding: 8px 16px; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer;">
+                        Reset to Default
+                    </button>
+                    <button onclick="closeBinaryClassificationPromptEditor()" style="padding: 8px 16px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Cancel
+                    </button>
+                    <button onclick="saveBinaryClassificationPrompt()" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Save Prompt
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Extraction Prompt Editor Modal -->
     <div id="extraction-prompt-editor-modal" class="modal">

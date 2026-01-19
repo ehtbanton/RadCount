@@ -2328,47 +2328,18 @@ def extract_binary_classification(request):
                 return 'no'
             return None
 
+        # Load custom prompt template
+        prompt_data = load_binary_classification_prompt()
+        prompt_template = prompt_data.get('template', '')
+
         for label in labels:
             # Make multiple calls and collect votes
             votes = []
             raw_responses = []
 
             for vote_num in range(num_votes):
-                # Vary the prompt slightly to prevent caching
-                prompt_variants = [
-                    f"""Analyze the following radiology report and determine: {label}
-
-Report:
-{report_text}
-
-Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" or "no" (lowercase, no other text).""",
-                    f"""Review this radiology report and classify: {label}
-
-Report:
-{report_text}
-
-Is "{label}" indicated in this report? Respond with only "yes" or "no".""",
-                    f"""Examine the radiology report below for: {label}
-
-Report:
-{report_text}
-
-Does this report indicate "{label}"? Answer only "yes" or "no".""",
-                    f"""Based on this radiology report, determine if the following applies: {label}
-
-Report:
-{report_text}
-
-Is "{label}" present? Reply with just "yes" or "no".""",
-                    f"""Read the following radiology report and assess: {label}
-
-Report:
-{report_text}
-
-Does "{label}" apply to this report? Answer "yes" or "no" only.""",
-                ]
-
-                prompt = prompt_variants[vote_num % len(prompt_variants)]
+                # Use the custom prompt template with placeholders replaced
+                prompt = prompt_template.format(label=label, report_text=report_text)
                 messages = [{'role': 'user', 'content': prompt}]
 
                 try:
@@ -4452,5 +4423,81 @@ def get_test_versions(request):
             'current_version': versions_data.get('current_version')
         })
 
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# Binary Classification Prompt Management
+
+def get_binary_classification_prompts_file():
+    """Get path to binary classification prompts file."""
+    return PROJECT_ROOT / "binary_classification_prompts.json"
+
+
+def load_binary_classification_prompt():
+    """Load binary classification prompt from file, or return default."""
+    prompts_file = get_binary_classification_prompts_file()
+
+    default_prompt = {
+        "template": """Analyze the following radiology report and determine: {label}
+
+Report:
+{report_text}
+
+Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" or "no" (lowercase, no other text)."""
+    }
+
+    if not prompts_file.exists():
+        return default_prompt
+
+    try:
+        with open(prompts_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            return data if data.get('template') else default_prompt
+    except:
+        return default_prompt
+
+
+def save_binary_classification_prompt(template):
+    """Save binary classification prompt to file."""
+    prompts_file = get_binary_classification_prompts_file()
+    with open(prompts_file, 'w', encoding='utf-8') as f:
+        json.dump({'template': template}, f, indent=2)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_binary_classification_prompt(request):
+    """Get the binary classification prompt template."""
+    try:
+        prompt_data = load_binary_classification_prompt()
+        return JsonResponse({
+            'success': True,
+            'template': prompt_data.get('template', '')
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def save_binary_classification_prompt_view(request):
+    """Save the binary classification prompt template."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        template = data.get('template', '')
+
+        if not template:
+            return JsonResponse({'success': False, 'error': 'Template is required'}, status=400)
+
+        # Validate that template contains required placeholders
+        if '{label}' not in template:
+            return JsonResponse({'success': False, 'error': 'Template must contain {label} placeholder'}, status=400)
+        if '{report_text}' not in template:
+            return JsonResponse({'success': False, 'error': 'Template must contain {report_text} placeholder'}, status=400)
+
+        save_binary_classification_prompt(template)
+
+        return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)

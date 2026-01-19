@@ -30,6 +30,8 @@ urlpatterns = [
     path('extract-observations/', views.extract_observations, name='extract_observations'),
     # Binary classification extraction
     path('extract-binary-classification/', views.extract_binary_classification, name='extract_binary_classification'),
+    path('get-binary-classification-prompt/', views.get_binary_classification_prompt, name='get_binary_classification_prompt'),
+    path('save-binary-classification-prompt/', views.save_binary_classification_prompt_view, name='save_binary_classification_prompt'),
     # Extraction Methods
     path('create-extraction-method/', views.create_extraction_method, name='create_extraction_method'),
     path('run-extraction-method/', views.run_extraction_method, name='run_extraction_method'),
