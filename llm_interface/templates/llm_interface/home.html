@@ -709,8 +709,8 @@
                     <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
                         <button
                             id="calculate-obs-metrics-btn"
-                            onclick="calculateObservationMetrics()"
-                            style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 500;"
+                            onclick="calculateAllObservationMetrics()"
+                            style="padding: 8px 16px; background: #8b5cf6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 500;"
                         >
                             Calculate Metrics
                         </button>
@@ -1924,6 +1924,10 @@
         // Binary metrics calculation state (for restart functionality)
         let binaryMetricsRunning = false;
         let binaryMetricsCancelled = false;
+
+        // Observation metrics calculation state (for restart functionality)
+        let obsMetricsRunning = false;
+        let obsMetricsCancelled = false;
 
         // Legacy compatibility - stub variables and functions for old property code
         let propertiesData = []; // Empty array for legacy code compatibility
@@ -3979,6 +3983,289 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
                 btn.textContent = originalText;
                 btn.disabled = false;
             }
+        }
+
+        // Calculate observation metrics across ALL reports with ground truth
+        async function calculateAllObservationMetrics() {
+            // If already running, cancel and restart
+            if (obsMetricsRunning) {
+                console.log('Observation metrics calculation already running - cancelling and restarting...');
+                obsMetricsCancelled = true;
+                await new Promise(resolve => setTimeout(resolve, 100));
+                obsMetricsCancelled = false;
+            }
+
+            obsMetricsRunning = true;
+
+            // Find all entries with ground truth annotations
+            const entriesWithGT = entitiesData.filter(entry => {
+                if (entry.entry === 0 || entry._config) return false;
+                const annotations = entry.annotations;
+                return annotations && annotations.length > 0;
+            });
+
+            console.log('Entries with ground truth:', entriesWithGT.map(e => e.entry));
+
+            if (entriesWithGT.length === 0) {
+                alert('No reports found with ground truth annotations. Make sure you have added annotations to at least one report.');
+                obsMetricsRunning = false;
+                return;
+            }
+
+            // Show progress in the display area
+            const display = document.getElementById('observation-metrics-display');
+            const statusEl = document.getElementById('metrics-status');
+            display.style.display = 'block';
+
+            const total = entriesWithGT.length;
+            let completed = 0;
+            const errors = [];
+            const successful = [];
+            const perReportResults = [];
+
+            // Aggregated metrics
+            let totalTP = 0;
+            let totalFP = 0;
+            let totalFN = 0;
+
+            // Show progress UI
+            display.innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                    <div style="font-size: 0.85em; color: #6b7280; margin-bottom: 10px;">Calculating metrics across all reports...</div>
+                    <div style="font-size: 1.5em; font-weight: 600; color: #8b5cf6;"><span id="obs-metrics-completed">0</span>/${total}</div>
+                    <div id="obs-metrics-current" style="font-size: 0.8em; color: #9ca3af; margin-top: 5px;">Starting...</div>
+                    <div style="margin-top: 10px; background: #e5e7eb; border-radius: 4px; height: 8px; overflow: hidden;">
+                        <div id="obs-metrics-progress-bar" style="background: #8b5cf6; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                    </div>
+                </div>
+            `;
+            statusEl.textContent = 'Calculating...';
+
+            // Process entries sequentially
+            for (const entry of entriesWithGT) {
+                // Check if cancelled (restart requested)
+                if (obsMetricsCancelled) {
+                    console.log('Observation metrics calculation cancelled - restarting...');
+                    obsMetricsRunning = false;
+                    return;
+                }
+
+                // Update current entry indicator
+                const currentEl = document.getElementById('obs-metrics-current');
+                if (currentEl) currentEl.textContent = `Processing report ${entry.entry}...`;
+
+                // Check if auto_extracted exists; if not, run extraction first
+                let needsExtraction = !entry.auto_extracted || entry.auto_extracted.length === 0;
+
+                if (needsExtraction) {
+                    // Fetch report text
+                    const reportText = await getReportTextForEntry(entry.entry);
+                    if (reportText) {
+                        try {
+                            const extractResponse = await fetch('/llm/extract-observations/', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    entry_number: entry.entry,
+                                    report_text: reportText
+                                })
+                            });
+                            const extractResult = await extractResponse.json();
+                            if (!extractResult.success) {
+                                errors.push({ entry: entry.entry, error: 'Extraction failed: ' + extractResult.error });
+                                completed++;
+                                updateObsMetricsProgress(completed, total);
+                                continue;
+                            }
+                            // Reload entities data to get updated auto_extracted
+                            await loadEntities();
+                        } catch (extractError) {
+                            errors.push({ entry: entry.entry, error: 'Extraction error: ' + extractError.message });
+                            completed++;
+                            updateObsMetricsProgress(completed, total);
+                            continue;
+                        }
+                    } else {
+                        errors.push({ entry: entry.entry, error: 'Could not fetch report text' });
+                        completed++;
+                        updateObsMetricsProgress(completed, total);
+                        continue;
+                    }
+                }
+
+                // Now calculate metrics for this entry
+                try {
+                    const response = await fetch('/llm/calculate-observation-metrics/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ entry_number: entry.entry })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        const metrics = result.metrics;
+                        successful.push(entry.entry);
+
+                        // Aggregate TP/FP/FN
+                        totalTP += metrics.true_positives;
+                        totalFP += metrics.false_positives;
+                        totalFN += metrics.false_negatives;
+
+                        // Store per-report results
+                        perReportResults.push({
+                            entry: entry.entry,
+                            tp: metrics.true_positives,
+                            fp: metrics.false_positives,
+                            fn: metrics.false_negatives,
+                            precision: metrics.precision,
+                            recall: metrics.recall,
+                            f1: metrics.f1,
+                            gt_count: metrics.ground_truth_count,
+                            pred_count: metrics.predicted_count
+                        });
+
+                        console.log(`Report ${entry.entry}: TP=${metrics.true_positives}, FP=${metrics.false_positives}, FN=${metrics.false_negatives}`);
+                    } else {
+                        errors.push({ entry: entry.entry, error: result.error });
+                    }
+                } catch (error) {
+                    errors.push({ entry: entry.entry, error: error.message });
+                }
+
+                completed++;
+                updateObsMetricsProgress(completed, total);
+            }
+
+            console.log(`Metrics calculation complete: ${successful.length} successful, ${errors.length} errors`);
+
+            // Calculate overall metrics
+            const overallPrecision = (totalTP + totalFP) > 0 ? totalTP / (totalTP + totalFP) : 0;
+            const overallRecall = (totalTP + totalFN) > 0 ? totalTP / (totalTP + totalFN) : 0;
+            const overallF1 = (overallPrecision + overallRecall) > 0
+                ? 2 * (overallPrecision * overallRecall) / (overallPrecision + overallRecall)
+                : 0;
+
+            // Render aggregated results
+            renderAllObservationMetrics({
+                total,
+                successful: successful.length,
+                errors,
+                totalTP,
+                totalFP,
+                totalFN,
+                precision: overallPrecision,
+                recall: overallRecall,
+                f1: overallF1,
+                perReportResults
+            });
+
+            statusEl.textContent = `Calculated (${successful.length} reports)`;
+            obsMetricsRunning = false;
+
+            // Store aggregated metrics for saving
+            currentObservationMetrics = {
+                entry: 'all',
+                precision: overallPrecision,
+                recall: overallRecall,
+                f1: overallF1,
+                true_positives: totalTP,
+                false_positives: totalFP,
+                false_negatives: totalFN
+            };
+
+            // Show save section
+            document.getElementById('save-results-section').style.display = 'block';
+            await fetchCurrentVersionInfo();
+        }
+
+        // Helper to update progress bar for observation metrics
+        function updateObsMetricsProgress(completed, total) {
+            const progressBar = document.getElementById('obs-metrics-progress-bar');
+            if (progressBar) {
+                progressBar.style.width = `${(completed / total) * 100}%`;
+            }
+            const completedEl = document.getElementById('obs-metrics-completed');
+            if (completedEl) completedEl.textContent = completed;
+        }
+
+        // Render aggregated observation metrics
+        function renderAllObservationMetrics(data) {
+            const display = document.getElementById('observation-metrics-display');
+
+            // Status message for extraction/errors
+            let statusHtml = '';
+            if (data.errors.length > 0 || data.successful > 0) {
+                statusHtml = `
+                    <div style="margin-bottom: 15px; padding: 10px; background: ${data.errors.length > 0 ? '#fef2f2' : '#f0fdf4'}; border: 1px solid ${data.errors.length > 0 ? '#fecaca' : '#bbf7d0'}; border-radius: 6px; font-size: 0.8em;">
+                        <div style="color: #059669; margin-bottom: 5px;">✓ Calculated metrics for ${data.successful} of ${data.total} reports</div>
+                        ${data.errors.length > 0 ? `
+                            <div style="color: #dc2626; font-weight: 500; margin-top: 8px; margin-bottom: 5px;">⚠ ${data.errors.length} error(s):</div>
+                            ${data.errors.map(e => `<div style="color: #7f1d1d;">Report ${e.entry}: ${escapeHtml(e.error)}</div>`).join('')}
+                        ` : ''}
+                    </div>
+                `;
+            }
+
+            display.innerHTML = `
+                ${statusHtml}
+                <div style="text-align: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #e5e7eb;">
+                    <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase;">Overall F1 Score</div>
+                    <div style="font-size: 2.5em; font-weight: 600; color: #8b5cf6;">${(data.f1 * 100).toFixed(1)}%</div>
+                    <div style="font-size: 0.8em; color: #9ca3af;">${data.successful} reports evaluated</div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px;">
+                    <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                        <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">Precision</div>
+                        <div style="font-size: 1.5em; font-weight: 600; color: #059669;">${(data.precision * 100).toFixed(1)}%</div>
+                    </div>
+                    <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                        <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">Recall</div>
+                        <div style="font-size: 1.5em; font-weight: 600; color: #2563eb;">${(data.recall * 100).toFixed(1)}%</div>
+                    </div>
+                    <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                        <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">F1 Score</div>
+                        <div style="font-size: 1.5em; font-weight: 600; color: #7c3aed;">${(data.f1 * 100).toFixed(1)}%</div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 0.85em; margin-bottom: 15px; padding: 10px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                    <div style="text-align: center;">
+                        <span style="color: #10b981; font-weight: 600;">TP: ${data.totalTP}</span>
+                    </div>
+                    <div style="text-align: center;">
+                        <span style="color: #f59e0b; font-weight: 600;">FP: ${data.totalFP}</span>
+                    </div>
+                    <div style="text-align: center;">
+                        <span style="color: #ef4444; font-weight: 600;">FN: ${data.totalFN}</span>
+                    </div>
+                </div>
+
+                <details style="font-size: 0.8em; margin-top: 10px;">
+                    <summary style="cursor: pointer; font-weight: 500; color: #374151; margin-bottom: 8px;">Per-Report Breakdown (${data.perReportResults.length} reports)</summary>
+                    <div style="max-height: 200px; overflow-y: auto; margin-top: 8px;">
+                        ${data.perReportResults.map(r => {
+                            const f1Color = r.f1 >= 0.8 ? '#10b981' : r.f1 >= 0.5 ? '#f59e0b' : '#ef4444';
+                            return `
+                                <div style="padding: 8px; margin-bottom: 6px; background: white; border: 1px solid #e5e7eb; border-radius: 4px;">
+                                    <div style="display: flex; justify-content: space-between; font-weight: 500;">
+                                        <span>Report ${r.entry}</span>
+                                        <span style="color: ${f1Color};">F1: ${(r.f1 * 100).toFixed(1)}%</span>
+                                    </div>
+                                    <div style="margin-top: 4px; font-size: 0.9em; color: #6b7280;">
+                                        <span style="margin-right: 12px;">P: ${(r.precision * 100).toFixed(1)}%</span>
+                                        <span style="margin-right: 12px;">R: ${(r.recall * 100).toFixed(1)}%</span>
+                                        <span style="color: #10b981;">TP: ${r.tp}</span> |
+                                        <span style="color: #f59e0b;">FP: ${r.fp}</span> |
+                                        <span style="color: #ef4444;">FN: ${r.fn}</span>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </details>
+            `;
         }
 
         // Save test results to file (version auto-detected)
