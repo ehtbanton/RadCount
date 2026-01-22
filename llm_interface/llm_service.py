@@ -265,7 +265,7 @@ class LlamaService:
 
         return context
 
-    def generate_response(self, temperature: float = 0.7, max_tokens: int = 512) -> Dict:
+    def generate_response(self, temperature: float = 0, max_tokens: int = 512) -> Dict:
         """
         Generate a response based on context files.
 

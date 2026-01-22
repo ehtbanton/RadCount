@@ -658,7 +658,7 @@ def generate(request):
     try:
         # Parse request parameters
         data = json.loads(request.body) if request.body else {}
-        temperature = float(data.get('temperature', 0.7))
+        temperature = float(data.get('temperature', 0))
         max_tokens = int(data.get('max_tokens', 512))
 
         # Generate response
@@ -1722,7 +1722,7 @@ def generate_with_prompt(request):
         data = json.loads(request.body) if request.body else {}
         user_prompt = data.get('user_prompt', '')
         report_text = data.get('report_text', '')
-        temperature = float(data.get('temperature', 0.7))
+        temperature = float(data.get('temperature', 0))
         max_tokens = int(data.get('max_tokens', 50))
 
         if not user_prompt:
@@ -2305,11 +2305,10 @@ def extract_binary_classification(request):
         if not llm_service.is_server_running():
             return JsonResponse({'success': False, 'error': 'LLM server is not running'}, status=503)
 
-        # Get temperature and voter count from request
-        temperature = float(data.get('temperature', 0.1))
-        num_votes = int(data.get('num_votes', 5))
+        # Get temperature from request
+        temperature = float(data.get('temperature', 0))
 
-        # Process one label at a time with majority voting
+        # Process one label at a time
         normalized = {}
         debug_info = {}
 
@@ -2333,68 +2332,40 @@ def extract_binary_classification(request):
         prompt_template = prompt_data.get('template', '')
 
         for label in labels:
-            # Make multiple calls and collect votes
-            votes = []
-            raw_responses = []
+            # Use the custom prompt template with placeholders replaced
+            prompt = prompt_template.format(label=label, report_text=report_text)
+            messages = [{'role': 'user', 'content': prompt}]
 
-            for vote_num in range(num_votes):
-                # Use the custom prompt template with placeholders replaced
-                prompt = prompt_template.format(label=label, report_text=report_text)
-                messages = [{'role': 'user', 'content': prompt}]
+            try:
+                response = requests.post(
+                    f"{llm_service.base_url}/v1/chat/completions",
+                    headers={'Content-Type': 'application/json'},
+                    json={
+                        'messages': messages,
+                        'temperature': temperature,
+                        'max_tokens': 50
+                    },
+                    timeout=60
+                )
 
-                try:
-                    response = requests.post(
-                        f"{llm_service.base_url}/v1/chat/completions",
-                        headers={'Content-Type': 'application/json'},
-                        json={
-                            'messages': messages,
-                            'temperature': temperature,
-                            'max_tokens': 50
-                        },
-                        timeout=60
-                    )
+                if response.status_code != 200:
+                    normalized[label] = None
+                    debug_info[label] = {'raw_response': f'error: {response.status_code}'}
+                    continue
 
-                    if response.status_code != 200:
-                        raw_responses.append(f'error: {response.status_code}')
-                        continue
+                result = response.json()
+                generated_text = result['choices'][0]['message']['content']
+                classification = extract_yes_no(generated_text)
+                normalized[label] = classification
+                debug_info[label] = {'raw_response': generated_text.strip()}
 
-                    result = response.json()
-                    generated_text = result['choices'][0]['message']['content']
-                    raw_responses.append(generated_text.strip())
-
-                    vote = extract_yes_no(generated_text)
-                    if vote:
-                        votes.append(vote)
-
-                except Exception as e:
-                    raw_responses.append(f'error: {str(e)}')
-
-            # Determine majority vote
-            debug_info[label] = {
-                'votes': votes,
-                'raw_responses': raw_responses
-            }
-
-            if votes:
-                yes_count = votes.count('yes')
-                no_count = votes.count('no')
-                if yes_count > no_count:
-                    normalized[label] = 'yes'
-                    debug_info[label]['majority'] = f'yes ({yes_count}/{len(votes)})'
-                elif no_count > yes_count:
-                    normalized[label] = 'no'
-                    debug_info[label]['majority'] = f'no ({no_count}/{len(votes)})'
-                else:
-                    # Tie - use first valid vote
-                    normalized[label] = votes[0] if votes else None
-                    debug_info[label]['majority'] = f'tie, used first: {votes[0] if votes else None}'
-            else:
+            except Exception as e:
                 normalized[label] = None
-                debug_info[label]['majority'] = 'no valid votes'
+                debug_info[label] = {'raw_response': f'error: {str(e)}'}
 
-            print(f"[BinaryClassification] Entry {data.get('entry_number')}, Label '{label}': votes={votes} -> {normalized[label]}")
+            print(f"[BinaryClassification] Entry {data.get('entry_number')}, Label '{label}': -> {normalized[label]}")
 
-        print(f"[BinaryClassification] Entry {data.get('entry_number')}: Final results: {normalized} (T={temperature}, votes={num_votes})")
+        print(f"[BinaryClassification] Entry {data.get('entry_number')}: Final results: {normalized} (T={temperature})")
 
         return JsonResponse({
             'success': True,
@@ -4501,3 +4472,865 @@ def save_binary_classification_prompt_view(request):
         return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# ===== Observations Extraction =====
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def extract_findings(request):
+    """Extract observations using LLM (stores as observations_auto_extracted)."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        entry_number = data.get('entry_number')
+        report_text = data.get('report_text', '')
+
+        if entry_number is None:
+            return JsonResponse({'success': False, 'error': 'entry_number is required'}, status=400)
+
+        if not report_text:
+            return JsonResponse({'success': False, 'error': 'report_text is required'}, status=400)
+
+        # Load prompts
+        prompts_file = PROJECT_ROOT / "extraction_prompts.json"
+        if not prompts_file.exists():
+            return JsonResponse({'success': False, 'error': 'extraction_prompts.json not found'}, status=404)
+
+        with open(prompts_file, 'r', encoding='utf-8') as f:
+            prompts_data = json.load(f)
+
+        # Get findings prompt
+        active_prompt_key = prompts_data.get('active_findings_prompt', 'concerning_findings')
+        prompt_template = prompts_data['prompts'].get(active_prompt_key, {}).get('template', '')
+
+        if not prompt_template:
+            return JsonResponse({'success': False, 'error': 'No findings prompt template found'}, status=400)
+
+        # Create indexed report as JSON array of [word, index] tuples
+        words = report_text.split()
+        indexed_report = json.dumps([[word, i] for i, word in enumerate(words)])
+
+        # Build prompt
+        prompt = prompt_template.replace('{indexed_report}', indexed_report)
+
+        # Check if LLM server is running
+        llm_service = LlamaService()
+        if not llm_service.is_server_running():
+            return JsonResponse({'success': False, 'error': 'LLM server is not running'}, status=503)
+
+        # Build messages
+        messages = [
+            {
+                'role': 'user',
+                'content': prompt
+            }
+        ]
+
+        # Call LLM
+        response = requests.post(
+            f"{llm_service.base_url}/v1/chat/completions",
+            headers={'Content-Type': 'application/json'},
+            json={
+                'messages': messages,
+                'temperature': 0.1,
+                'max_tokens': 4000
+            },
+            timeout=180
+        )
+
+        if response.status_code != 200:
+            return JsonResponse({'success': False, 'error': f'LLM request failed: {response.text}'}, status=500)
+
+        result = response.json()
+        generated_text = result['choices'][0]['message']['content']
+
+        # Parse JSON response
+        extraction_result, parse_error = extract_json_array(generated_text)
+        if extraction_result is None:
+            return JsonResponse({
+                'success': False,
+                'error': f'Failed to parse LLM response: {parse_error}',
+                'raw_response': generated_text
+            }, status=400)
+
+        # Store extracted findings in entities.json
+        entities_file = PROJECT_ROOT / "entities.json"
+        if entities_file.exists():
+            with open(entities_file, 'r', encoding='utf-8') as f:
+                entities_data = json.load(f)
+        else:
+            entities_data = []
+
+        # Find or create entry
+        target_entry = None
+        for entry in entities_data:
+            if entry.get('entry') == entry_number:
+                target_entry = entry
+                break
+
+        if not target_entry:
+            target_entry = {'entry': entry_number}
+            entities_data.append(target_entry)
+            entities_data.sort(key=lambda x: x.get('entry', 0))
+
+        # Store auto-extracted observations
+        target_entry['observations_auto_extracted'] = extraction_result
+
+        # Save
+        with open(entities_file, 'w', encoding='utf-8') as f:
+            json.dump(entities_data, f, indent=2)
+
+        return JsonResponse({
+            'success': True,
+            'observations': extraction_result,
+            'count': len(extraction_result)
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Failed to extract observations: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def calculate_findings_metrics(request):
+    """Calculate precision, recall, and F1 for observations extraction."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        entry_number = data.get('entry_number')
+
+        if entry_number is None:
+            return JsonResponse({'success': False, 'error': 'entry_number is required'}, status=400)
+
+        # Load entities data
+        entities_file = PROJECT_ROOT / "entities.json"
+        if not entities_file.exists():
+            return JsonResponse({'success': False, 'error': 'entities.json not found'}, status=404)
+
+        with open(entities_file, 'r', encoding='utf-8') as f:
+            entities_data = json.load(f)
+
+        # Find the entry
+        target_entry = None
+        for entry in entities_data:
+            if entry.get('entry') == entry_number:
+                target_entry = entry
+                break
+
+        if not target_entry:
+            return JsonResponse({'success': False, 'error': f'Entry {entry_number} not found'}, status=404)
+
+        ground_truth = target_entry.get('observations_ground_truth', [])
+        auto_extracted = target_entry.get('observations_auto_extracted', [])
+
+        if not ground_truth:
+            return JsonResponse({'success': False, 'error': 'No ground truth observations found'}, status=400)
+
+        if not auto_extracted:
+            return JsonResponse({'success': False, 'error': 'No auto-extracted observations found'}, status=400)
+
+        # Build observation signatures from ground truth using word indices
+        # New format: {observation: [word, index]}
+        gt_indices = set()
+        for obs in ground_truth:
+            observation = obs.get('observation', [])
+            if isinstance(observation, list) and len(observation) == 2:
+                # Store the word index for comparison
+                gt_indices.add(observation[1])
+
+        # Build observation signatures from auto-extracted
+        pred_indices = set()
+        for obs in auto_extracted:
+            observation = obs.get('observation', [])
+            if isinstance(observation, list) and len(observation) == 2:
+                pred_indices.add(observation[1])
+
+        # Calculate metrics with exact index matching
+        true_positives = len(gt_indices & pred_indices)
+        false_positives = len(pred_indices - gt_indices)
+        false_negatives = len(gt_indices - pred_indices)
+
+        precision = true_positives / (true_positives + false_positives) if (true_positives + false_positives) > 0 else 0
+        recall = true_positives / (true_positives + false_negatives) if (true_positives + false_negatives) > 0 else 0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+
+        return JsonResponse({
+            'success': True,
+            'metrics': {
+                'precision': round(precision, 4),
+                'recall': round(recall, 4),
+                'f1': round(f1, 4),
+                'true_positives': true_positives,
+                'false_positives': false_positives,
+                'false_negatives': false_negatives,
+                'ground_truth_count': len(gt_indices),
+                'predicted_count': len(pred_indices)
+            }
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Failed to calculate observations metrics: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_findings_prompt(request):
+    """Get the current findings extraction prompt template."""
+    try:
+        prompts_file = PROJECT_ROOT / "extraction_prompts.json"
+        if not prompts_file.exists():
+            return JsonResponse({'success': False, 'error': 'extraction_prompts.json not found'}, status=404)
+
+        with open(prompts_file, 'r', encoding='utf-8') as f:
+            prompts_data = json.load(f)
+
+        # Get findings prompt
+        active_prompt_key = prompts_data.get('active_findings_prompt', 'concerning_findings')
+        prompt_template = prompts_data['prompts'].get(active_prompt_key, {}).get('template', '')
+
+        return JsonResponse({
+            'success': True,
+            'template': prompt_template,
+            'prompt_key': active_prompt_key
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def save_findings_prompt(request):
+    """Save the findings extraction prompt template."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        template = data.get('template', '')
+
+        if not template:
+            return JsonResponse({'success': False, 'error': 'Template is required'}, status=400)
+
+        # Validate that template contains required placeholder
+        if '{indexed_report}' not in template:
+            return JsonResponse({'success': False, 'error': 'Template must contain {indexed_report} placeholder'}, status=400)
+
+        prompts_file = PROJECT_ROOT / "extraction_prompts.json"
+        if prompts_file.exists():
+            with open(prompts_file, 'r', encoding='utf-8') as f:
+                prompts_data = json.load(f)
+        else:
+            prompts_data = {'prompts': {}, 'active_findings_prompt': 'concerning_findings'}
+
+        # Update the findings prompt
+        active_prompt_key = prompts_data.get('active_findings_prompt', 'concerning_findings')
+        if active_prompt_key not in prompts_data['prompts']:
+            prompts_data['prompts'][active_prompt_key] = {
+                'name': 'Concerning Findings Extraction',
+                'description': 'Extract concerning/abnormal findings from radiology reports with word locations'
+            }
+
+        prompts_data['prompts'][active_prompt_key]['template'] = template
+
+        with open(prompts_file, 'w', encoding='utf-8') as f:
+            json.dump(prompts_data, f, indent=2)
+
+        return JsonResponse({'success': True})
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_triplet_prompt(request):
+    """Get the current triplet extraction prompt template."""
+    try:
+        prompts_file = PROJECT_ROOT / "extraction_prompts.json"
+        if not prompts_file.exists():
+            return JsonResponse({'success': False, 'error': 'extraction_prompts.json not found'}, status=404)
+
+        with open(prompts_file, 'r', encoding='utf-8') as f:
+            prompts_data = json.load(f)
+
+        # Get triplet prompt (uses active_prompt which defaults to observation_location)
+        active_prompt_key = prompts_data.get('active_prompt', 'observation_location')
+        prompt_template = prompts_data['prompts'].get(active_prompt_key, {}).get('template', '')
+
+        return JsonResponse({
+            'success': True,
+            'template': prompt_template,
+            'prompt_key': active_prompt_key
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def save_triplet_prompt(request):
+    """Save the triplet extraction prompt template."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        template = data.get('template', '')
+
+        if not template:
+            return JsonResponse({'success': False, 'error': 'Template is required'}, status=400)
+
+        # Validate that template contains required placeholder
+        if '{indexed_report}' not in template:
+            return JsonResponse({'success': False, 'error': 'Template must contain {indexed_report} placeholder'}, status=400)
+
+        prompts_file = PROJECT_ROOT / "extraction_prompts.json"
+        if prompts_file.exists():
+            with open(prompts_file, 'r', encoding='utf-8') as f:
+                prompts_data = json.load(f)
+        else:
+            prompts_data = {'prompts': {}, 'active_prompt': 'observation_location'}
+
+        # Update the triplet prompt
+        active_prompt_key = prompts_data.get('active_prompt', 'observation_location')
+        if active_prompt_key not in prompts_data['prompts']:
+            prompts_data['prompts'][active_prompt_key] = {
+                'name': 'Observation-Location-Properties Extraction',
+                'description': 'Extract clinical observations with anatomical locations and properties'
+            }
+
+        prompts_data['prompts'][active_prompt_key]['template'] = template
+
+        with open(prompts_file, 'w', encoding='utf-8') as f:
+            json.dump(prompts_data, f, indent=2)
+
+        return JsonResponse({'success': True})
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# ============================================================
+# Schema Management Endpoints (for Entities & Relations tab)
+# ============================================================
+
+@require_http_methods(["GET"])
+def get_schemas(request):
+    """Get all available schemas and the active schema name."""
+    try:
+        schemas_file = PROJECT_ROOT / "schemas.json"
+
+        if not schemas_file.exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'schemas.json not found'
+            }, status=404)
+
+        with open(schemas_file, 'r', encoding='utf-8') as f:
+            schemas_data = json.load(f)
+
+        return JsonResponse({
+            'success': True,
+            'active_schema': schemas_data.get('active_schema', 'radgraph'),
+            'schemas': schemas_data.get('schemas', {})
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to load schemas: {str(e)}'
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def get_active_schema(request):
+    """Get the currently active schema configuration."""
+    try:
+        schemas_file = PROJECT_ROOT / "schemas.json"
+
+        if not schemas_file.exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'schemas.json not found'
+            }, status=404)
+
+        with open(schemas_file, 'r', encoding='utf-8') as f:
+            schemas_data = json.load(f)
+
+        active_name = schemas_data.get('active_schema', 'radgraph')
+        active_schema = schemas_data['schemas'].get(active_name)
+
+        if not active_schema:
+            return JsonResponse({
+                'success': False,
+                'error': f'Active schema "{active_name}" not found'
+            }, status=404)
+
+        return JsonResponse({
+            'success': True,
+            'schema_name': active_name,
+            'schema': active_schema
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to load active schema: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def set_active_schema(request):
+    """Set which schema to use for extraction."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        schema_name = data.get('schema_name')
+
+        if not schema_name:
+            return JsonResponse({
+                'success': False,
+                'error': 'schema_name is required'
+            }, status=400)
+
+        schemas_file = PROJECT_ROOT / "schemas.json"
+
+        with open(schemas_file, 'r', encoding='utf-8') as f:
+            schemas_data = json.load(f)
+
+        # Verify schema exists
+        if schema_name not in schemas_data['schemas']:
+            return JsonResponse({
+                'success': False,
+                'error': f'Schema "{schema_name}" not found'
+            }, status=404)
+
+        # Update active schema
+        schemas_data['active_schema'] = schema_name
+
+        # Save back to file
+        with open(schemas_file, 'w', encoding='utf-8') as f:
+            json.dump(schemas_data, f, indent=2, ensure_ascii=False)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Active schema set to "{schema_name}"'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to set active schema: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def save_schema(request):
+    """Create or update a schema definition."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        schema_name = data.get('schema_name')
+        schema_data = data.get('schema_data')
+
+        if not schema_name or not schema_data:
+            return JsonResponse({
+                'success': False,
+                'error': 'schema_name and schema_data are required'
+            }, status=400)
+
+        # Validate schema structure
+        required_fields = ['name', 'description', 'entity_types', 'relation_types']
+        for field in required_fields:
+            if field not in schema_data:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Schema missing required field: {field}'
+                }, status=400)
+
+        schemas_file = PROJECT_ROOT / "schemas.json"
+
+        with open(schemas_file, 'r', encoding='utf-8') as f:
+            schemas_data = json.load(f)
+
+        # Add or update schema
+        schemas_data['schemas'][schema_name] = schema_data
+
+        # Save back to file
+        with open(schemas_file, 'w', encoding='utf-8') as f:
+            json.dump(schemas_data, f, indent=2, ensure_ascii=False)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Schema "{schema_name}" saved successfully'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to save schema: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def delete_schema(request):
+    """Delete a custom schema (cannot delete built-in schemas)."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        schema_name = data.get('schema_name')
+
+        if not schema_name:
+            return JsonResponse({
+                'success': False,
+                'error': 'schema_name is required'
+            }, status=400)
+
+        # Prevent deletion of built-in schemas
+        if schema_name in ['radgraph', 'pet_ct_oncology']:
+            return JsonResponse({
+                'success': False,
+                'error': 'Cannot delete built-in schemas'
+            }, status=403)
+
+        schemas_file = PROJECT_ROOT / "schemas.json"
+
+        with open(schemas_file, 'r', encoding='utf-8') as f:
+            schemas_data = json.load(f)
+
+        # Check if schema exists
+        if schema_name not in schemas_data['schemas']:
+            return JsonResponse({
+                'success': False,
+                'error': f'Schema "{schema_name}" not found'
+            }, status=404)
+
+        # Delete schema
+        del schemas_data['schemas'][schema_name]
+
+        # If deleted schema was active, switch to radgraph
+        if schemas_data.get('active_schema') == schema_name:
+            schemas_data['active_schema'] = 'radgraph'
+
+        # Save back to file
+        with open(schemas_file, 'w', encoding='utf-8') as f:
+            json.dump(schemas_data, f, indent=2, ensure_ascii=False)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Schema "{schema_name}" deleted successfully'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to delete schema: {str(e)}'
+        }, status=500)
+
+
+# ============================================================
+# Ground Truth Entity & Relation Endpoints (for Entities & Relations tab)
+# ============================================================
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def add_ground_truth_entity(request):
+    """Add a ground truth entity to a specific entry."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        entry_number = data.get('entry_number')
+        entity = data.get('entity')
+
+        if entry_number is None:
+            return JsonResponse({'success': False, 'error': 'entry_number is required'}, status=400)
+
+        if not entity:
+            return JsonResponse({'success': False, 'error': 'entity is required'}, status=400)
+
+        # Validate entity structure
+        required_fields = ['text', 'type']
+        for field in required_fields:
+            if field not in entity:
+                return JsonResponse({'success': False, 'error': f'Entity missing required field: {field}'}, status=400)
+
+        # Handle optional word indices
+        if 'start_word' in entity:
+            try:
+                entity['start_word'] = int(entity['start_word'])
+                if entity['start_word'] < 0:
+                    entity['start_word'] = None
+            except (ValueError, TypeError):
+                entity['start_word'] = None
+        else:
+            entity['start_word'] = None
+
+        if 'end_word' in entity:
+            try:
+                entity['end_word'] = int(entity['end_word'])
+                if entity['end_word'] < 0:
+                    entity['end_word'] = None
+            except (ValueError, TypeError):
+                entity['end_word'] = None
+        else:
+            entity['end_word'] = None
+
+        entities_file = PROJECT_ROOT / "entities.json"
+
+        if not entities_file.exists():
+            return JsonResponse({'success': False, 'error': 'entities.json not found'}, status=404)
+
+        with open(entities_file, 'r', encoding='utf-8') as f:
+            entities_data = json.load(f)
+
+        # Find and update the entry
+        entry_found = False
+        new_entity_id = None
+        for entry in entities_data:
+            if entry.get('entry') == entry_number:
+                active_schema = entry.get('active_schema', 'radgraph')
+                if 'ground_truths' not in entry:
+                    entry['ground_truths'] = {}
+                if active_schema not in entry['ground_truths']:
+                    entry['ground_truths'][active_schema] = {"entities": [], "triplets": []}
+                if 'entities' not in entry['ground_truths'][active_schema]:
+                    entry['ground_truths'][active_schema]['entities'] = []
+
+                # Generate entity ID with consistent scheme: gt_e{n}
+                existing_ids = [e.get('id', '') for e in entry['ground_truths'][active_schema]['entities']]
+                entity_num = 1
+                while f"gt_e{entity_num}" in existing_ids:
+                    entity_num += 1
+                new_entity_id = f"gt_e{entity_num}"
+
+                entity['id'] = new_entity_id
+                entry['ground_truths'][active_schema]['entities'].append(entity)
+                entry_found = True
+                break
+
+        if not entry_found:
+            # Create new entry with entity
+            schemas_file = PROJECT_ROOT / "schemas.json"
+            active_schema = 'radgraph'
+            if schemas_file.exists():
+                with open(schemas_file, 'r', encoding='utf-8') as f:
+                    schemas_data = json.load(f)
+                    active_schema = schemas_data.get('active_schema', 'radgraph')
+
+            new_entity_id = "gt_e1"
+            entity['id'] = new_entity_id
+            new_entry = {
+                'entry': entry_number,
+                'active_schema': active_schema,
+                'ground_truths': {
+                    active_schema: {
+                        'entities': [entity],
+                        'triplets': []
+                    }
+                }
+            }
+            entities_data.append(new_entry)
+            entities_data.sort(key=lambda x: x.get('entry', 0))
+            entry_found = True
+
+        # Save updated data
+        with open(entities_file, 'w', encoding='utf-8') as f:
+            json.dump(entities_data, f, indent=2, ensure_ascii=False)
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Ground truth entity added successfully',
+            'entity_id': new_entity_id
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON in request body'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Failed to add ground truth entity: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def delete_ground_truth_entity(request):
+    """Delete a ground truth entity from a specific entry (also removes related triplets)."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        entry_number = data.get('entry_number')
+        entity_id = data.get('entity_id')
+
+        if entry_number is None:
+            return JsonResponse({'success': False, 'error': 'entry_number is required'}, status=400)
+
+        if not entity_id:
+            return JsonResponse({'success': False, 'error': 'entity_id is required'}, status=400)
+
+        entities_file = PROJECT_ROOT / "entities.json"
+
+        if not entities_file.exists():
+            return JsonResponse({'success': False, 'error': 'entities.json not found'}, status=404)
+
+        with open(entities_file, 'r', encoding='utf-8') as f:
+            entities_data = json.load(f)
+
+        # Find and update the entry
+        entry_found = False
+        for entry in entities_data:
+            if entry.get('entry') == entry_number:
+                active_schema = entry.get('active_schema', 'radgraph')
+                if 'ground_truths' in entry and active_schema in entry['ground_truths']:
+                    gt = entry['ground_truths'][active_schema]
+                    if 'entities' in gt:
+                        # Find and remove the entity
+                        original_len = len(gt['entities'])
+                        gt['entities'] = [e for e in gt['entities'] if e.get('id') != entity_id]
+                        if len(gt['entities']) < original_len:
+                            entry_found = True
+                            # Also remove any triplets referencing this entity
+                            if 'triplets' in gt:
+                                gt['triplets'] = [
+                                    t for t in gt['triplets']
+                                    if t.get('entity1_id') != entity_id and t.get('entity2_id') != entity_id
+                                ]
+                break
+
+        if not entry_found:
+            return JsonResponse({'success': False, 'error': f'Entity {entity_id} not found'}, status=404)
+
+        # Save updated data
+        with open(entities_file, 'w', encoding='utf-8') as f:
+            json.dump(entities_data, f, indent=2, ensure_ascii=False)
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Ground truth entity deleted successfully'
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON in request body'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Failed to delete ground truth entity: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def add_ground_truth_relation(request):
+    """Add a ground truth relation (triplet using entity IDs) to a specific entry."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        entry_number = data.get('entry_number')
+        relation = data.get('relation')
+
+        if entry_number is None:
+            return JsonResponse({'success': False, 'error': 'entry_number is required'}, status=400)
+
+        if not relation:
+            return JsonResponse({'success': False, 'error': 'relation is required'}, status=400)
+
+        # Validate relation structure
+        required_fields = ['entity1_id', 'relation_type', 'entity2_id']
+        for field in required_fields:
+            if field not in relation:
+                return JsonResponse({'success': False, 'error': f'Relation missing required field: {field}'}, status=400)
+
+        entities_file = PROJECT_ROOT / "entities.json"
+
+        if not entities_file.exists():
+            return JsonResponse({'success': False, 'error': 'entities.json not found'}, status=404)
+
+        with open(entities_file, 'r', encoding='utf-8') as f:
+            entities_data = json.load(f)
+
+        # Find and update the entry
+        entry_found = False
+        for entry in entities_data:
+            if entry.get('entry') == entry_number:
+                active_schema = entry.get('active_schema', 'radgraph')
+                if 'ground_truths' not in entry:
+                    entry['ground_truths'] = {}
+                if active_schema not in entry['ground_truths']:
+                    entry['ground_truths'][active_schema] = {"entities": [], "triplets": []}
+                if 'triplets' not in entry['ground_truths'][active_schema]:
+                    entry['ground_truths'][active_schema]['triplets'] = []
+
+                # Verify entity IDs exist
+                entity_ids = {e.get('id') for e in entry['ground_truths'][active_schema].get('entities', [])}
+                if relation['entity1_id'] not in entity_ids:
+                    return JsonResponse({'success': False, 'error': f"Entity {relation['entity1_id']} not found"}, status=400)
+                if relation['entity2_id'] not in entity_ids:
+                    return JsonResponse({'success': False, 'error': f"Entity {relation['entity2_id']} not found"}, status=400)
+
+                # Generate triplet ID with consistent scheme: gt_r{n}
+                existing_triplet_ids = [t.get('id', '') for t in entry['ground_truths'][active_schema]['triplets']]
+                triplet_num = 1
+                while f"gt_r{triplet_num}" in existing_triplet_ids:
+                    triplet_num += 1
+                relation['id'] = f"gt_r{triplet_num}"
+
+                entry['ground_truths'][active_schema]['triplets'].append(relation)
+                entry_found = True
+                break
+
+        if not entry_found:
+            return JsonResponse({'success': False, 'error': f'Entry {entry_number} not found'}, status=404)
+
+        # Save updated data
+        with open(entities_file, 'w', encoding='utf-8') as f:
+            json.dump(entities_data, f, indent=2, ensure_ascii=False)
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Ground truth relation added successfully'
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON in request body'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Failed to add ground truth relation: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def delete_ground_truth_relation(request):
+    """Delete a ground truth relation from a specific entry."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        entry_number = data.get('entry_number')
+        relation_index = data.get('relation_index')
+
+        if entry_number is None:
+            return JsonResponse({'success': False, 'error': 'entry_number is required'}, status=400)
+
+        if relation_index is None:
+            return JsonResponse({'success': False, 'error': 'relation_index is required'}, status=400)
+
+        entities_file = PROJECT_ROOT / "entities.json"
+
+        if not entities_file.exists():
+            return JsonResponse({'success': False, 'error': 'entities.json not found'}, status=404)
+
+        with open(entities_file, 'r', encoding='utf-8') as f:
+            entities_data = json.load(f)
+
+        # Find and update the entry
+        entry_found = False
+        for entry in entities_data:
+            if entry.get('entry') == entry_number:
+                active_schema = entry.get('active_schema', 'radgraph')
+                if 'ground_truths' in entry and active_schema in entry['ground_truths'] and 'triplets' in entry['ground_truths'][active_schema]:
+                    if 0 <= relation_index < len(entry['ground_truths'][active_schema]['triplets']):
+                        del entry['ground_truths'][active_schema]['triplets'][relation_index]
+                        entry_found = True
+                    else:
+                        return JsonResponse({'success': False, 'error': 'Invalid relation_index'}, status=400)
+                break
+
+        if not entry_found:
+            return JsonResponse({'success': False, 'error': f'Entry {entry_number} not found or has no ground truth'}, status=404)
+
+        # Save updated data
+        with open(entities_file, 'w', encoding='utf-8') as f:
+            json.dump(entities_data, f, indent=2, ensure_ascii=False)
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Ground truth relation deleted successfully'
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON in request body'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Failed to delete ground truth relation: {str(e)}'}, status=500)

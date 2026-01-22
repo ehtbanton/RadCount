@@ -60,4 +60,22 @@ urlpatterns = [
     path('save-test-results/', views.save_test_results, name='save_test_results'),
     path('get-test-versions/', views.get_test_versions, name='get_test_versions'),
     path('get-current-version-info/', views.get_current_version_info, name='get_current_version_info'),
+    # Findings extraction
+    path('extract-findings/', views.extract_findings, name='extract_findings'),
+    path('calculate-findings-metrics/', views.calculate_findings_metrics, name='calculate_findings_metrics'),
+    path('get-findings-prompt/', views.get_findings_prompt, name='get_findings_prompt'),
+    path('save-findings-prompt/', views.save_findings_prompt, name='save_findings_prompt'),
+    path('get-triplet-prompt/', views.get_triplet_prompt, name='get_triplet_prompt'),
+    path('save-triplet-prompt/', views.save_triplet_prompt, name='save_triplet_prompt'),
+    # Schema management (for Entities & Relations tab)
+    path('schemas/', views.get_schemas, name='get_schemas'),
+    path('active-schema/', views.get_active_schema, name='get_active_schema'),
+    path('set-active-schema/', views.set_active_schema, name='set_active_schema'),
+    path('save-schema/', views.save_schema, name='save_schema'),
+    path('delete-schema/', views.delete_schema, name='delete_schema'),
+    # Ground Truth - Entities and Relations (new entity-first workflow)
+    path('add-ground-truth-entity/', views.add_ground_truth_entity, name='add_ground_truth_entity'),
+    path('delete-ground-truth-entity/', views.delete_ground_truth_entity, name='delete_ground_truth_entity'),
+    path('add-ground-truth-relation/', views.add_ground_truth_relation, name='add_ground_truth_relation'),
+    path('delete-ground-truth-relation/', views.delete_ground_truth_relation, name='delete_ground_truth_relation'),
 ]

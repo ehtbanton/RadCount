@@ -485,8 +485,8 @@
                         </select>
                         <input type="number" id="context-size" class="context-size-input" placeholder="Context" value="{% if current_context_size %}{{ current_context_size }}{% else %}4096{% endif %}" min="512" max="32768" step="512" style="padding: 6px 10px; font-size: 0.85em;" title="Context window size">
                         <select id="temperature-select" style="padding: 6px 10px; font-size: 0.85em; border: 1px solid #e5e7eb; border-radius: 4px;" title="Temperature">
-                            <option value="0.0">T: 0.0</option>
-                            <option value="0.1" selected>T: 0.1</option>
+                            <option value="0.0" selected>T: 0.0</option>
+                            <option value="0.1">T: 0.1</option>
                             <option value="0.2">T: 0.2</option>
                             <option value="0.3">T: 0.3</option>
                             <option value="0.5">T: 0.5</option>
@@ -581,6 +581,20 @@
                     >
                         Triplet Annotations
                     </button>
+                    <button
+                        id="schema-tab-observations"
+                        onclick="switchAnnotationSchema('observations')"
+                        style="padding: 6px 14px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; cursor: pointer; font-size: 0.85em; font-weight: 400; margin-bottom: -12px;"
+                    >
+                        Observations
+                    </button>
+                    <button
+                        id="schema-tab-entities"
+                        onclick="switchAnnotationSchema('entities')"
+                        style="padding: 6px 14px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; cursor: pointer; font-size: 0.85em; font-weight: 400; margin-bottom: -12px;"
+                    >
+                        Entities & Relations
+                    </button>
                 </div>
 
                 <!-- Binary Classification Schema Content -->
@@ -617,13 +631,6 @@
                         >
                             Extract Classifications (LLM)
                         </button>
-                        <select id="voter-count-select" style="padding: 10px 8px; font-size: 0.85em; border: 1px solid #e5e7eb; border-radius: 4px;" title="Number of votes for majority voting">
-                            <option value="1">1 vote</option>
-                            <option value="3">3 votes</option>
-                            <option value="5" selected>5 votes</option>
-                            <option value="7">7 votes</option>
-                            <option value="9">9 votes</option>
-                        </select>
                         <button
                             onclick="openBinaryClassificationPromptEditor()"
                             style="padding: 10px 12px; background: #6366f1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; transition: background 0.2s;"
@@ -660,15 +667,26 @@
                         <!-- Auto-Extracted Controls (Left) -->
                         <div style="background: #fffbeb; padding: 12px; border-radius: 6px; border: 1px solid #fbbf24;">
                             <div style="font-weight: 500; color: #b45309; margin-bottom: 10px; font-size: 0.9em;">Auto-Extracted</div>
-                            <button
-                                id="extract-observations-btn"
-                                onclick="runObservationExtraction()"
-                                style="width: 100%; padding: 10px 16px; background: #f59e0b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: 500; transition: background 0.2s;"
-                                onmouseover="this.style.background='#d97706'"
-                                onmouseout="this.style.background='#f59e0b'"
-                            >
-                                Extract Observations
-                            </button>
+                            <div style="display: flex; gap: 6px;">
+                                <button
+                                    id="extract-observations-btn"
+                                    onclick="runObservationExtraction()"
+                                    style="flex: 1; padding: 10px 16px; background: #f59e0b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: 500; transition: background 0.2s;"
+                                    onmouseover="this.style.background='#d97706'"
+                                    onmouseout="this.style.background='#f59e0b'"
+                                >
+                                    Extract Observations
+                                </button>
+                                <button
+                                    onclick="openTripletPromptEditor()"
+                                    style="padding: 10px 12px; background: #6366f1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; transition: background 0.2s;"
+                                    onmouseover="this.style.background='#4f46e5'"
+                                    onmouseout="this.style.background='#6366f1'"
+                                    title="Edit triplet extraction prompt"
+                                >
+                                    Edit Prompt
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Ground Truth Controls (Right) -->
@@ -759,9 +777,242 @@
                         <div id="version-config-info" style="font-size: 0.75em; color: #6b7280; margin-bottom: 8px;"></div>
                         <div id="save-results-message" style="font-size: 0.8em; color: #166534;"></div>
                     </div>
-                </div>
                 </div><!-- End test-evaluate-section -->
                 </div><!-- End schema-content-triplets -->
+
+                <!-- Observations Annotation Schema Content -->
+                <div id="schema-content-observations" style="display: none;">
+                    <!-- Side-by-side controls -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <!-- Auto-Extracted Controls (Left) -->
+                        <div style="background: #fef3c7; padding: 12px; border-radius: 6px; border: 1px solid #f59e0b;">
+                            <div style="font-weight: 500; color: #b45309; margin-bottom: 10px; font-size: 0.9em;">Auto-Extracted</div>
+                            <div style="display: flex; gap: 6px;">
+                                <button
+                                    id="extract-simple-obs-btn"
+                                    onclick="runSimpleObservationsExtraction()"
+                                    style="flex: 1; padding: 10px 16px; background: #f59e0b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: 500; transition: background 0.2s;"
+                                    onmouseover="this.style.background='#d97706'"
+                                    onmouseout="this.style.background='#f59e0b'"
+                                >
+                                    Extract Observations
+                                </button>
+                                <button
+                                    onclick="openSimpleObsPromptEditor()"
+                                    style="padding: 10px 12px; background: #6366f1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; transition: background 0.2s;"
+                                    onmouseover="this.style.background='#4f46e5'"
+                                    onmouseout="this.style.background='#6366f1'"
+                                    title="Edit observations extraction prompt"
+                                >
+                                    Edit Prompt
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Ground Truth Controls (Right) -->
+                        <div style="background: #f0f9ff; padding: 12px; border-radius: 6px; border: 1px solid #3b82f6;">
+                            <div style="font-weight: 500; color: #1d4ed8; margin-bottom: 10px; font-size: 0.9em;">Ground Truth</div>
+                            <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+                                <input type="text" id="simple-obs-index-input" placeholder="Word index (e.g., 5)" title="Word index for observation" style="flex: 1; padding: 6px; border: 1px solid #3b82f6; border-radius: 4px; font-size: 0.8em;">
+                            </div>
+                            <div style="display: flex; gap: 6px;">
+                                <button onclick="addSimpleObsFromInputs()" style="flex: 1; padding: 6px 10px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;">Add</button>
+                                <button onclick="addSimpleObsFromSelection()" style="flex: 1; padding: 6px 10px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;">From Selection</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Aligned Annotations Display -->
+                    <div style="margin-bottom: 15px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 8px;">
+                            <div style="font-weight: 500; color: #b45309; font-size: 0.85em;">Auto-Extracted (<span id="simple-obs-auto-count">0</span>)</div>
+                            <div style="font-weight: 500; color: #1d4ed8; font-size: 0.85em;">Ground Truth (<span id="simple-obs-gt-count">0</span>)</div>
+                        </div>
+                        <div id="simple-obs-annotations-container" style="background: white; border: 1px solid #e5e7eb; border-radius: 6px; min-height: 100px; margin-bottom: 20px;">
+                            <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 20px;">No observations yet.</div>
+                        </div>
+                    </div>
+
+                    <!-- Test & Evaluate Section -->
+                    <div id="simple-obs-test-evaluate-section" style="border-top: 2px solid #e5e7eb; padding-top: 15px;">
+                        <div style="font-weight: 500; color: #374151; margin-bottom: 12px; font-size: 0.9em;">Test & Evaluate</div>
+
+                        <!-- Calculate Metrics Button -->
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
+                            <button
+                                id="calculate-simple-obs-metrics-btn"
+                                onclick="calculateAllSimpleObsMetrics()"
+                                style="padding: 8px 16px; background: #8b5cf6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 500;"
+                            >
+                                Calculate Metrics
+                            </button>
+                            <span id="simple-obs-metrics-status" style="color: #6b7280; font-size: 0.85em;"></span>
+                        </div>
+
+                        <!-- Metrics Display -->
+                        <div id="simple-obs-metrics-display" style="display: none; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                        </div>
+
+                        <!-- Save Results Section -->
+                        <div id="simple-obs-save-results-section" style="display: none; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <div>
+                                    <span style="font-size: 0.9em; font-weight: 500; color: #166534;">Version: </span>
+                                    <span id="simple-obs-detected-version-name" style="font-size: 0.9em; font-weight: 600; color: #166534;">-</span>
+                                </div>
+                                <button
+                                    id="simple-obs-save-results-btn"
+                                    onclick="saveSimpleObsTestResults()"
+                                    style="padding: 8px 16px; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 500;"
+                                >
+                                    Save to Results
+                                </button>
+                            </div>
+                            <div id="simple-obs-save-results-message" style="font-size: 0.8em; color: #166534;"></div>
+                        </div>
+                    </div>
+                </div><!-- End schema-content-observations -->
+
+                <!-- Entities & Relations Schema Content -->
+                <div id="schema-content-entities" style="display: none;">
+                    <!-- Schema Selector -->
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px; background: #f0fdf4; padding: 12px; border-radius: 6px; border: 1px solid #86efac;">
+                        <div style="font-weight: 400; color: #166534; font-size: 0.9em; white-space: nowrap;">
+                            Schema:
+                        </div>
+                        <select
+                            id="er-schema-selector"
+                            onchange="switchERSchema()"
+                            style="flex: 1; padding: 6px 10px; border: 1px solid #86efac; border-radius: 4px; font-size: 0.9em; background: white; cursor: pointer;"
+                        >
+                            <option value="">Loading schemas...</option>
+                        </select>
+                    </div>
+
+                    <!-- Step 1: Add Entity Form -->
+                    <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
+                        <div style="font-weight: 500; color: #374151; margin-bottom: 12px; font-size: 0.95em;">
+                            Step 1: Add Entities
+                        </div>
+
+                        <div style="display: flex; gap: 10px; align-items: end; flex-wrap: wrap;">
+                            <div style="flex: 2; min-width: 150px;">
+                                <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Entity Text</label>
+                                <input
+                                    id="er-entity-text"
+                                    type="text"
+                                    placeholder="e.g., lung opacity"
+                                    style="width: 100%; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9em;"
+                                />
+                            </div>
+                            <div style="flex: 1; min-width: 120px;">
+                                <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Entity Type</label>
+                                <select
+                                    id="er-entity-type"
+                                    style="width: 100%; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em; background: white;"
+                                >
+                                    <option value="">Select type...</option>
+                                </select>
+                            </div>
+                            <div style="flex: 0 0 70px;">
+                                <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Start</label>
+                                <input
+                                    id="er-entity-start-word"
+                                    type="number"
+                                    min="0"
+                                    placeholder="0"
+                                    style="width: 100%; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em;"
+                                />
+                            </div>
+                            <div style="flex: 0 0 70px;">
+                                <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">End</label>
+                                <input
+                                    id="er-entity-end-word"
+                                    type="number"
+                                    min="0"
+                                    placeholder="0"
+                                    style="width: 100%; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em;"
+                                />
+                            </div>
+                            <button
+                                onclick="addERGroundTruthEntity()"
+                                style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: background 0.2s;"
+                                onmouseover="this.style.background='#059669'"
+                                onmouseout="this.style.background='#10b981'"
+                            >
+                                Add Entity
+                            </button>
+                        </div>
+                        <div style="margin-top: 8px; font-size: 0.75em; color: #9ca3af;">
+                            Word indices are 0-based. Select text in the report to auto-fill indices.
+                        </div>
+                    </div>
+
+                    <!-- Ground Truth Entities Display -->
+                    <div style="margin-bottom: 15px;">
+                        <div style="font-weight: 500; color: #374151; margin-bottom: 8px; font-size: 0.9em;">
+                            Entities (<span id="er-entity-count">0</span>)
+                        </div>
+                        <div id="er-entities-container" style="display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; background: #f9fafb; border-radius: 6px; min-height: 40px; max-height: 150px; overflow-y: auto;">
+                            <div style="color: #6b7280; font-size: 0.85em;">No entities yet.</div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Add Relation Form -->
+                    <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
+                        <div style="font-weight: 500; color: #374151; margin-bottom: 12px; font-size: 0.95em;">
+                            Step 2: Add Relations
+                        </div>
+
+                        <div style="display: flex; gap: 10px; align-items: end;">
+                            <div style="flex: 1;">
+                                <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Entity 1</label>
+                                <select
+                                    id="er-relation-entity1"
+                                    style="width: 100%; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em; background: white;"
+                                >
+                                    <option value="">Select entity...</option>
+                                </select>
+                            </div>
+                            <div style="flex-shrink: 0;">
+                                <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Relation</label>
+                                <select
+                                    id="er-relation-type"
+                                    style="width: 120px; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em; background: white;"
+                                >
+                                    <option value="">Relation...</option>
+                                </select>
+                            </div>
+                            <div style="flex: 1;">
+                                <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 4px;">Entity 2</label>
+                                <select
+                                    id="er-relation-entity2"
+                                    style="width: 100%; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85em; background: white;"
+                                >
+                                    <option value="">Select entity...</option>
+                                </select>
+                            </div>
+                            <button
+                                onclick="addERGroundTruthRelation()"
+                                style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: background 0.2s;"
+                                onmouseover="this.style.background='#2563eb'"
+                                onmouseout="this.style.background='#3b82f6'"
+                            >
+                                Add Relation
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Ground Truth Relations Display -->
+                    <div>
+                        <div style="font-weight: 500; color: #374151; margin-bottom: 8px; font-size: 0.9em;">
+                            Relations (<span id="er-relation-count">0</span>)
+                        </div>
+                        <div id="er-relations-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto;">
+                            <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">No relations yet.</div>
+                        </div>
+                    </div>
+                </div><!-- End schema-content-entities -->
             </div>
         </div>
     </div>
@@ -1165,6 +1416,21 @@
                 span.style.backgroundColor = '';
                 span.style.borderRadius = '';
             });
+        }
+
+        // Get text from word range indices
+        function getTextFromWordRange(startWord, endWord) {
+            const textDisplayArea = document.getElementById('csv-entry-text-display');
+            if (!textDisplayArea) return '';
+
+            const words = [];
+            for (let i = startWord; i <= endWord; i++) {
+                const span = textDisplayArea.querySelector(`.word-span[data-word-index="${i}"]`);
+                if (span) {
+                    words.push(span.textContent);
+                }
+            }
+            return words.join(' ');
         }
 
         // Update selected words display and form inputs
@@ -2116,42 +2382,60 @@
         let activeMethodId = null;
 
         // State for annotation schema
-        let activeAnnotationSchema = 'binary'; // 'binary' or 'triplets'
+        let activeAnnotationSchema = 'binary'; // 'binary', 'triplets', 'observations', or 'entities'
 
-        // Switch between annotation schemas (binary vs triplets)
+        // Switch between annotation schemas (binary vs triplets vs observations vs entities)
         function switchAnnotationSchema(schemaName) {
             activeAnnotationSchema = schemaName;
 
             // Update tab button styles
             const binaryTab = document.getElementById('schema-tab-binary');
             const tripletsTab = document.getElementById('schema-tab-triplets');
+            const observationsTab = document.getElementById('schema-tab-observations');
+            const entitiesTab = document.getElementById('schema-tab-entities');
 
+            // Reset all tabs to inactive
+            [binaryTab, tripletsTab, observationsTab, entitiesTab].forEach(tab => {
+                if (tab) {
+                    tab.style.borderBottom = '2px solid transparent';
+                    tab.style.color = '#6b7280';
+                    tab.style.fontWeight = '400';
+                }
+            });
+
+            // Hide all content
+            document.getElementById('schema-content-binary').style.display = 'none';
+            document.getElementById('schema-content-triplets').style.display = 'none';
+            document.getElementById('schema-content-observations').style.display = 'none';
+            document.getElementById('schema-content-entities').style.display = 'none';
+
+            // Activate selected tab
             if (schemaName === 'binary') {
                 binaryTab.style.borderBottom = '2px solid #8b5cf6';
                 binaryTab.style.color = '#8b5cf6';
                 binaryTab.style.fontWeight = '500';
-                tripletsTab.style.borderBottom = '2px solid transparent';
-                tripletsTab.style.color = '#6b7280';
-                tripletsTab.style.fontWeight = '400';
-
                 document.getElementById('schema-content-binary').style.display = 'block';
-                document.getElementById('schema-content-triplets').style.display = 'none';
-
-                // Render binary classification UI
                 renderBinaryClassificationUI();
-            } else {
+            } else if (schemaName === 'triplets') {
                 tripletsTab.style.borderBottom = '2px solid #8b5cf6';
                 tripletsTab.style.color = '#8b5cf6';
                 tripletsTab.style.fontWeight = '500';
-                binaryTab.style.borderBottom = '2px solid transparent';
-                binaryTab.style.color = '#6b7280';
-                binaryTab.style.fontWeight = '400';
-
-                document.getElementById('schema-content-binary').style.display = 'none';
                 document.getElementById('schema-content-triplets').style.display = 'block';
-
-                // Render triplet annotations
                 renderAlignedAnnotations();
+            } else if (schemaName === 'observations') {
+                observationsTab.style.borderBottom = '2px solid #8b5cf6';
+                observationsTab.style.color = '#8b5cf6';
+                observationsTab.style.fontWeight = '500';
+                document.getElementById('schema-content-observations').style.display = 'block';
+                renderSimpleObsAnnotations();
+            } else if (schemaName === 'entities') {
+                entitiesTab.style.borderBottom = '2px solid #10b981';
+                entitiesTab.style.color = '#10b981';
+                entitiesTab.style.fontWeight = '500';
+                document.getElementById('schema-content-entities').style.display = 'block';
+                loadERSchemas();
+                renderERGroundTruthEntities();
+                renderERGroundTruthRelations();
             }
         }
 
@@ -2483,7 +2767,7 @@
         }
 
         // Run binary extraction for a specific entry
-        async function runBinaryExtractionForEntry(entryNumber, labels, reportText, temperature, voterCount) {
+        async function runBinaryExtractionForEntry(entryNumber, labels, reportText, temperature) {
             try {
                 const response = await fetch('/llm/extract-binary-classification/', {
                     method: 'POST',
@@ -2492,8 +2776,7 @@
                         entry_number: entryNumber,
                         labels: labels,
                         report_text: reportText,
-                        temperature: temperature,
-                        num_votes: voterCount
+                        temperature: temperature
                     })
                 });
 
@@ -2650,9 +2933,8 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
             const statusEl = document.getElementById('binary-metrics-status');
             display.style.display = 'block';
 
-            // Get temperature and voter count from UI
-            const temperature = parseFloat(document.getElementById('temperature-select').value) || 0.1;
-            const voterCount = parseInt(document.getElementById('voter-count-select').value) || 5;
+            // Get temperature from UI
+            const temperature = parseFloat(document.getElementById('temperature-select').value) || 0;
 
             // Run extractions for all entries with ground truth
             let completed = 0;
@@ -2662,7 +2944,7 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
 
             display.innerHTML = `
                 <div style="text-align: center; padding: 20px;">
-                    <div style="font-size: 0.85em; color: #6b7280; margin-bottom: 10px;">Extracting classifications (T=${temperature}, ${voterCount} votes)...</div>
+                    <div style="font-size: 0.85em; color: #6b7280; margin-bottom: 10px;">Extracting classifications (T=${temperature})...</div>
                     <div style="font-size: 1.5em; font-weight: 600; color: #8b5cf6;"><span id="extraction-completed">0</span>/${total}</div>
                     <div id="extraction-current" style="font-size: 0.8em; color: #9ca3af; margin-top: 5px;">Starting...</div>
                     <div style="margin-top: 10px; background: #e5e7eb; border-radius: 4px; height: 8px; overflow: hidden;">
@@ -2689,7 +2971,7 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
                 console.log(`Report ${entry.entry}: text length = ${reportText ? reportText.length : 'null'}`);
 
                 if (reportText !== null && reportText !== undefined) {
-                    const result = await runBinaryExtractionForEntry(entry.entry, labels, reportText, temperature, voterCount);
+                    const result = await runBinaryExtractionForEntry(entry.entry, labels, reportText, temperature);
                     if (result.success) {
                         successful.push(entry.entry);
                         // Count non-null values
@@ -2923,6 +3205,8 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
             // Render based on active annotation schema
             if (activeAnnotationSchema === 'binary') {
                 renderBinaryClassificationUI();
+            } else if (activeAnnotationSchema === 'observations') {
+                renderSimpleObsAnnotations();
             } else {
                 // Render the active tab content (triplets schema)
                 if (activeAnnotationTab === 'ground-truth') {
@@ -4314,6 +4598,866 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
                 btn.textContent = originalText;
                 btn.disabled = false;
             }
+        }
+
+        // ===== Simple Observations Annotation Functions =====
+
+        // Simple observations metrics calculation state
+        let simpleObsMetricsRunning = false;
+        let simpleObsMetricsCancelled = false;
+        let currentSimpleObsMetrics = null;
+
+        // Render simple observations annotations (aligned auto-extracted and ground truth by position)
+        // Data format: {observation: [word, index]}
+        function renderSimpleObsAnnotations() {
+            const container = document.getElementById('simple-obs-annotations-container');
+            const gtCountSpan = document.getElementById('simple-obs-gt-count');
+            const autoCountSpan = document.getElementById('simple-obs-auto-count');
+            if (!container) return;
+
+            const entryData = getEntityEntryData(currentEntry);
+            const groundTruth = entryData?.observations_ground_truth || [];
+            const autoExtracted = entryData?.observations_auto_extracted || [];
+
+            // Update counts
+            if (gtCountSpan) gtCountSpan.textContent = groundTruth.length;
+            if (autoCountSpan) autoCountSpan.textContent = autoExtracted.length;
+
+            if (groundTruth.length === 0 && autoExtracted.length === 0) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 20px;">No observations yet.</div>';
+                return;
+            }
+
+            // Helper to get word index from observation
+            function getObsIndex(obs) {
+                const observation = obs?.observation;
+                if (Array.isArray(observation) && observation.length === 2) {
+                    return observation[1];
+                }
+                return Infinity;
+            }
+
+            // Sort both arrays by word index and track original indices
+            const sortedGT = [...groundTruth].map((obs, idx) => ({...obs, originalIndex: idx})).sort((a, b) => getObsIndex(a) - getObsIndex(b));
+            const sortedAuto = [...autoExtracted].map((obs, idx) => ({...obs, originalIndex: idx})).sort((a, b) => getObsIndex(a) - getObsIndex(b));
+
+            // Collect all unique positions
+            const positions = new Set();
+            sortedGT.forEach(obs => positions.add(getObsIndex(obs)));
+            sortedAuto.forEach(obs => positions.add(getObsIndex(obs)));
+            const sortedPositions = [...positions].filter(p => p !== Infinity).sort((a, b) => a - b);
+
+            // Group observations by position
+            const gtByPos = {};
+            const autoByPos = {};
+            sortedGT.forEach(obs => {
+                const pos = getObsIndex(obs);
+                if (!gtByPos[pos]) gtByPos[pos] = [];
+                gtByPos[pos].push(obs);
+            });
+            sortedAuto.forEach(obs => {
+                const pos = getObsIndex(obs);
+                if (!autoByPos[pos]) autoByPos[pos] = [];
+                autoByPos[pos].push(obs);
+            });
+
+            // Build aligned rows
+            let html = '<div style="display: flex; flex-direction: column; gap: 2px;">';
+
+            sortedPositions.forEach(pos => {
+                const gtObsList = gtByPos[pos] || [];
+                const autoObsList = autoByPos[pos] || [];
+                const maxRows = Math.max(gtObsList.length, autoObsList.length);
+
+                for (let i = 0; i < maxRows; i++) {
+                    const gtObs = gtObsList[i];
+                    const autoObs = autoObsList[i];
+
+                    html += `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; min-height: 32px;">`;
+
+                    // Auto-extracted cell (left)
+                    if (autoObs) {
+                        html += renderSimpleObsAutoCell(autoObs, pos);
+                    } else {
+                        html += `<div style="background: #fefce8; border-radius: 4px; opacity: 0.3;"></div>`;
+                    }
+
+                    // Ground truth cell (right)
+                    if (gtObs) {
+                        html += renderSimpleObsGTCell(gtObs, pos);
+                    } else {
+                        html += `<div style="background: #eff6ff; border-radius: 4px; opacity: 0.3;"></div>`;
+                    }
+
+                    html += `</div>`;
+                }
+            });
+
+            // Handle observations without valid position
+            const gtNoPos = sortedGT.filter(obs => getObsIndex(obs) === Infinity);
+            const autoNoPos = sortedAuto.filter(obs => getObsIndex(obs) === Infinity);
+            const maxNoPos = Math.max(gtNoPos.length, autoNoPos.length);
+
+            for (let i = 0; i < maxNoPos; i++) {
+                const gtObs = gtNoPos[i];
+                const autoObs = autoNoPos[i];
+
+                html += `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; min-height: 32px;">`;
+
+                if (autoObs) {
+                    html += renderSimpleObsAutoCell(autoObs, '?');
+                } else {
+                    html += `<div style="background: #fefce8; border-radius: 4px; opacity: 0.3;"></div>`;
+                }
+
+                if (gtObs) {
+                    html += renderSimpleObsGTCell(gtObs, '?');
+                } else {
+                    html += `<div style="background: #eff6ff; border-radius: 4px; opacity: 0.3;"></div>`;
+                }
+
+                html += `</div>`;
+            }
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // Render a single auto-extracted observation cell
+        function renderSimpleObsAutoCell(obs, pos) {
+            const observation = obs.observation || ['?', 0];
+            const word = observation[0] || '?';
+            const index = observation[1] !== undefined ? observation[1] : '?';
+
+            return `<div class="simple-obs-auto-row" data-index="${index}" style="background: #fefce8; border-radius: 4px; overflow: hidden; border-left: 3px solid #f59e0b;">
+                <div style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; cursor: pointer;"
+                     onmouseenter="highlightWordRange(${index}, ${index}, '#fef3c7')"
+                     onmouseleave="clearWordHighlights()">
+                    <span style="color: #b45309; font-weight: 500; font-size: 0.85em;">${escapeHtml(word)}</span>
+                    <span style="color: #9ca3af; font-size: 0.75em;">[${index}]</span>
+                </div>
+            </div>`;
+        }
+
+        // Render a single ground truth observation cell
+        function renderSimpleObsGTCell(obs, pos) {
+            const originalIndex = obs.originalIndex;
+            const observation = obs.observation || ['?', 0];
+            const word = observation[0] || '?';
+            const index = observation[1] !== undefined ? observation[1] : '?';
+
+            return `<div class="simple-obs-gt-row" data-index="${index}" style="background: #eff6ff; border-radius: 4px; overflow: hidden; border-left: 3px solid #3b82f6;">
+                <div style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; cursor: pointer; justify-content: space-between;"
+                     onmouseenter="highlightWordRange(${index}, ${index}, '#dbeafe')"
+                     onmouseleave="clearWordHighlights()">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="color: #1d4ed8; font-weight: 500; font-size: 0.85em;">${escapeHtml(word)}</span>
+                        <span style="color: #9ca3af; font-size: 0.75em;">[${index}]</span>
+                    </div>
+                    <button onclick="removeSimpleObs(${originalIndex})" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 0.8em; padding: 2px 6px; opacity: 0.6;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">×</button>
+                </div>
+            </div>`;
+        }
+
+        // Add simple observation from input field (single word index)
+        function addSimpleObsFromInputs() {
+            if (!currentEntry) {
+                alert('Please select a CSV entry first');
+                return;
+            }
+
+            const indexInput = document.getElementById('simple-obs-index-input');
+            const indexStr = indexInput.value.trim();
+
+            if (!indexStr) {
+                alert('Please enter a word index (e.g., 5)');
+                return;
+            }
+
+            const index = parseInt(indexStr);
+            if (isNaN(index)) {
+                alert('Invalid index. Enter a number (e.g., 5)');
+                return;
+            }
+
+            // Get word from report using word index
+            const word = getTextFromWordRange(index, index);
+
+            // Add to ground truth
+            const entryData = ensureEntityEntryExists(currentEntry);
+            if (!entryData.observations_ground_truth) {
+                entryData.observations_ground_truth = [];
+            }
+
+            entryData.observations_ground_truth.push({
+                observation: [word, index]
+            });
+
+            // Clear input and save
+            indexInput.value = '';
+            saveEntitiesToServer();
+            renderSimpleObsAnnotations();
+        }
+
+        // Add simple observation from text selection
+        function addSimpleObsFromSelection() {
+            if (!currentEntry) {
+                alert('Please select a CSV entry first');
+                return;
+            }
+
+            if (selectedWordIndices.size === 0) {
+                alert('Please select a word in the report first (enable "Show Word Indices" and click to select)');
+                return;
+            }
+
+            // For simple observations, we only use the first selected word
+            const indices = Array.from(selectedWordIndices).sort((a, b) => a - b);
+            const index = indices[0];
+            const word = getTextFromWordRange(index, index);
+
+            // Add to ground truth
+            const entryData = ensureEntityEntryExists(currentEntry);
+            if (!entryData.observations_ground_truth) {
+                entryData.observations_ground_truth = [];
+            }
+
+            entryData.observations_ground_truth.push({
+                observation: [word, index]
+            });
+
+            // Clear selection and save
+            selectedWordIndices.clear();
+            updateSelectedWords();
+            saveEntitiesToServer();
+            renderSimpleObsAnnotations();
+        }
+
+        // Remove a simple observation from ground truth
+        function removeSimpleObs(index) {
+            if (!currentEntry) return;
+
+            const entryData = getEntityEntryData(currentEntry);
+            if (entryData && entryData.observations_ground_truth && entryData.observations_ground_truth[index]) {
+                entryData.observations_ground_truth.splice(index, 1);
+                saveEntitiesToServer();
+                renderSimpleObsAnnotations();
+            }
+        }
+
+        // Run simple observations extraction using LLM
+        async function runSimpleObservationsExtraction() {
+            if (!currentEntry) {
+                alert('Please select a CSV entry first');
+                return;
+            }
+
+            const reportText = currentReportText;
+            if (!reportText) {
+                alert('No report text available');
+                return;
+            }
+
+            const btn = document.getElementById('extract-simple-obs-btn');
+            const originalText = btn.textContent;
+            btn.textContent = 'Extracting...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/llm/extract-findings/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        report_text: reportText
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Reload entities data to get updated observations_auto_extracted
+                    await loadEntities();
+                    renderSimpleObsAnnotations();
+                    alert(`Extracted ${result.count} observations`);
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error extracting observations: ' + error.message);
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // Calculate simple observations metrics across ALL reports with ground truth
+        async function calculateAllSimpleObsMetrics() {
+            // If already running, cancel and restart
+            if (simpleObsMetricsRunning) {
+                console.log('Simple observations metrics calculation already running - cancelling and restarting...');
+                simpleObsMetricsCancelled = true;
+                await new Promise(resolve => setTimeout(resolve, 100));
+                simpleObsMetricsCancelled = false;
+            }
+
+            simpleObsMetricsRunning = true;
+
+            // Find all entries with ground truth observations
+            const entriesWithGT = entitiesData.filter(entry => {
+                if (entry.entry === 0 || entry._config) return false;
+                const observations = entry.observations_ground_truth;
+                return observations && observations.length > 0;
+            });
+
+            console.log('Entries with observations ground truth:', entriesWithGT.map(e => e.entry));
+
+            if (entriesWithGT.length === 0) {
+                alert('No reports found with ground truth observations. Make sure you have added observations to at least one report.');
+                simpleObsMetricsRunning = false;
+                return;
+            }
+
+            // Show progress in the display area
+            const display = document.getElementById('simple-obs-metrics-display');
+            const statusEl = document.getElementById('simple-obs-metrics-status');
+            display.style.display = 'block';
+
+            const total = entriesWithGT.length;
+            let completed = 0;
+            const errors = [];
+            const successful = [];
+            const perReportResults = [];
+
+            // Aggregated metrics
+            let totalTP = 0;
+            let totalFP = 0;
+            let totalFN = 0;
+
+            // Show progress UI
+            display.innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                    <div style="font-size: 0.85em; color: #6b7280; margin-bottom: 10px;">Calculating metrics across all reports...</div>
+                    <div style="font-size: 1.5em; font-weight: 600; color: #8b5cf6;"><span id="simple-obs-metrics-completed">0</span>/${total}</div>
+                    <div id="simple-obs-metrics-current" style="font-size: 0.8em; color: #9ca3af; margin-top: 5px;">Starting...</div>
+                    <div style="margin-top: 10px; background: #e5e7eb; border-radius: 4px; height: 8px; overflow: hidden;">
+                        <div id="simple-obs-metrics-progress-bar" style="background: #8b5cf6; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                    </div>
+                </div>
+            `;
+            statusEl.textContent = 'Calculating...';
+
+            // Process entries sequentially
+            for (const entry of entriesWithGT) {
+                // Check if cancelled (restart requested)
+                if (simpleObsMetricsCancelled) {
+                    console.log('Simple observations metrics calculation cancelled - restarting...');
+                    simpleObsMetricsRunning = false;
+                    return;
+                }
+
+                // Update current entry indicator
+                const currentEl = document.getElementById('simple-obs-metrics-current');
+                if (currentEl) currentEl.textContent = `Processing report ${entry.entry}...`;
+
+                // Check if observations_auto_extracted exists; if not, run extraction first
+                let needsExtraction = !entry.observations_auto_extracted || entry.observations_auto_extracted.length === 0;
+
+                if (needsExtraction) {
+                    // Fetch report text
+                    const reportText = await getReportTextForEntry(entry.entry);
+                    if (reportText) {
+                        try {
+                            const extractResponse = await fetch('/llm/extract-findings/', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    entry_number: entry.entry,
+                                    report_text: reportText
+                                })
+                            });
+                            const extractResult = await extractResponse.json();
+                            if (!extractResult.success) {
+                                errors.push({ entry: entry.entry, error: 'Extraction failed: ' + extractResult.error });
+                                completed++;
+                                updateSimpleObsMetricsProgress(completed, total);
+                                continue;
+                            }
+                            // Reload entities data to get updated observations_auto_extracted
+                            await loadEntities();
+                        } catch (extractError) {
+                            errors.push({ entry: entry.entry, error: 'Extraction error: ' + extractError.message });
+                            completed++;
+                            updateSimpleObsMetricsProgress(completed, total);
+                            continue;
+                        }
+                    } else {
+                        errors.push({ entry: entry.entry, error: 'Could not fetch report text' });
+                        completed++;
+                        updateSimpleObsMetricsProgress(completed, total);
+                        continue;
+                    }
+                }
+
+                // Now calculate metrics for this entry
+                try {
+                    const response = await fetch('/llm/calculate-findings-metrics/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ entry_number: entry.entry })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        const metrics = result.metrics;
+                        successful.push(entry.entry);
+
+                        // Aggregate TP/FP/FN
+                        totalTP += metrics.true_positives;
+                        totalFP += metrics.false_positives;
+                        totalFN += metrics.false_negatives;
+
+                        // Store per-report results
+                        perReportResults.push({
+                            entry: entry.entry,
+                            tp: metrics.true_positives,
+                            fp: metrics.false_positives,
+                            fn: metrics.false_negatives,
+                            precision: metrics.precision,
+                            recall: metrics.recall,
+                            f1: metrics.f1,
+                            gt_count: metrics.ground_truth_count,
+                            pred_count: metrics.predicted_count
+                        });
+
+                        console.log(`Report ${entry.entry}: TP=${metrics.true_positives}, FP=${metrics.false_positives}, FN=${metrics.false_negatives}`);
+                    } else {
+                        errors.push({ entry: entry.entry, error: result.error });
+                    }
+                } catch (error) {
+                    errors.push({ entry: entry.entry, error: error.message });
+                }
+
+                completed++;
+                updateSimpleObsMetricsProgress(completed, total);
+            }
+
+            console.log(`Simple observations metrics calculation complete: ${successful.length} successful, ${errors.length} errors`);
+
+            // Calculate overall metrics
+            const overallPrecision = (totalTP + totalFP) > 0 ? totalTP / (totalTP + totalFP) : 0;
+            const overallRecall = (totalTP + totalFN) > 0 ? totalTP / (totalTP + totalFN) : 0;
+            const overallF1 = (overallPrecision + overallRecall) > 0
+                ? 2 * (overallPrecision * overallRecall) / (overallPrecision + overallRecall)
+                : 0;
+
+            // Render aggregated results
+            renderAllSimpleObsMetrics({
+                total,
+                successful: successful.length,
+                errors,
+                totalTP,
+                totalFP,
+                totalFN,
+                precision: overallPrecision,
+                recall: overallRecall,
+                f1: overallF1,
+                perReportResults
+            });
+
+            statusEl.textContent = `Calculated (${successful.length} reports)`;
+            simpleObsMetricsRunning = false;
+
+            // Store aggregated metrics for saving
+            currentSimpleObsMetrics = {
+                entry: 'all',
+                precision: overallPrecision,
+                recall: overallRecall,
+                f1: overallF1,
+                true_positives: totalTP,
+                false_positives: totalFP,
+                false_negatives: totalFN
+            };
+
+            // Show save section
+            document.getElementById('simple-obs-save-results-section').style.display = 'block';
+        }
+
+        // Helper to update progress bar for simple observations metrics
+        function updateSimpleObsMetricsProgress(completed, total) {
+            const progressBar = document.getElementById('simple-obs-metrics-progress-bar');
+            if (progressBar) {
+                progressBar.style.width = `${(completed / total) * 100}%`;
+            }
+            const completedEl = document.getElementById('simple-obs-metrics-completed');
+            if (completedEl) completedEl.textContent = completed;
+        }
+
+        // Render aggregated simple observations metrics
+        function renderAllSimpleObsMetrics(data) {
+            const display = document.getElementById('simple-obs-metrics-display');
+
+            // Status message for extraction/errors
+            let statusHtml = '';
+            if (data.errors.length > 0 || data.successful > 0) {
+                statusHtml = `
+                    <div style="margin-bottom: 15px; padding: 10px; background: ${data.errors.length > 0 ? '#fef2f2' : '#f0fdf4'}; border: 1px solid ${data.errors.length > 0 ? '#fecaca' : '#bbf7d0'}; border-radius: 6px; font-size: 0.8em;">
+                        <div style="color: #059669; margin-bottom: 5px;">✓ Calculated metrics for ${data.successful} of ${data.total} reports</div>
+                        ${data.errors.length > 0 ? `
+                            <div style="color: #dc2626; font-weight: 500; margin-top: 8px; margin-bottom: 5px;">⚠ ${data.errors.length} error(s):</div>
+                            ${data.errors.map(e => `<div style="color: #7f1d1d;">Report ${e.entry}: ${escapeHtml(e.error)}</div>`).join('')}
+                        ` : ''}
+                    </div>
+                `;
+            }
+
+            display.innerHTML = `
+                ${statusHtml}
+                <div style="text-align: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #e5e7eb;">
+                    <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase;">Overall F1 Score</div>
+                    <div style="font-size: 2.5em; font-weight: 600; color: #8b5cf6;">${(data.f1 * 100).toFixed(1)}%</div>
+                    <div style="font-size: 0.8em; color: #9ca3af;">${data.successful} reports evaluated</div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px;">
+                    <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                        <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">Precision</div>
+                        <div style="font-size: 1.5em; font-weight: 600; color: #059669;">${(data.precision * 100).toFixed(1)}%</div>
+                    </div>
+                    <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                        <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">Recall</div>
+                        <div style="font-size: 1.5em; font-weight: 600; color: #2563eb;">${(data.recall * 100).toFixed(1)}%</div>
+                    </div>
+                    <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                        <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">F1 Score</div>
+                        <div style="font-size: 1.5em; font-weight: 600; color: #7c3aed;">${(data.f1 * 100).toFixed(1)}%</div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 0.85em; margin-bottom: 15px; padding: 10px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                    <div style="text-align: center;">
+                        <span style="color: #10b981; font-weight: 600;">TP: ${data.totalTP}</span>
+                    </div>
+                    <div style="text-align: center;">
+                        <span style="color: #f59e0b; font-weight: 600;">FP: ${data.totalFP}</span>
+                    </div>
+                    <div style="text-align: center;">
+                        <span style="color: #ef4444; font-weight: 600;">FN: ${data.totalFN}</span>
+                    </div>
+                </div>
+
+                <details style="font-size: 0.8em; margin-top: 10px;">
+                    <summary style="cursor: pointer; font-weight: 500; color: #374151; margin-bottom: 8px;">Per-Report Breakdown (${data.perReportResults.length} reports)</summary>
+                    <div style="max-height: 200px; overflow-y: auto; margin-top: 8px;">
+                        ${data.perReportResults.map(r => {
+                            const f1Color = r.f1 >= 0.8 ? '#10b981' : r.f1 >= 0.5 ? '#f59e0b' : '#ef4444';
+                            return `
+                                <div style="padding: 8px; margin-bottom: 6px; background: white; border: 1px solid #e5e7eb; border-radius: 4px;">
+                                    <div style="display: flex; justify-content: space-between; font-weight: 500;">
+                                        <span>Report ${r.entry}</span>
+                                        <span style="color: ${f1Color};">F1: ${(r.f1 * 100).toFixed(1)}%</span>
+                                    </div>
+                                    <div style="margin-top: 4px; font-size: 0.9em; color: #6b7280;">
+                                        <span style="margin-right: 12px;">P: ${(r.precision * 100).toFixed(1)}%</span>
+                                        <span style="margin-right: 12px;">R: ${(r.recall * 100).toFixed(1)}%</span>
+                                        <span style="color: #10b981;">TP: ${r.tp}</span> |
+                                        <span style="color: #f59e0b;">FP: ${r.fp}</span> |
+                                        <span style="color: #ef4444;">FN: ${r.fn}</span>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </details>
+            `;
+        }
+
+        // Save simple observations test results
+        async function saveSimpleObsTestResults() {
+            if (!currentSimpleObsMetrics) {
+                alert('Please calculate metrics first');
+                return;
+            }
+
+            const btn = document.getElementById('simple-obs-save-results-btn');
+            const messageDiv = document.getElementById('simple-obs-save-results-message');
+            const originalText = btn.textContent;
+            btn.textContent = 'Saving...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/llm/save-test-results/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        results: [{
+                            entry: currentSimpleObsMetrics.entry,
+                            precision: currentSimpleObsMetrics.precision,
+                            recall: currentSimpleObsMetrics.recall,
+                            f1: currentSimpleObsMetrics.f1,
+                            schema: 'observations'
+                        }]
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const versionName = result.version_info?.name || 'Unknown';
+                    messageDiv.textContent = `Saved to Version ${versionName}: ${result.message}`;
+                    messageDiv.style.color = '#166534';
+                    document.getElementById('simple-obs-detected-version-name').textContent = versionName;
+                } else {
+                    messageDiv.textContent = 'Error: ' + result.error;
+                    messageDiv.style.color = '#dc2626';
+                }
+            } catch (error) {
+                messageDiv.textContent = 'Error: ' + error.message;
+                messageDiv.style.color = '#dc2626';
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // ===== Simple Observations Prompt Editor =====
+
+        // Open simple observations prompt editor modal
+        async function openSimpleObsPromptEditor() {
+            const modal = document.getElementById('simple-obs-prompt-modal');
+            const textarea = document.getElementById('simple-obs-prompt-template');
+
+            try {
+                // Load current prompt from server
+                const response = await fetch('/llm/get-findings-prompt/');
+                const data = await response.json();
+
+                if (data.success) {
+                    textarea.value = data.template;
+                } else {
+                    alert('Error loading prompt: ' + data.error);
+                    return;
+                }
+            } catch (error) {
+                alert('Error loading prompt: ' + error.message);
+                return;
+            }
+
+            modal.classList.add('active');
+        }
+
+        // Close simple observations prompt editor modal
+        function closeSimpleObsPromptEditor() {
+            document.getElementById('simple-obs-prompt-modal').classList.remove('active');
+        }
+
+        // Save simple observations prompt
+        async function saveSimpleObsPrompt() {
+            const textarea = document.getElementById('simple-obs-prompt-template');
+            const template = textarea.value.trim();
+
+            if (!template) {
+                alert('Please enter a prompt template');
+                return;
+            }
+
+            // Validate placeholder
+            if (!template.includes('{indexed_report}')) {
+                alert('Template must contain {indexed_report} placeholder');
+                return;
+            }
+
+            try {
+                const response = await fetch('/llm/save-findings-prompt/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ template })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Prompt saved successfully');
+                    closeSimpleObsPromptEditor();
+                } else {
+                    alert('Error saving prompt: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error saving prompt: ' + error.message);
+            }
+        }
+
+        // Reset simple observations prompt to default
+        async function resetSimpleObsPrompt() {
+            if (!confirm('Reset to default prompt? This will overwrite your current prompt.')) return;
+
+            const defaultTemplate = `Extract observations from this radiology report.
+
+REPORT (as JSON array of [word, index] pairs):
+{indexed_report}
+
+EXTRACT each observation with:
+- observation: The core finding ONLY (e.g., "tumour", "effusion", "opacity"). Do NOT include location, size, or descriptors.
+
+CRITICAL RULES:
+- The report is provided as a JSON array where each element is [word, index].
+- EXTRACT THE EXACT WORDS as they appear in the text - do not paraphrase or modify them.
+- Return each observation as ["word", index] matching the input format.
+- observation = the finding itself (noun)
+
+OUTPUT FORMAT (JSON array):
+[
+  {
+    "observation": ["<exact_word>", index]
+  }
+]
+
+EXAMPLE:
+Input: [["Large", 0], ["FDG-avid", 1], ["tumour", 2], ["in", 3], ["the", 4], ["distal", 5], ["oesophagus.", 6]]
+Output:
+[
+  {
+    "observation": ["tumour", 2]
+  }
+]
+
+EXAMPLE:
+Input: [["No", 0], ["pneumothorax.", 1], ["Stable", 2], ["small", 3], ["effusion.", 4]]
+Output:
+[
+  {"observation": ["pneumothorax.", 1]},
+  {"observation": ["effusion.", 4]}
+]
+
+EXAMPLE:
+Input: [["New", 0], ["right", 1], ["lower", 2], ["lobe", 3], ["consolidation.", 4]]
+Output:
+[
+  {
+    "observation": ["consolidation.", 4]
+  }
+]
+
+Respond with ONLY a valid JSON array. No explanations.`;
+
+            document.getElementById('simple-obs-prompt-template').value = defaultTemplate;
+        }
+
+        // ===== Triplet Prompt Editor =====
+
+        // Open triplet prompt editor modal
+        async function openTripletPromptEditor() {
+            const modal = document.getElementById('triplet-prompt-modal');
+            const textarea = document.getElementById('triplet-prompt-template');
+
+            try {
+                // Load current prompt from server
+                const response = await fetch('/llm/get-triplet-prompt/');
+                const data = await response.json();
+
+                if (data.success) {
+                    textarea.value = data.template;
+                } else {
+                    alert('Error loading prompt: ' + data.error);
+                    return;
+                }
+            } catch (error) {
+                alert('Error loading prompt: ' + error.message);
+                return;
+            }
+
+            modal.classList.add('active');
+        }
+
+        // Close triplet prompt editor modal
+        function closeTripletPromptEditor() {
+            document.getElementById('triplet-prompt-modal').classList.remove('active');
+        }
+
+        // Save triplet prompt
+        async function saveTripletPrompt() {
+            const textarea = document.getElementById('triplet-prompt-template');
+            const template = textarea.value.trim();
+
+            if (!template) {
+                alert('Please enter a prompt template');
+                return;
+            }
+
+            // Validate placeholder
+            if (!template.includes('{indexed_report}')) {
+                alert('Template must contain {indexed_report} placeholder');
+                return;
+            }
+
+            try {
+                const response = await fetch('/llm/save-triplet-prompt/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ template })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Prompt saved successfully');
+                    closeTripletPromptEditor();
+                } else {
+                    alert('Error saving prompt: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error saving prompt: ' + error.message);
+            }
+        }
+
+        // Reset triplet prompt to default
+        async function resetTripletPrompt() {
+            if (!confirm('Reset to default prompt? This will overwrite your current prompt.')) return;
+
+            const defaultTemplate = `Extract observations from this radiology report.
+
+INDEXED TEXT:
+{indexed_report}
+
+EXTRACT each observation with:
+- observation: The core finding ONLY (e.g., "tumour", "effusion", "opacity"). Do NOT include location, size, or descriptors.
+- anatomical_location: Where it is located (e.g., "lung", "liver", "T8 vertebra"). Set to null if not specified.
+- properties: List of modifiers/descriptors (e.g., "large", "stable", "FDG-avid", "9cm"). Empty list [] if none.
+
+CRITICAL RULES:
+- Word indices are shown in brackets [0], [1], etc.
+- EXTRACT THE EXACT WORDS as they appear in the text - do not paraphrase or modify them.
+- Store EACH WORD SEPARATELY with its individual index as ["word", index] pairs.
+- For multi-word phrases, list each word with its own index.
+- NO OVERLAP: Each word should appear in only ONE field.
+- observation = the finding itself (noun)
+- anatomical_location = body part only
+- properties = adjectives, sizes, qualifiers, modifiers
+
+OUTPUT FORMAT (JSON array):
+[
+  {
+    "observation": [["<exact_word>", index], ...],
+    "anatomical_location": [["<exact_word>", index], ...] or null,
+    "properties": [[["<exact_word>", index], ...], ...]
+  }
+]
+
+EXAMPLE:
+Input: "[0]Large [1]FDG-avid [2]tumour [3]in [4]the [5]distal [6]oesophagus."
+Output:
+[
+  {
+    "observation": [["tumour", 2]],
+    "anatomical_location": [["distal", 5], ["oesophagus.", 6]],
+    "properties": [[["Large", 0]], [["FDG-avid", 1]]]
+  }
+]
+
+Respond with ONLY a valid JSON array. No explanations.`;
+
+            document.getElementById('triplet-prompt-template').value = defaultTemplate;
         }
 
         // Run entity extraction (LLM) - Legacy
@@ -6959,6 +8103,399 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
         // Make function globally available for entities
         window.extractEntitiesFromLLM = extractEntitiesFromLLM;
 
+        // ===== Entities & Relations Tab Functions =====
+
+        // State for E&R schemas
+        let erAllSchemas = {};
+        let erActiveSchemaName = 'radgraph';
+        let erActiveSchema = null;
+
+        // Load schemas from server
+        async function loadERSchemas() {
+            try {
+                const response = await fetch('/llm/schemas/');
+                const data = await response.json();
+
+                if (data.success) {
+                    erAllSchemas = data.schemas;
+                    erActiveSchemaName = data.active_schema;
+                    erActiveSchema = erAllSchemas[erActiveSchemaName];
+                    populateERSchemaSelector();
+                    populateEREntityTypeDropdown();
+                    populateERRelationTypeDropdown();
+                    console.log(`E&R: Loaded ${Object.keys(erAllSchemas).length} schemas. Active: ${erActiveSchemaName}`);
+                } else {
+                    console.error('Failed to load E&R schemas:', data.error);
+                }
+            } catch (error) {
+                console.error('Error loading E&R schemas:', error);
+            }
+        }
+
+        // Populate schema selector dropdown
+        function populateERSchemaSelector() {
+            const selector = document.getElementById('er-schema-selector');
+            if (!selector) return;
+            selector.innerHTML = '';
+
+            for (const [key, schema] of Object.entries(erAllSchemas)) {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = schema.name;
+                if (key === erActiveSchemaName) {
+                    option.selected = true;
+                }
+                selector.appendChild(option);
+            }
+        }
+
+        // Switch to a different E&R schema
+        async function switchERSchema() {
+            const selector = document.getElementById('er-schema-selector');
+            const newSchemaName = selector.value;
+
+            if (newSchemaName === erActiveSchemaName) {
+                return; // No change
+            }
+
+            try {
+                const response = await fetch('/llm/set-active-schema/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ schema_name: newSchemaName })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    erActiveSchemaName = newSchemaName;
+                    erActiveSchema = erAllSchemas[newSchemaName];
+                    populateEREntityTypeDropdown();
+                    populateERRelationTypeDropdown();
+                    renderERGroundTruthEntities();
+                    renderERGroundTruthRelations();
+                    console.log(`E&R: Switched to schema: ${erActiveSchema.name}`);
+                } else {
+                    alert(`Failed to switch schema: ${data.error}`);
+                    selector.value = erActiveSchemaName;
+                }
+            } catch (error) {
+                alert(`Error switching schema: ${error.message}`);
+                selector.value = erActiveSchemaName;
+            }
+        }
+
+        // Get entity type color from active E&R schema
+        function getEREntityTypeColor(entityType) {
+            if (!erActiveSchema || !erActiveSchema.entity_types) {
+                return '#6b7280'; // Default gray
+            }
+            const entityTypeDef = erActiveSchema.entity_types.find(et => et.name === entityType);
+            return entityTypeDef ? entityTypeDef.color : '#6b7280';
+        }
+
+        // Populate entity type dropdown from active schema
+        function populateEREntityTypeDropdown() {
+            const select = document.getElementById('er-entity-type');
+            if (!select || !erActiveSchema) return;
+
+            select.innerHTML = '<option value="">Select type...</option>';
+            if (erActiveSchema.entity_types) {
+                erActiveSchema.entity_types.forEach(et => {
+                    const option = document.createElement('option');
+                    option.value = et.name;
+                    option.textContent = et.name;
+                    option.style.color = et.color;
+                    select.appendChild(option);
+                });
+            }
+        }
+
+        // Populate relation type dropdown from active schema
+        function populateERRelationTypeDropdown() {
+            const select = document.getElementById('er-relation-type');
+            if (!select || !erActiveSchema) return;
+
+            select.innerHTML = '<option value="">Relation...</option>';
+            if (erActiveSchema.relation_types) {
+                erActiveSchema.relation_types.forEach(rt => {
+                    const option = document.createElement('option');
+                    option.value = rt.name;
+                    option.textContent = rt.name;
+                    select.appendChild(option);
+                });
+            }
+        }
+
+        // Get E&R ground truth data for current entry
+        function getERGroundTruthData() {
+            if (!currentEntry) return { entities: [], triplets: [] };
+            const entryData = entitiesData.find(e => e.entry === currentEntry);
+            if (!entryData) return { entities: [], triplets: [] };
+            const schemaData = entryData.ground_truths?.[erActiveSchemaName];
+            if (!schemaData) return { entities: [], triplets: [] };
+            return {
+                entities: schemaData.entities || [],
+                triplets: schemaData.triplets || []
+            };
+        }
+
+        // Add ground truth entity
+        async function addERGroundTruthEntity() {
+            if (!currentEntry) {
+                alert('Please select a CSV entry first');
+                return;
+            }
+
+            const entityText = document.getElementById('er-entity-text').value.trim();
+            const entityType = document.getElementById('er-entity-type').value;
+            const startWordInput = document.getElementById('er-entity-start-word').value;
+            const endWordInput = document.getElementById('er-entity-end-word').value;
+
+            if (!entityText || !entityType) {
+                alert('Please fill in both entity text and type');
+                return;
+            }
+
+            const entity = {
+                text: entityText,
+                type: entityType,
+                start_word: startWordInput !== '' ? parseInt(startWordInput, 10) : null,
+                end_word: endWordInput !== '' ? parseInt(endWordInput, 10) : null
+            };
+
+            try {
+                const response = await fetch('/llm/add-ground-truth-entity/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        entity: entity
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Reload entities data to get updated state
+                    await loadEntities();
+
+                    // Clear form
+                    document.getElementById('er-entity-text').value = '';
+                    document.getElementById('er-entity-type').value = '';
+                    document.getElementById('er-entity-start-word').value = '';
+                    document.getElementById('er-entity-end-word').value = '';
+
+                    // Re-render
+                    renderERGroundTruthEntities();
+                    updateEREntityDropdowns();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error adding entity: ' + error.message);
+            }
+        }
+
+        // Delete ground truth entity
+        async function deleteERGroundTruthEntity(entityId) {
+            if (!currentEntry) return;
+
+            try {
+                const response = await fetch('/llm/delete-ground-truth-entity/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        entity_id: entityId
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    await loadEntities();
+                    renderERGroundTruthEntities();
+                    renderERGroundTruthRelations();
+                    updateEREntityDropdowns();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error deleting entity: ' + error.message);
+            }
+        }
+
+        // Add ground truth relation
+        async function addERGroundTruthRelation() {
+            if (!currentEntry) {
+                alert('Please select a CSV entry first');
+                return;
+            }
+
+            const entity1Id = document.getElementById('er-relation-entity1').value;
+            const relationType = document.getElementById('er-relation-type').value;
+            const entity2Id = document.getElementById('er-relation-entity2').value;
+
+            if (!entity1Id || !relationType || !entity2Id) {
+                alert('Please select both entities and a relation type');
+                return;
+            }
+
+            const relation = {
+                entity1_id: entity1Id,
+                relation_type: relationType,
+                entity2_id: entity2Id
+            };
+
+            try {
+                const response = await fetch('/llm/add-ground-truth-relation/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        relation: relation
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    await loadEntities();
+
+                    // Clear form
+                    document.getElementById('er-relation-entity1').value = '';
+                    document.getElementById('er-relation-type').value = '';
+                    document.getElementById('er-relation-entity2').value = '';
+
+                    renderERGroundTruthRelations();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error adding relation: ' + error.message);
+            }
+        }
+
+        // Delete ground truth relation
+        async function deleteERGroundTruthRelation(relationIndex) {
+            if (!currentEntry) return;
+
+            try {
+                const response = await fetch('/llm/delete-ground-truth-relation/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        relation_index: relationIndex
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    await loadEntities();
+                    renderERGroundTruthRelations();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error deleting relation: ' + error.message);
+            }
+        }
+
+        // Render ground truth entities for E&R tab
+        function renderERGroundTruthEntities() {
+            const container = document.getElementById('er-entities-container');
+            const countSpan = document.getElementById('er-entity-count');
+            if (!container) return;
+
+            const gtData = getERGroundTruthData();
+            const entities = gtData.entities;
+
+            if (countSpan) countSpan.textContent = entities.length;
+
+            if (entities.length === 0) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.85em;">No entities yet.</div>';
+                return;
+            }
+
+            let html = '';
+            entities.forEach(e => {
+                const color = getEREntityTypeColor(e.type);
+                let indexDisplay = '';
+                if (e.start_word !== null && e.start_word !== undefined) {
+                    if (e.end_word !== null && e.end_word !== undefined && e.end_word !== e.start_word) {
+                        indexDisplay = `<span style="color: #9ca3af; font-size: 0.75em; margin-left: 2px;">[${e.start_word}-${e.end_word}]</span>`;
+                    } else {
+                        indexDisplay = `<span style="color: #9ca3af; font-size: 0.75em; margin-left: 2px;">[${e.start_word}]</span>`;
+                    }
+                }
+                html += `<div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: white; border: 1px solid ${color}; border-radius: 16px; font-size: 0.85em;">
+                    <span style="font-weight: 500; color: ${color};">[${e.id}]</span>
+                    <span style="color: #374151;">${escapeHtml(e.text)}${indexDisplay}</span>
+                    <span style="color: ${color}; font-size: 0.8em;">(${e.type})</span>
+                    <button onclick="deleteERGroundTruthEntity('${e.id}')" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0 2px; font-size: 1em;">&times;</button>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        // Render ground truth relations for E&R tab
+        function renderERGroundTruthRelations() {
+            const container = document.getElementById('er-relations-container');
+            const countSpan = document.getElementById('er-relation-count');
+            if (!container) return;
+
+            const gtData = getERGroundTruthData();
+            const relations = gtData.triplets;
+            const entities = gtData.entities;
+
+            if (countSpan) countSpan.textContent = relations.length;
+
+            if (relations.length === 0) {
+                container.innerHTML = '<div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">No relations yet.</div>';
+                return;
+            }
+
+            // Build entity lookup
+            const entityLookup = {};
+            entities.forEach(e => { entityLookup[e.id] = e; });
+
+            let html = '';
+            relations.forEach((rel, index) => {
+                const e1 = entityLookup[rel.entity1_id] || { text: rel.entity1_id, type: '?' };
+                const e2 = entityLookup[rel.entity2_id] || { text: rel.entity2_id, type: '?' };
+                const color1 = getEREntityTypeColor(e1.type);
+                const color2 = getEREntityTypeColor(e2.type);
+
+                html += `<div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f9fafb; border-radius: 4px; font-size: 0.85em;">
+                    <span style="font-weight: 500; color: #6b7280;">[${rel.id || index}]</span>
+                    <span style="flex: 2; color: ${color1};">[${rel.entity1_id}] ${escapeHtml(e1.text)}</span>
+                    <span style="flex-shrink: 0; background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 4px; font-size: 0.9em;">${rel.relation_type}</span>
+                    <span style="flex: 2; color: ${color2};">[${rel.entity2_id}] ${escapeHtml(e2.text)}</span>
+                    <button onclick="deleteERGroundTruthRelation(${index})" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0 4px; font-size: 1em;">&times;</button>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        // Update entity dropdowns for relation form
+        function updateEREntityDropdowns() {
+            const entity1Select = document.getElementById('er-relation-entity1');
+            const entity2Select = document.getElementById('er-relation-entity2');
+            if (!entity1Select || !entity2Select) return;
+
+            const gtData = getERGroundTruthData();
+            const entities = gtData.entities;
+
+            const optionsHtml = '<option value="">Select entity...</option>' +
+                entities.map(e => `<option value="${e.id}">[${e.id}] ${escapeHtml(e.text)}</option>`).join('');
+
+            entity1Select.innerHTML = optionsHtml;
+            entity2Select.innerHTML = optionsHtml;
+        }
+
         // Initialize everything after DOM is loaded
         document.addEventListener('DOMContentLoaded', () => {
             console.log('DOM loaded, initializing event listeners and loading data...');
@@ -7049,6 +8586,88 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
                         Cancel
                     </button>
                     <button onclick="saveBinaryClassificationPrompt()" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Save Prompt
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Triplet Prompt Editor Modal -->
+    <div id="triplet-prompt-modal" class="modal">
+        <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3>Triplet Extraction Prompt Editor</h3>
+                <button class="close-modal" onclick="closeTripletPromptEditor()">&times;</button>
+            </div>
+            <div style="padding: 20px;">
+                <!-- Help Text -->
+                <div style="margin-bottom: 20px; padding: 15px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px;">
+                    <div style="font-weight: 500; color: #92400e; margin-bottom: 8px; font-size: 0.9em;">Required Placeholder:</div>
+                    <div style="font-size: 0.85em; color: #78350f;">
+                        <ul style="margin: 5px 0; padding-left: 20px;">
+                            <li><code>{indexed_report}</code> - The report text with word indices (e.g., "[0]Large [1]tumor [2]in [3]liver")</li>
+                        </ul>
+                        <div style="margin-top: 8px; font-style: italic;">The prompt should instruct the LLM to output a JSON array of triplets with observation, anatomical_location, and properties fields.</div>
+                    </div>
+                </div>
+
+                <!-- Prompt Template -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 5px;">Prompt Template</label>
+                    <textarea id="triplet-prompt-template" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 4px; min-height: 400px; font-family: 'Courier New', monospace; font-size: 0.85em; line-height: 1.5;"></textarea>
+                </div>
+
+                <!-- Actions -->
+                <div style="display: flex; gap: 10px; justify-content: flex-end; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                    <button onclick="resetTripletPrompt()" style="margin-right: auto; padding: 8px 16px; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer;">
+                        Reset to Default
+                    </button>
+                    <button onclick="closeTripletPromptEditor()" style="padding: 8px 16px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Cancel
+                    </button>
+                    <button onclick="saveTripletPrompt()" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Save Prompt
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Simple Observations Prompt Editor Modal -->
+    <div id="simple-obs-prompt-modal" class="modal">
+        <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3>Observations Extraction Prompt Editor</h3>
+                <button class="close-modal" onclick="closeSimpleObsPromptEditor()">&times;</button>
+            </div>
+            <div style="padding: 20px;">
+                <!-- Help Text -->
+                <div style="margin-bottom: 20px; padding: 15px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px;">
+                    <div style="font-weight: 500; color: #92400e; margin-bottom: 8px; font-size: 0.9em;">Required Placeholder:</div>
+                    <div style="font-size: 0.85em; color: #78350f;">
+                        <ul style="margin: 5px 0; padding-left: 20px;">
+                            <li><code>{indexed_report}</code> - The report as a JSON array of [word, index] pairs (e.g., <code>[["Large", 0], ["tumor", 1], ...]</code>)</li>
+                        </ul>
+                        <div style="margin-top: 8px; font-style: italic;">The prompt should instruct the LLM to output a JSON array of observations with format: {"observation": ["word", index]}</div>
+                    </div>
+                </div>
+
+                <!-- Prompt Template -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 0.85em; color: #6b7280; margin-bottom: 5px;">Prompt Template</label>
+                    <textarea id="simple-obs-prompt-template" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 4px; min-height: 400px; font-family: 'Courier New', monospace; font-size: 0.85em; line-height: 1.5;"></textarea>
+                </div>
+
+                <!-- Actions -->
+                <div style="display: flex; gap: 10px; justify-content: flex-end; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                    <button onclick="resetSimpleObsPrompt()" style="margin-right: auto; padding: 8px 16px; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer;">
+                        Reset to Default
+                    </button>
+                    <button onclick="closeSimpleObsPromptEditor()" style="padding: 8px 16px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Cancel
+                    </button>
+                    <button onclick="saveSimpleObsPrompt()" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer;">
                         Save Prompt
                     </button>
                 </div>
