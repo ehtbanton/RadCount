@@ -78,4 +78,10 @@ urlpatterns = [
     path('delete-ground-truth-entity/', views.delete_ground_truth_entity, name='delete_ground_truth_entity'),
     path('add-ground-truth-relation/', views.add_ground_truth_relation, name='add_ground_truth_relation'),
     path('delete-ground-truth-relation/', views.delete_ground_truth_relation, name='delete_ground_truth_relation'),
+    # Experiment Logging
+    path('experiments/', views.experiments, name='experiments'),
+    path('experiments/<str:experiment_id>/', views.experiment_detail, name='experiment_detail'),
+    path('experiments-compare/', views.compare_experiments, name='compare_experiments'),
+    path('experiments-export/', views.export_experiments, name='export_experiments'),
+    path('experiment-types/', views.get_experiment_types, name='get_experiment_types'),
 ]

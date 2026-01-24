@@ -595,6 +595,13 @@
                     >
                         Entities & Relations
                     </button>
+                    <button
+                        id="schema-tab-experiments"
+                        onclick="switchAnnotationSchema('experiments')"
+                        style="padding: 6px 14px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; cursor: pointer; font-size: 0.85em; font-weight: 400; margin-bottom: -12px;"
+                    >
+                        📊 Experiments
+                    </button>
                 </div>
 
                 <!-- Binary Classification Schema Content -->
@@ -1013,6 +1020,121 @@
                         </div>
                     </div>
                 </div><!-- End schema-content-entities -->
+
+                <!-- Experiments Schema Content -->
+                <div id="schema-content-experiments" style="display: none;">
+                    <!-- Header with actions -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <div style="font-weight: 600; color: #374151; font-size: 1em;">Experiment Log</div>
+                        <div style="display: flex; gap: 8px;">
+                            <button
+                                onclick="exportExperimentsCSV()"
+                                style="padding: 6px 12px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;"
+                                title="Export experiments to CSV"
+                            >
+                                Export CSV
+                            </button>
+                            <button
+                                onclick="refreshExperiments()"
+                                style="padding: 6px 12px; background: #6366f1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;"
+                            >
+                                Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Experiment Type Filter -->
+                    <div style="display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap;">
+                        <button
+                            class="exp-filter-btn active"
+                            data-filter="all"
+                            onclick="filterExperiments('all')"
+                            style="padding: 4px 10px; background: #8b5cf6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75em;"
+                        >
+                            All
+                        </button>
+                        <button
+                            class="exp-filter-btn"
+                            data-filter="binary_classification"
+                            onclick="filterExperiments('binary_classification')"
+                            style="padding: 4px 10px; background: #e5e7eb; color: #374151; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75em;"
+                        >
+                            Binary Classification
+                        </button>
+                        <button
+                            class="exp-filter-btn"
+                            data-filter="entity_extraction"
+                            onclick="filterExperiments('entity_extraction')"
+                            style="padding: 4px 10px; background: #e5e7eb; color: #374151; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75em;"
+                        >
+                            Entity Extraction
+                        </button>
+                        <button
+                            class="exp-filter-btn"
+                            data-filter="observation_extraction"
+                            onclick="filterExperiments('observation_extraction')"
+                            style="padding: 4px 10px; background: #e5e7eb; color: #374151; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75em;"
+                        >
+                            Observations
+                        </button>
+                    </div>
+
+                    <!-- Comparison Selection -->
+                    <div id="experiment-compare-bar" style="display: none; background: #fef3c7; padding: 10px; border-radius: 6px; margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.85em; color: #92400e;">
+                                <span id="compare-count">0</span> experiments selected for comparison
+                            </span>
+                            <div style="display: flex; gap: 8px;">
+                                <button
+                                    onclick="compareSelectedExperiments()"
+                                    style="padding: 4px 10px; background: #f59e0b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;"
+                                >
+                                    Compare
+                                </button>
+                                <button
+                                    onclick="clearExperimentSelection()"
+                                    style="padding: 4px 10px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;"
+                                >
+                                    Clear
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Experiments List -->
+                    <div id="experiments-list" style="display: flex; flex-direction: column; gap: 10px; max-height: calc(100vh - 400px); overflow-y: auto;">
+                        <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 20px;">
+                            Loading experiments...
+                        </div>
+                    </div>
+
+                    <!-- Comparison Results Modal -->
+                    <div id="experiment-comparison-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+                        <div style="background: white; border-radius: 12px; padding: 24px; max-width: 900px; width: 90%; max-height: 80vh; overflow-y: auto;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <h3 style="margin: 0; color: #374151;">Experiment Comparison</h3>
+                                <button onclick="closeComparisonModal()" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: #6b7280;">&times;</button>
+                            </div>
+                            <div id="comparison-content">
+                                <!-- Comparison data will be rendered here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Experiment Detail Modal -->
+                    <div id="experiment-detail-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+                        <div style="background: white; border-radius: 12px; padding: 24px; max-width: 700px; width: 90%; max-height: 80vh; overflow-y: auto;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <h3 style="margin: 0; color: #374151;">Experiment Details</h3>
+                                <button onclick="closeExperimentDetailModal()" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: #6b7280;">&times;</button>
+                            </div>
+                            <div id="experiment-detail-content">
+                                <!-- Experiment details will be rendered here -->
+                            </div>
+                        </div>
+                    </div>
+                </div><!-- End schema-content-experiments -->
             </div>
         </div>
     </div>
@@ -2393,9 +2515,10 @@
             const tripletsTab = document.getElementById('schema-tab-triplets');
             const observationsTab = document.getElementById('schema-tab-observations');
             const entitiesTab = document.getElementById('schema-tab-entities');
+            const experimentsTab = document.getElementById('schema-tab-experiments');
 
             // Reset all tabs to inactive
-            [binaryTab, tripletsTab, observationsTab, entitiesTab].forEach(tab => {
+            [binaryTab, tripletsTab, observationsTab, entitiesTab, experimentsTab].forEach(tab => {
                 if (tab) {
                     tab.style.borderBottom = '2px solid transparent';
                     tab.style.color = '#6b7280';
@@ -2408,6 +2531,7 @@
             document.getElementById('schema-content-triplets').style.display = 'none';
             document.getElementById('schema-content-observations').style.display = 'none';
             document.getElementById('schema-content-entities').style.display = 'none';
+            document.getElementById('schema-content-experiments').style.display = 'none';
 
             // Activate selected tab
             if (schemaName === 'binary') {
@@ -2436,6 +2560,12 @@
                 loadERSchemas();
                 renderERGroundTruthEntities();
                 renderERGroundTruthRelations();
+            } else if (schemaName === 'experiments') {
+                experimentsTab.style.borderBottom = '2px solid #f59e0b';
+                experimentsTab.style.color = '#f59e0b';
+                experimentsTab.style.fontWeight = '500';
+                document.getElementById('schema-content-experiments').style.display = 'block';
+                loadExperiments();
             }
         }
 
@@ -2888,6 +3018,9 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
         }
 
         // Calculate binary classification metrics across all reports with ground truth
+        // Store last calculated metrics for experiment logging
+        let lastBinaryMetricsData = null;
+
         async function calculateBinaryMetrics() {
             // If already running, cancel and restart
             if (binaryMetricsRunning) {
@@ -2899,6 +3032,7 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
             }
 
             binaryMetricsRunning = true;
+            const startTime = Date.now();
 
             const labels = getGlobalClassificationLabels();
 
@@ -3187,10 +3321,103 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
                         `).join('')}
                     </div>
                 </details>
+
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb; display: flex; gap: 10px; align-items: center;">
+                    <button onclick="logBinaryClassificationExperiment()" style="padding: 8px 16px; background: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 500;">
+                        📊 Log Experiment
+                    </button>
+                    <span style="font-size: 0.8em; color: #6b7280;">Save these results to your experiment history</span>
+                </div>
             `;
+
+            // Calculate duration and overall metrics for logging
+            const durationSeconds = (Date.now() - startTime) / 1000;
+
+            // Calculate overall F1, precision, recall
+            let overallTP = 0, overallFP = 0, overallFN = 0, overallTN = 0;
+            labelMetrics.forEach(m => {
+                overallTP += m.tp;
+                overallFP += m.fp;
+                overallFN += m.fn;
+                overallTN += m.tn;
+            });
+
+            const overallPrecision = (overallTP + overallFP) > 0 ? overallTP / (overallTP + overallFP) : 0;
+            const overallRecall = (overallTP + overallFN) > 0 ? overallTP / (overallTP + overallFN) : 0;
+            const overallF1 = (overallPrecision + overallRecall) > 0
+                ? 2 * overallPrecision * overallRecall / (overallPrecision + overallRecall)
+                : 0;
+
+            // Store metrics data for potential logging
+            lastBinaryMetricsData = {
+                experiment_type: 'binary_classification',
+                temperature: temperature,
+                model: document.getElementById('model-select')?.value || 'unknown',
+                entries_processed: successful,
+                total_entries: successful.length,
+                duration_seconds: durationSeconds,
+                metrics: {
+                    accuracy: totalComparisons > 0 ? totalCorrect / totalComparisons : 0,
+                    precision: overallPrecision,
+                    recall: overallRecall,
+                    f1: overallF1
+                },
+                per_label_metrics: labelMetrics.reduce((acc, m) => {
+                    acc[m.label] = {
+                        accuracy: m.total > 0 ? m.correct / m.total : 0,
+                        precision: m.precision !== 'N/A' ? parseFloat(m.precision) / 100 : 0,
+                        recall: m.recall !== 'N/A' ? parseFloat(m.recall) / 100 : 0,
+                        f1: m.f1 !== 'N/A' ? parseFloat(m.f1) / 100 : 0,
+                        tp: m.tp, fp: m.fp, fn: m.fn, tn: m.tn
+                    };
+                    return acc;
+                }, {}),
+                labels: labels
+            };
 
             statusEl.textContent = `Calculated (${reportsWithGT} reports)`;
             binaryMetricsRunning = false;
+        }
+
+        async function logBinaryClassificationExperiment() {
+            if (!lastBinaryMetricsData) {
+                alert('No metrics data available. Run "Calculate Metrics" first.');
+                return;
+            }
+
+            // Get the current prompt text
+            let promptText = '';
+            try {
+                const promptResponse = await fetch('/llm/get-binary-classification-prompt/');
+                const promptResult = await promptResponse.json();
+                if (promptResult.success) {
+                    promptText = promptResult.template;
+                }
+            } catch (e) {
+                console.warn('Could not fetch prompt text:', e);
+            }
+
+            // Prompt for experiment name
+            const defaultName = `Binary Classification - ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`;
+            const expName = prompt('Enter a name for this experiment:', defaultName);
+            if (!expName) return; // User cancelled
+
+            const expDescription = prompt('Enter a description (optional):', '');
+
+            const experimentData = {
+                ...lastBinaryMetricsData,
+                name: expName,
+                description: expDescription || '',
+                prompt_text: promptText,
+                prompt_name: 'binary_classification'
+            };
+
+            const result = await logExperiment(experimentData);
+            if (result) {
+                alert(`Experiment logged successfully!\nID: ${result.id}\n\nView it in the Experiments tab.`);
+            } else {
+                alert('Failed to log experiment. Check console for details.');
+            }
         }
 
         // Render entities and relations for current entry (routes to tab-specific renderers)
@@ -8549,6 +8776,428 @@ Respond with ONLY a valid JSON array. No explanations.`;
 
             console.log('Initialization complete');
         });
+
+        // ===== Experiment Logging Functions =====
+
+        let allExperiments = [];
+        let selectedExperimentIds = [];
+        let currentExperimentFilter = 'all';
+
+        async function loadExperiments() {
+            try {
+                const response = await fetch('/llm/experiments/');
+                const result = await response.json();
+                if (result.success) {
+                    allExperiments = result.experiments;
+                    renderExperimentsList();
+                } else {
+                    console.error('Failed to load experiments:', result.error);
+                }
+            } catch (error) {
+                console.error('Error loading experiments:', error);
+            }
+        }
+
+        function refreshExperiments() {
+            loadExperiments();
+        }
+
+        function filterExperiments(filterType) {
+            currentExperimentFilter = filterType;
+
+            // Update filter button styles
+            document.querySelectorAll('.exp-filter-btn').forEach(btn => {
+                if (btn.dataset.filter === filterType) {
+                    btn.style.background = '#8b5cf6';
+                    btn.style.color = 'white';
+                } else {
+                    btn.style.background = '#e5e7eb';
+                    btn.style.color = '#374151';
+                }
+            });
+
+            renderExperimentsList();
+        }
+
+        function renderExperimentsList() {
+            const container = document.getElementById('experiments-list');
+            let filteredExperiments = allExperiments;
+
+            if (currentExperimentFilter !== 'all') {
+                filteredExperiments = allExperiments.filter(exp => exp.experiment_type === currentExperimentFilter);
+            }
+
+            if (filteredExperiments.length === 0) {
+                container.innerHTML = `
+                    <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 40px;">
+                        <div style="font-size: 2em; margin-bottom: 10px;">📊</div>
+                        <div>No experiments logged yet.</div>
+                        <div style="margin-top: 10px; font-size: 0.9em;">Run extractions with "Log Experiment" enabled to start tracking.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filteredExperiments.map(exp => {
+                const metrics = exp.results?.metrics || {};
+                const config = exp.config || {};
+                const isSelected = selectedExperimentIds.includes(exp.id);
+                const timestamp = new Date(exp.timestamp).toLocaleString();
+
+                const f1Display = metrics.f1 !== undefined ? (metrics.f1 * 100).toFixed(1) + '%' : '-';
+                const precisionDisplay = metrics.precision !== undefined ? (metrics.precision * 100).toFixed(1) + '%' : '-';
+                const recallDisplay = metrics.recall !== undefined ? (metrics.recall * 100).toFixed(1) + '%' : '-';
+
+                return `
+                    <div class="experiment-card" style="background: ${isSelected ? '#fef3c7' : '#f9fafb'}; border: 1px solid ${isSelected ? '#f59e0b' : '#e5e7eb'}; border-radius: 8px; padding: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div style="flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                                    <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleExperimentSelection('${exp.id}')" style="cursor: pointer;">
+                                    <span style="font-weight: 600; color: #374151; font-size: 0.9em;">${exp.name || 'Unnamed'}</span>
+                                    <span style="background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 4px; font-size: 0.7em;">${exp.experiment_type}</span>
+                                </div>
+                                <div style="font-size: 0.75em; color: #6b7280; margin-bottom: 8px;">${timestamp}</div>
+                                ${exp.description ? `<div style="font-size: 0.8em; color: #4b5563; margin-bottom: 8px;">${exp.description}</div>` : ''}
+                                <div style="display: flex; gap: 16px; font-size: 0.8em;">
+                                    <div><span style="color: #6b7280;">F1:</span> <span style="font-weight: 600; color: #059669;">${f1Display}</span></div>
+                                    <div><span style="color: #6b7280;">P:</span> <span style="color: #374151;">${precisionDisplay}</span></div>
+                                    <div><span style="color: #6b7280;">R:</span> <span style="color: #374151;">${recallDisplay}</span></div>
+                                    <div><span style="color: #6b7280;">Entries:</span> <span style="color: #374151;">${exp.results?.total_entries || 0}</span></div>
+                                    ${config.temperature !== undefined ? `<div><span style="color: #6b7280;">T:</span> <span style="color: #374151;">${config.temperature}</span></div>` : ''}
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 4px;">
+                                <button onclick="viewExperimentDetail('${exp.id}')" style="padding: 4px 8px; background: #6366f1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75em;" title="View details">View</button>
+                                <button onclick="deleteExperiment('${exp.id}')" style="padding: 4px 8px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75em;" title="Delete">&times;</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleExperimentSelection(expId) {
+            const idx = selectedExperimentIds.indexOf(expId);
+            if (idx >= 0) {
+                selectedExperimentIds.splice(idx, 1);
+            } else {
+                selectedExperimentIds.push(expId);
+            }
+
+            // Update compare bar visibility
+            const compareBar = document.getElementById('experiment-compare-bar');
+            if (selectedExperimentIds.length >= 2) {
+                compareBar.style.display = 'block';
+                document.getElementById('compare-count').textContent = selectedExperimentIds.length;
+            } else {
+                compareBar.style.display = 'none';
+            }
+
+            renderExperimentsList();
+        }
+
+        function clearExperimentSelection() {
+            selectedExperimentIds = [];
+            document.getElementById('experiment-compare-bar').style.display = 'none';
+            renderExperimentsList();
+        }
+
+        async function compareSelectedExperiments() {
+            if (selectedExperimentIds.length < 2) {
+                alert('Select at least 2 experiments to compare');
+                return;
+            }
+
+            try {
+                const response = await fetch('/llm/experiments-compare/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ experiment_ids: selectedExperimentIds })
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    renderComparisonModal(result.comparison, result.deltas);
+                } else {
+                    alert('Comparison failed: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error comparing experiments:', error);
+                alert('Error comparing experiments');
+            }
+        }
+
+        function renderComparisonModal(comparison, deltas) {
+            const modal = document.getElementById('experiment-comparison-modal');
+            const content = document.getElementById('comparison-content');
+
+            // Build comparison table
+            let tableHTML = `
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.85em;">
+                    <thead>
+                        <tr style="background: #f3f4f6;">
+                            <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e5e7eb;">Experiment</th>
+                            <th style="padding: 10px; text-align: center; border-bottom: 2px solid #e5e7eb;">F1</th>
+                            <th style="padding: 10px; text-align: center; border-bottom: 2px solid #e5e7eb;">Precision</th>
+                            <th style="padding: 10px; text-align: center; border-bottom: 2px solid #e5e7eb;">Recall</th>
+                            <th style="padding: 10px; text-align: center; border-bottom: 2px solid #e5e7eb;">Entries</th>
+                            <th style="padding: 10px; text-align: center; border-bottom: 2px solid #e5e7eb;">Temp</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            comparison.forEach((exp, idx) => {
+                const metrics = exp.metrics || {};
+                const f1 = metrics.f1 !== undefined ? (metrics.f1 * 100).toFixed(1) + '%' : '-';
+                const precision = metrics.precision !== undefined ? (metrics.precision * 100).toFixed(1) + '%' : '-';
+                const recall = metrics.recall !== undefined ? (metrics.recall * 100).toFixed(1) + '%' : '-';
+
+                tableHTML += `
+                    <tr>
+                        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">
+                            <div style="font-weight: 500;">${exp.name || exp.id}</div>
+                            <div style="font-size: 0.8em; color: #6b7280;">${new Date(exp.timestamp).toLocaleString()}</div>
+                        </td>
+                        <td style="padding: 10px; text-align: center; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #059669;">${f1}</td>
+                        <td style="padding: 10px; text-align: center; border-bottom: 1px solid #e5e7eb;">${precision}</td>
+                        <td style="padding: 10px; text-align: center; border-bottom: 1px solid #e5e7eb;">${recall}</td>
+                        <td style="padding: 10px; text-align: center; border-bottom: 1px solid #e5e7eb;">${exp.total_entries || 0}</td>
+                        <td style="padding: 10px; text-align: center; border-bottom: 1px solid #e5e7eb;">${exp.config?.temperature ?? '-'}</td>
+                    </tr>
+                `;
+            });
+
+            tableHTML += '</tbody></table>';
+
+            // Add deltas section
+            if (deltas && deltas.length > 0) {
+                tableHTML += `<h4 style="margin-top: 20px; color: #374151;">Changes Between Experiments</h4>`;
+                deltas.forEach(delta => {
+                    const f1Change = delta.metrics_delta?.f1?.change || 0;
+                    const f1Pct = delta.metrics_delta?.f1?.change_percent || 0;
+                    const changeColor = f1Change >= 0 ? '#059669' : '#dc2626';
+                    const changeSign = f1Change >= 0 ? '+' : '';
+
+                    tableHTML += `
+                        <div style="background: #f9fafb; padding: 10px; border-radius: 6px; margin-top: 10px;">
+                            <div style="font-size: 0.85em; color: #6b7280;">F1 Score Change:</div>
+                            <div style="font-size: 1.2em; font-weight: 600; color: ${changeColor};">
+                                ${changeSign}${(f1Change * 100).toFixed(2)}% (${changeSign}${f1Pct.toFixed(1)}% relative)
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            content.innerHTML = tableHTML;
+            modal.style.display = 'flex';
+        }
+
+        function closeComparisonModal() {
+            document.getElementById('experiment-comparison-modal').style.display = 'none';
+        }
+
+        async function viewExperimentDetail(expId) {
+            const exp = allExperiments.find(e => e.id === expId);
+            if (!exp) return;
+
+            const modal = document.getElementById('experiment-detail-modal');
+            const content = document.getElementById('experiment-detail-content');
+
+            const metrics = exp.results?.metrics || {};
+            const perLabel = exp.results?.per_label_metrics || {};
+            const config = exp.config || {};
+
+            let html = `
+                <div style="margin-bottom: 20px;">
+                    <input type="text" id="exp-detail-name" value="${exp.name || ''}" style="font-size: 1.1em; font-weight: 600; width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 4px; margin-bottom: 8px;">
+                    <textarea id="exp-detail-desc" placeholder="Add description..." style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 4px; min-height: 60px; font-size: 0.9em;">${exp.description || ''}</textarea>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px;">
+                    <div style="background: #f0fdf4; padding: 12px; border-radius: 6px;">
+                        <div style="font-size: 0.75em; color: #6b7280;">F1 Score</div>
+                        <div style="font-size: 1.5em; font-weight: 600; color: #059669;">${metrics.f1 !== undefined ? (metrics.f1 * 100).toFixed(1) + '%' : '-'}</div>
+                    </div>
+                    <div style="background: #eff6ff; padding: 12px; border-radius: 6px;">
+                        <div style="font-size: 0.75em; color: #6b7280;">Precision / Recall</div>
+                        <div style="font-size: 1.2em; font-weight: 500; color: #2563eb;">
+                            ${metrics.precision !== undefined ? (metrics.precision * 100).toFixed(1) : '-'}% / ${metrics.recall !== undefined ? (metrics.recall * 100).toFixed(1) : '-'}%
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background: #f9fafb; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
+                    <div style="font-weight: 500; margin-bottom: 8px; color: #374151;">Configuration</div>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 0.85em;">
+                        <div><span style="color: #6b7280;">Type:</span> ${exp.experiment_type}</div>
+                        <div><span style="color: #6b7280;">Temperature:</span> ${config.temperature ?? '-'}</div>
+                        <div><span style="color: #6b7280;">Model:</span> ${config.model || '-'}</div>
+                        <div><span style="color: #6b7280;">Entries:</span> ${exp.results?.total_entries || 0}</div>
+                        <div><span style="color: #6b7280;">Duration:</span> ${exp.results?.duration_seconds ? exp.results.duration_seconds.toFixed(1) + 's' : '-'}</div>
+                        <div><span style="color: #6b7280;">Schema:</span> ${config.schema || '-'}</div>
+                    </div>
+                </div>
+            `;
+
+            // Per-label metrics if available
+            if (Object.keys(perLabel).length > 0) {
+                html += `
+                    <div style="background: #faf5ff; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
+                        <div style="font-weight: 500; margin-bottom: 8px; color: #6d28d9;">Per-Label Metrics</div>
+                        <div style="font-size: 0.85em;">
+                `;
+                for (const [label, labelMetrics] of Object.entries(perLabel)) {
+                    html += `
+                        <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #e9d5ff;">
+                            <span style="color: #374151;">${label}</span>
+                            <span>F1: ${labelMetrics.f1 !== undefined ? (labelMetrics.f1 * 100).toFixed(1) + '%' : '-'}</span>
+                        </div>
+                    `;
+                }
+                html += '</div></div>';
+            }
+
+            // Prompt text if available
+            if (config.prompt_text) {
+                html += `
+                    <details style="margin-bottom: 15px;">
+                        <summary style="cursor: pointer; font-weight: 500; color: #374151;">Prompt Used</summary>
+                        <pre style="background: #1f2937; color: #f3f4f6; padding: 12px; border-radius: 6px; font-size: 0.75em; overflow-x: auto; margin-top: 8px; white-space: pre-wrap;">${config.prompt_text}</pre>
+                    </details>
+                `;
+            }
+
+            // Notes
+            html += `
+                <div style="margin-bottom: 15px;">
+                    <div style="font-weight: 500; margin-bottom: 8px; color: #374151;">Notes</div>
+                    <textarea id="exp-detail-notes" placeholder="Add notes about this experiment..." style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 4px; min-height: 80px; font-size: 0.85em;">${exp.notes || ''}</textarea>
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button onclick="saveExperimentDetails('${exp.id}')" style="padding: 8px 16px; background: #8b5cf6; color: white; border: none; border-radius: 4px; cursor: pointer;">Save Changes</button>
+                    <button onclick="closeExperimentDetailModal()" style="padding: 8px 16px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer;">Close</button>
+                </div>
+            `;
+
+            content.innerHTML = html;
+            modal.style.display = 'flex';
+        }
+
+        function closeExperimentDetailModal() {
+            document.getElementById('experiment-detail-modal').style.display = 'none';
+        }
+
+        async function saveExperimentDetails(expId) {
+            const name = document.getElementById('exp-detail-name').value;
+            const description = document.getElementById('exp-detail-desc').value;
+            const notes = document.getElementById('exp-detail-notes').value;
+
+            try {
+                const response = await fetch(`/llm/experiments/${expId}/`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, description, notes })
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    closeExperimentDetailModal();
+                    loadExperiments();
+                } else {
+                    alert('Failed to save: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error saving experiment:', error);
+                alert('Error saving experiment');
+            }
+        }
+
+        async function deleteExperiment(expId) {
+            if (!confirm('Delete this experiment? This cannot be undone.')) return;
+
+            try {
+                const response = await fetch(`/llm/experiments/${expId}/`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    loadExperiments();
+                } else {
+                    alert('Failed to delete: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error deleting experiment:', error);
+                alert('Error deleting experiment');
+            }
+        }
+
+        async function exportExperimentsCSV() {
+            try {
+                const response = await fetch('/llm/experiments-export/');
+                const result = await response.json();
+
+                if (!result.success) {
+                    alert('Export failed: ' + result.error);
+                    return;
+                }
+
+                // Build CSV content
+                const headers = result.headers;
+                const rows = result.rows;
+
+                let csv = headers.join(',') + '\n';
+                rows.forEach(row => {
+                    csv += headers.map(h => {
+                        const val = row[h] || '';
+                        // Escape quotes and wrap in quotes if contains comma
+                        if (String(val).includes(',') || String(val).includes('"')) {
+                            return '"' + String(val).replace(/"/g, '""') + '"';
+                        }
+                        return val;
+                    }).join(',') + '\n';
+                });
+
+                // Download
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `experiments_${new Date().toISOString().split('T')[0]}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('Error exporting experiments:', error);
+                alert('Error exporting experiments');
+            }
+        }
+
+        // Function to log an experiment (called after extraction completes)
+        async function logExperiment(experimentData) {
+            try {
+                const response = await fetch('/llm/experiments/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(experimentData)
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    console.log('Experiment logged:', result.experiment.id);
+                    return result.experiment;
+                } else {
+                    console.error('Failed to log experiment:', result.error);
+                    return null;
+                }
+            } catch (error) {
+                console.error('Error logging experiment:', error);
+                return null;
+            }
+        }
     </script>
 
     <!-- Binary Classification Prompt Editor Modal -->

@@ -5334,3 +5334,278 @@ def delete_ground_truth_relation(request):
         return JsonResponse({'success': False, 'error': 'Invalid JSON in request body'}, status=400)
     except Exception as e:
         return JsonResponse({'success': False, 'error': f'Failed to delete ground truth relation: {str(e)}'}, status=500)
+
+
+# ============ EXPERIMENT LOGGING SYSTEM ============
+
+EXPERIMENTS_FILE = PROJECT_ROOT / "experiments.json"
+
+
+def load_experiments():
+    """Load experiments from JSON file."""
+    if not EXPERIMENTS_FILE.exists():
+        return []
+    try:
+        with open(EXPERIMENTS_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError):
+        return []
+
+
+def save_experiments(experiments):
+    """Save experiments to JSON file."""
+    with open(EXPERIMENTS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(experiments, f, indent=2, ensure_ascii=False)
+
+
+def generate_experiment_id():
+    """Generate a unique experiment ID."""
+    import time
+    return f"exp_{int(time.time() * 1000)}"
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def experiments(request):
+    """List all experiments (GET) or create a new experiment (POST)."""
+    if request.method == "GET":
+        try:
+            all_experiments = load_experiments()
+            # Return sorted by timestamp (newest first)
+            all_experiments.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+            return JsonResponse({'success': True, 'experiments': all_experiments})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+    elif request.method == "POST":
+        try:
+            data = json.loads(request.body) if request.body else {}
+
+            # Required fields
+            experiment_type = data.get('experiment_type')
+            if not experiment_type:
+                return JsonResponse({'success': False, 'error': 'experiment_type is required'}, status=400)
+
+            # Create experiment record
+            experiment = {
+                'id': generate_experiment_id(),
+                'name': data.get('name', f"{experiment_type} - {datetime.now().strftime('%Y-%m-%d %H:%M')}"),
+                'description': data.get('description', ''),
+                'timestamp': datetime.now().isoformat(),
+                'experiment_type': experiment_type,
+                'config': {
+                    'schema': data.get('schema'),
+                    'model': data.get('model'),
+                    'temperature': data.get('temperature', 0),
+                    'prompt_name': data.get('prompt_name'),
+                    'prompt_text': data.get('prompt_text'),
+                },
+                'results': {
+                    'entries_processed': data.get('entries_processed', []),
+                    'total_entries': data.get('total_entries', 0),
+                    'duration_seconds': data.get('duration_seconds'),
+                    'metrics': data.get('metrics', {}),
+                    'per_label_metrics': data.get('per_label_metrics', {}),
+                    'raw_results': data.get('raw_results', {}),
+                },
+                'notes': data.get('notes', ''),
+            }
+
+            # Load existing experiments and append
+            all_experiments = load_experiments()
+            all_experiments.append(experiment)
+            save_experiments(all_experiments)
+
+            return JsonResponse({'success': True, 'experiment': experiment})
+
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Invalid JSON in request body'}, status=400)
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET", "DELETE", "PATCH"])
+def experiment_detail(request, experiment_id):
+    """Get, update, or delete a specific experiment."""
+    try:
+        all_experiments = load_experiments()
+        experiment = None
+        experiment_index = None
+
+        for i, exp in enumerate(all_experiments):
+            if exp.get('id') == experiment_id:
+                experiment = exp
+                experiment_index = i
+                break
+
+        if experiment is None:
+            return JsonResponse({'success': False, 'error': 'Experiment not found'}, status=404)
+
+        if request.method == "GET":
+            return JsonResponse({'success': True, 'experiment': experiment})
+
+        elif request.method == "DELETE":
+            all_experiments.pop(experiment_index)
+            save_experiments(all_experiments)
+            return JsonResponse({'success': True, 'message': 'Experiment deleted'})
+
+        elif request.method == "PATCH":
+            data = json.loads(request.body) if request.body else {}
+
+            # Allow updating name, description, notes
+            if 'name' in data:
+                experiment['name'] = data['name']
+            if 'description' in data:
+                experiment['description'] = data['description']
+            if 'notes' in data:
+                experiment['notes'] = data['notes']
+
+            all_experiments[experiment_index] = experiment
+            save_experiments(all_experiments)
+            return JsonResponse({'success': True, 'experiment': experiment})
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON in request body'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def compare_experiments(request):
+    """Compare two or more experiments side by side."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        experiment_ids = data.get('experiment_ids', [])
+
+        if len(experiment_ids) < 2:
+            return JsonResponse({'success': False, 'error': 'At least 2 experiment IDs required'}, status=400)
+
+        all_experiments = load_experiments()
+        experiments_map = {exp['id']: exp for exp in all_experiments}
+
+        comparison = []
+        for exp_id in experiment_ids:
+            if exp_id in experiments_map:
+                exp = experiments_map[exp_id]
+                comparison.append({
+                    'id': exp['id'],
+                    'name': exp['name'],
+                    'timestamp': exp['timestamp'],
+                    'experiment_type': exp['experiment_type'],
+                    'config': exp['config'],
+                    'metrics': exp['results'].get('metrics', {}),
+                    'per_label_metrics': exp['results'].get('per_label_metrics', {}),
+                    'total_entries': exp['results'].get('total_entries', 0),
+                    'duration_seconds': exp['results'].get('duration_seconds'),
+                })
+            else:
+                comparison.append({'id': exp_id, 'error': 'Not found'})
+
+        # Calculate deltas between consecutive experiments
+        deltas = []
+        for i in range(1, len(comparison)):
+            if 'error' not in comparison[i] and 'error' not in comparison[i-1]:
+                prev_metrics = comparison[i-1].get('metrics', {})
+                curr_metrics = comparison[i].get('metrics', {})
+
+                delta = {
+                    'from': comparison[i-1]['id'],
+                    'to': comparison[i]['id'],
+                    'metrics_delta': {}
+                }
+
+                for key in ['precision', 'recall', 'f1']:
+                    prev_val = prev_metrics.get(key, 0)
+                    curr_val = curr_metrics.get(key, 0)
+                    delta['metrics_delta'][key] = {
+                        'previous': prev_val,
+                        'current': curr_val,
+                        'change': curr_val - prev_val,
+                        'change_percent': ((curr_val - prev_val) / prev_val * 100) if prev_val > 0 else 0
+                    }
+
+                deltas.append(delta)
+
+        return JsonResponse({
+            'success': True,
+            'comparison': comparison,
+            'deltas': deltas
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON in request body'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def export_experiments(request):
+    """Export experiments to CSV format."""
+    try:
+        all_experiments = load_experiments()
+
+        # Build CSV data
+        rows = []
+        headers = [
+            'id', 'name', 'timestamp', 'experiment_type', 'schema', 'model',
+            'temperature', 'prompt_name', 'total_entries', 'duration_seconds',
+            'precision', 'recall', 'f1', 'notes'
+        ]
+
+        for exp in all_experiments:
+            metrics = exp.get('results', {}).get('metrics', {})
+            config = exp.get('config', {})
+            results = exp.get('results', {})
+
+            rows.append({
+                'id': exp.get('id', ''),
+                'name': exp.get('name', ''),
+                'timestamp': exp.get('timestamp', ''),
+                'experiment_type': exp.get('experiment_type', ''),
+                'schema': config.get('schema', ''),
+                'model': config.get('model', ''),
+                'temperature': config.get('temperature', ''),
+                'prompt_name': config.get('prompt_name', ''),
+                'total_entries': results.get('total_entries', ''),
+                'duration_seconds': results.get('duration_seconds', ''),
+                'precision': metrics.get('precision', ''),
+                'recall': metrics.get('recall', ''),
+                'f1': metrics.get('f1', ''),
+                'notes': exp.get('notes', '').replace('\n', ' '),
+            })
+
+        return JsonResponse({
+            'success': True,
+            'headers': headers,
+            'rows': rows,
+            'count': len(rows)
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_experiment_types(request):
+    """Get list of experiment types with counts."""
+    try:
+        all_experiments = load_experiments()
+
+        type_counts = {}
+        for exp in all_experiments:
+            exp_type = exp.get('experiment_type', 'unknown')
+            type_counts[exp_type] = type_counts.get(exp_type, 0) + 1
+
+        return JsonResponse({
+            'success': True,
+            'types': [
+                {'type': t, 'count': c} for t, c in sorted(type_counts.items())
+            ]
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
