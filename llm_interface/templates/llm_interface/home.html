@@ -3806,7 +3806,7 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
             const obsEnd = obsParts.length > 1 ? obsParts[1] : obsStart;
 
             // Get observation text from the report
-            const words = currentReportText ? currentReportText.split(/\s+/) : [];
+            const words = currentReportText ? currentReportText.split(/\s+/).filter(w => w.length > 0) : [];
             const obsText = words.slice(obsStart, obsEnd + 1).join(' ');
 
             // Build annotation object

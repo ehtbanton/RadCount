@@ -2195,9 +2195,9 @@ def extract_observations(request):
         if not prompt_template:
             return JsonResponse({'success': False, 'error': 'No prompt template found'}, status=400)
 
-        # Create indexed report text
+        # Create indexed report text as JSON pairs for clearer LLM parsing
         words = report_text.split()
-        indexed_report = ' '.join([f'[{i}]{word}' for i, word in enumerate(words)])
+        indexed_report = json.dumps([[word, i] for i, word in enumerate(words)])
 
         # Build prompt
         prompt = prompt_template.replace('{indexed_report}', indexed_report)
