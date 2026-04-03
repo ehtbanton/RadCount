@@ -5609,3 +5609,252 @@ def get_experiment_types(request):
 
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# ============================================================
+# App Control Endpoints
+# ============================================================
+
+def get_report_text_from_csv(entry_number):
+    """Helper to get report text from CSV file for a given entry number."""
+    large_data_dir = PROJECT_ROOT / "large_data"
+    if not large_data_dir.exists():
+        return None, "No CSV file found"
+
+    csv_files = list(large_data_dir.glob("*.csv"))
+    if not csv_files:
+        return None, "No CSV file found"
+
+    csv_file = csv_files[0]
+
+    with open(csv_file, 'r', encoding='utf-8') as f:
+        reader = csv.reader(f)
+        headers = next(reader)
+
+        for i, row in enumerate(reader, start=1):
+            if i == entry_number:
+                entry_data = {}
+                for j, header in enumerate(headers):
+                    if j < len(row):
+                        entry_data[header] = row[j]
+                # Try common column names for report text
+                for key in ['Report Text', 'report_text', 'text', 'report', 'content']:
+                    if key in entry_data and entry_data[key]:
+                        return entry_data[key], None
+                return None, f"No report text column found in entry {entry_number}"
+
+    return None, f"Entry {entry_number} not found in CSV"
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def calculate_all_observation_metrics(request):
+    """Calculate observation metrics for all entries with ground truth and save to file."""
+    try:
+        # Load entities data
+        entities_file = PROJECT_ROOT / "entities.json"
+        if not entities_file.exists():
+            return JsonResponse({'success': False, 'error': 'entities.json not found'}, status=404)
+
+        with open(entities_file, 'r', encoding='utf-8') as f:
+            entities_data = json.load(f)
+
+        # Get current configuration
+        current_model = get_current_model() or "unknown"
+
+        prompts_file = PROJECT_ROOT / "extraction_prompts.json"
+        active_prompt = "unknown"
+        if prompts_file.exists():
+            with open(prompts_file, 'r', encoding='utf-8') as f:
+                prompts_data = json.load(f)
+                active_prompt = prompts_data.get('active_prompt', 'unknown')
+
+        # Check if LLM is running (for auto-extraction if needed)
+        llm_service = LlamaService()
+        llm_running = llm_service.is_server_running()
+
+        results = []
+        total_precision = 0
+        total_recall = 0
+        total_f1 = 0
+        entries_processed = 0
+        entries_skipped = []
+
+        for entry in entities_data:
+            entry_number = entry.get('entry')
+
+            # Skip config entry
+            if entry.get('_config'):
+                continue
+
+            ground_truth = entry.get('annotations', [])
+
+            # Skip entries without ground truth
+            if not ground_truth:
+                entries_skipped.append({'entry': entry_number, 'reason': 'no ground truth'})
+                continue
+
+            auto_extracted = entry.get('auto_extracted', [])
+
+            # If no auto_extracted and LLM is running, try to extract
+            if not auto_extracted and llm_running:
+                report_text, error = get_report_text_from_csv(entry_number)
+                if report_text:
+                    # Run extraction via internal call
+                    try:
+                        # Load prompt
+                        if prompts_file.exists():
+                            with open(prompts_file, 'r', encoding='utf-8') as f:
+                                prompts_data = json.load(f)
+                            active_prompt_key = prompts_data.get('active_prompt', 'observation_location')
+                            prompt_template = prompts_data['prompts'].get(active_prompt_key, {}).get('template', '')
+
+                            if prompt_template:
+                                words = report_text.split()
+                                indexed_report = json.dumps([[word, i] for i, word in enumerate(words)])
+                                prompt = prompt_template.replace('{indexed_report}', indexed_report)
+
+                                messages = [{'role': 'user', 'content': prompt}]
+                                response = requests.post(
+                                    f"{llm_service.base_url}/v1/chat/completions",
+                                    headers={'Content-Type': 'application/json'},
+                                    json={'messages': messages, 'temperature': 0.1, 'max_tokens': 4000},
+                                    timeout=180
+                                )
+
+                                if response.status_code == 200:
+                                    result = response.json()
+                                    generated_text = result['choices'][0]['message']['content']
+                                    extraction_result, _ = extract_json_array(generated_text)
+                                    if extraction_result:
+                                        entry['auto_extracted'] = extraction_result
+                                        auto_extracted = extraction_result
+                    except Exception as e:
+                        pass  # Continue with empty auto_extracted
+
+            if not auto_extracted:
+                entries_skipped.append({'entry': entry_number, 'reason': 'no auto_extracted'})
+                continue
+
+            # Calculate metrics
+            gt_observations = set()
+            for annotation in ground_truth:
+                obs = annotation.get('observation', [])
+                for word_pair in obs:
+                    if isinstance(word_pair, list) and len(word_pair) == 2:
+                        word, idx = word_pair
+                        gt_observations.add((word.lower().strip(), idx))
+
+            pred_observations = set()
+            for annotation in auto_extracted:
+                obs = annotation.get('observation', [])
+                for word_pair in obs:
+                    if isinstance(word_pair, list) and len(word_pair) == 2:
+                        word, idx = word_pair
+                        pred_observations.add((word.lower().strip(), idx))
+
+            true_positives = len(gt_observations & pred_observations)
+            false_positives = len(pred_observations - gt_observations)
+            false_negatives = len(gt_observations - pred_observations)
+
+            precision = true_positives / (true_positives + false_positives) if (true_positives + false_positives) > 0 else 0
+            recall = true_positives / (true_positives + false_negatives) if (true_positives + false_negatives) > 0 else 0
+            f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+
+            results.append({
+                'entry': entry_number,
+                'precision': round(precision, 4),
+                'recall': round(recall, 4),
+                'f1': round(f1, 4)
+            })
+
+            total_precision += precision
+            total_recall += recall
+            total_f1 += f1
+            entries_processed += 1
+
+        # Calculate averages
+        avg_precision = total_precision / entries_processed if entries_processed > 0 else 0
+        avg_recall = total_recall / entries_processed if entries_processed > 0 else 0
+        avg_f1 = total_f1 / entries_processed if entries_processed > 0 else 0
+
+        # Save updated entities.json if any extractions were performed
+        with open(entities_file, 'w', encoding='utf-8') as f:
+            json.dump(entities_data, f, indent=2)
+
+        # Save results to file
+        app_control_dir = PROJECT_ROOT / "app_control"
+        app_control_dir.mkdir(exist_ok=True)
+        results_file = app_control_dir / "latest_results.txt"
+
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        with open(results_file, 'w', encoding='utf-8') as f:
+            f.write("# MedLint Test Results\n")
+            f.write(f"# Generated: {timestamp}\n")
+            f.write(f"# Model: {current_model}\n")
+            f.write(f"# Prompt: {active_prompt}\n")
+            f.write(f"# Entries processed: {entries_processed}\n")
+            f.write(f"# Entries skipped: {len(entries_skipped)}\n")
+            f.write("\n")
+            f.write("| Entry | Precision | Recall | F1 |\n")
+            f.write("|-------|-----------|--------|------|\n")
+
+            for r in results:
+                f.write(f"| {r['entry']:5} | {r['precision']:.4f}    | {r['recall']:.4f} | {r['f1']:.4f} |\n")
+
+            f.write(f"| Avg   | {avg_precision:.4f}    | {avg_recall:.4f} | {avg_f1:.4f} |\n")
+
+        return JsonResponse({
+            'success': True,
+            'results': results,
+            'averages': {
+                'precision': round(avg_precision, 4),
+                'recall': round(avg_recall, 4),
+                'f1': round(avg_f1, 4)
+            },
+            'entries_processed': entries_processed,
+            'entries_skipped': entries_skipped,
+            'results_file': str(results_file)
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def get_binary_classification_config(request):
+    """Get full binary classification configuration including prompt, labels, and file path."""
+    try:
+        prompts_file = get_binary_classification_prompts_file()
+
+        if not prompts_file.exists():
+            return JsonResponse({
+                'success': True,
+                'active_prompt': None,
+                'labels': {},
+                'template': load_binary_classification_prompt().get('template', ''),
+                'file_path': str(prompts_file),
+                'message': 'Using default template. Edit binary_classification_prompts.json to customize.'
+            })
+
+        with open(prompts_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        active_prompt_key = data.get('active_prompt', 'baseline')
+        prompts = data.get('prompts', {})
+        active_prompt_data = prompts.get(active_prompt_key, {})
+
+        return JsonResponse({
+            'success': True,
+            'active_prompt': active_prompt_key,
+            'labels': active_prompt_data.get('labels', {}),
+            'template': active_prompt_data.get('template', ''),
+            'prompt_name': active_prompt_data.get('name', ''),
+            'prompt_description': active_prompt_data.get('description', ''),
+            'available_prompts': list(prompts.keys()),
+            'file_path': str(prompts_file)
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

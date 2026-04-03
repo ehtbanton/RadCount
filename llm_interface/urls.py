@@ -84,4 +84,7 @@ urlpatterns = [
     path('experiments-compare/', views.compare_experiments, name='compare_experiments'),
     path('experiments-export/', views.export_experiments, name='export_experiments'),
     path('experiment-types/', views.get_experiment_types, name='get_experiment_types'),
+    # App Control
+    path('calculate-all-observation-metrics/', views.calculate_all_observation_metrics, name='calculate_all_observation_metrics'),
+    path('get-binary-classification-config/', views.get_binary_classification_config, name='get_binary_classification_config'),
 ]
