@@ -596,11 +596,11 @@
                         Entities & Relations
                     </button>
                     <button
-                        id="schema-tab-experiments"
-                        onclick="switchAnnotationSchema('experiments')"
+                        id="schema-tab-tests"
+                        onclick="switchAnnotationSchema('tests')"
                         style="padding: 6px 14px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; cursor: pointer; font-size: 0.85em; font-weight: 400; margin-bottom: -12px;"
                     >
-                        📊 Experiments
+                        📊 Tests
                     </button>
                 </div>
 
@@ -1021,21 +1021,21 @@
                     </div>
                 </div><!-- End schema-content-entities -->
 
-                <!-- Experiments Schema Content -->
-                <div id="schema-content-experiments" style="display: none;">
+                <!-- Tests Schema Content -->
+                <div id="schema-content-tests" style="display: none;">
                     <!-- Header with actions -->
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <div style="font-weight: 600; color: #374151; font-size: 1em;">Experiment Log</div>
+                        <div style="font-weight: 600; color: #374151; font-size: 1em;">Test Log</div>
                         <div style="display: flex; gap: 8px;">
                             <button
-                                onclick="exportExperimentsCSV()"
+                                onclick="exportTestsCSV()"
                                 style="padding: 6px 12px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;"
-                                title="Export experiments to CSV"
+                                title="Export tests to CSV"
                             >
                                 Export CSV
                             </button>
                             <button
-                                onclick="refreshExperiments()"
+                                onclick="refreshTests()"
                                 style="padding: 6px 12px; background: #6366f1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;"
                             >
                                 Refresh
@@ -1043,36 +1043,36 @@
                         </div>
                     </div>
 
-                    <!-- Experiment Type Filter -->
+                    <!-- Test Type Filter -->
                     <div style="display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap;">
                         <button
-                            class="exp-filter-btn active"
+                            class="test-filter-btn active"
                             data-filter="all"
-                            onclick="filterExperiments('all')"
+                            onclick="filterTests('all')"
                             style="padding: 4px 10px; background: #8b5cf6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75em;"
                         >
                             All
                         </button>
                         <button
-                            class="exp-filter-btn"
+                            class="test-filter-btn"
                             data-filter="binary_classification"
-                            onclick="filterExperiments('binary_classification')"
+                            onclick="filterTests('binary_classification')"
                             style="padding: 4px 10px; background: #e5e7eb; color: #374151; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75em;"
                         >
                             Binary Classification
                         </button>
                         <button
-                            class="exp-filter-btn"
+                            class="test-filter-btn"
                             data-filter="entity_extraction"
-                            onclick="filterExperiments('entity_extraction')"
+                            onclick="filterTests('entity_extraction')"
                             style="padding: 4px 10px; background: #e5e7eb; color: #374151; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75em;"
                         >
                             Entity Extraction
                         </button>
                         <button
-                            class="exp-filter-btn"
+                            class="test-filter-btn"
                             data-filter="observation_extraction"
-                            onclick="filterExperiments('observation_extraction')"
+                            onclick="filterTests('observation_extraction')"
                             style="padding: 4px 10px; background: #e5e7eb; color: #374151; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75em;"
                         >
                             Observations
@@ -1080,20 +1080,20 @@
                     </div>
 
                     <!-- Comparison Selection -->
-                    <div id="experiment-compare-bar" style="display: none; background: #fef3c7; padding: 10px; border-radius: 6px; margin-bottom: 15px;">
+                    <div id="test-compare-bar" style="display: none; background: #fef3c7; padding: 10px; border-radius: 6px; margin-bottom: 15px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <span style="font-size: 0.85em; color: #92400e;">
-                                <span id="compare-count">0</span> experiments selected for comparison
+                                <span id="compare-count">0</span> tests selected for comparison
                             </span>
                             <div style="display: flex; gap: 8px;">
                                 <button
-                                    onclick="compareSelectedExperiments()"
+                                    onclick="compareSelectedTests()"
                                     style="padding: 4px 10px; background: #f59e0b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;"
                                 >
                                     Compare
                                 </button>
                                 <button
-                                    onclick="clearExperimentSelection()"
+                                    onclick="clearTestSelection()"
                                     style="padding: 4px 10px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;"
                                 >
                                     Clear
@@ -1102,18 +1102,18 @@
                         </div>
                     </div>
 
-                    <!-- Experiments List -->
-                    <div id="experiments-list" style="display: flex; flex-direction: column; gap: 10px; max-height: calc(100vh - 400px); overflow-y: auto;">
+                    <!-- Tests List -->
+                    <div id="tests-list" style="display: flex; flex-direction: column; gap: 10px; max-height: calc(100vh - 400px); overflow-y: auto;">
                         <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 20px;">
-                            Loading experiments...
+                            Loading tests...
                         </div>
                     </div>
 
                     <!-- Comparison Results Modal -->
-                    <div id="experiment-comparison-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+                    <div id="test-comparison-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
                         <div style="background: white; border-radius: 12px; padding: 24px; max-width: 900px; width: 90%; max-height: 80vh; overflow-y: auto;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                                <h3 style="margin: 0; color: #374151;">Experiment Comparison</h3>
+                                <h3 style="margin: 0; color: #374151;">Test Comparison</h3>
                                 <button onclick="closeComparisonModal()" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: #6b7280;">&times;</button>
                             </div>
                             <div id="comparison-content">
@@ -1122,19 +1122,19 @@
                         </div>
                     </div>
 
-                    <!-- Experiment Detail Modal -->
-                    <div id="experiment-detail-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+                    <!-- Test Detail Modal -->
+                    <div id="test-detail-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
                         <div style="background: white; border-radius: 12px; padding: 24px; max-width: 700px; width: 90%; max-height: 80vh; overflow-y: auto;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                                <h3 style="margin: 0; color: #374151;">Experiment Details</h3>
-                                <button onclick="closeExperimentDetailModal()" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: #6b7280;">&times;</button>
+                                <h3 style="margin: 0; color: #374151;">Test Details</h3>
+                                <button onclick="closeTestDetailModal()" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: #6b7280;">&times;</button>
                             </div>
-                            <div id="experiment-detail-content">
-                                <!-- Experiment details will be rendered here -->
+                            <div id="test-detail-content">
+                                <!-- Test details will be rendered here -->
                             </div>
                         </div>
                     </div>
-                </div><!-- End schema-content-experiments -->
+                </div><!-- End schema-content-tests -->
             </div>
         </div>
     </div>
@@ -2515,10 +2515,10 @@
             const tripletsTab = document.getElementById('schema-tab-triplets');
             const observationsTab = document.getElementById('schema-tab-observations');
             const entitiesTab = document.getElementById('schema-tab-entities');
-            const experimentsTab = document.getElementById('schema-tab-experiments');
+            const testsTab = document.getElementById('schema-tab-tests');
 
             // Reset all tabs to inactive
-            [binaryTab, tripletsTab, observationsTab, entitiesTab, experimentsTab].forEach(tab => {
+            [binaryTab, tripletsTab, observationsTab, entitiesTab, testsTab].forEach(tab => {
                 if (tab) {
                     tab.style.borderBottom = '2px solid transparent';
                     tab.style.color = '#6b7280';
@@ -2531,7 +2531,7 @@
             document.getElementById('schema-content-triplets').style.display = 'none';
             document.getElementById('schema-content-observations').style.display = 'none';
             document.getElementById('schema-content-entities').style.display = 'none';
-            document.getElementById('schema-content-experiments').style.display = 'none';
+            document.getElementById('schema-content-tests').style.display = 'none';
 
             // Activate selected tab
             if (schemaName === 'binary') {
@@ -2560,12 +2560,12 @@
                 loadERSchemas();
                 renderERGroundTruthEntities();
                 renderERGroundTruthRelations();
-            } else if (schemaName === 'experiments') {
-                experimentsTab.style.borderBottom = '2px solid #f59e0b';
-                experimentsTab.style.color = '#f59e0b';
-                experimentsTab.style.fontWeight = '500';
-                document.getElementById('schema-content-experiments').style.display = 'block';
-                loadExperiments();
+            } else if (schemaName === 'tests') {
+                testsTab.style.borderBottom = '2px solid #f59e0b';
+                testsTab.style.color = '#f59e0b';
+                testsTab.style.fontWeight = '500';
+                document.getElementById('schema-content-tests').style.display = 'block';
+                loadTests();
             }
         }
 
@@ -3018,7 +3018,7 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
         }
 
         // Calculate binary classification metrics across all reports with ground truth
-        // Store last calculated metrics for experiment logging
+        // Store last calculated metrics for test logging
         let lastBinaryMetricsData = null;
 
         async function calculateBinaryMetrics() {
@@ -3323,10 +3323,10 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
                 </details>
 
                 <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb; display: flex; gap: 10px; align-items: center;">
-                    <button onclick="logBinaryClassificationExperiment()" style="padding: 8px 16px; background: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 500;">
-                        📊 Log Experiment
+                    <button onclick="logBinaryClassificationTest()" style="padding: 8px 16px; background: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 500;">
+                        📊 Log Test
                     </button>
-                    <span style="font-size: 0.8em; color: #6b7280;">Save these results to your experiment history</span>
+                    <span style="font-size: 0.8em; color: #6b7280;">Save these results to your test history</span>
                 </div>
             `;
 
@@ -3350,7 +3350,7 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
 
             // Store metrics data for potential logging
             lastBinaryMetricsData = {
-                experiment_type: 'binary_classification',
+                test_type: 'binary_classification',
                 temperature: temperature,
                 model: document.getElementById('model-select')?.value || 'unknown',
                 entries_processed: successful,
@@ -3379,7 +3379,7 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
             binaryMetricsRunning = false;
         }
 
-        async function logBinaryClassificationExperiment() {
+        async function logBinaryClassificationTest() {
             if (!lastBinaryMetricsData) {
                 alert('No metrics data available. Run "Calculate Metrics" first.');
                 return;
@@ -3397,26 +3397,26 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
                 console.warn('Could not fetch prompt text:', e);
             }
 
-            // Prompt for experiment name
+            // Prompt for test name
             const defaultName = `Binary Classification - ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`;
-            const expName = prompt('Enter a name for this experiment:', defaultName);
-            if (!expName) return; // User cancelled
+            const testName = prompt('Enter a name for this test:', defaultName);
+            if (!testName) return; // User cancelled
 
-            const expDescription = prompt('Enter a description (optional):', '');
+            const testDescription = prompt('Enter a description (optional):', '');
 
-            const experimentData = {
+            const testData = {
                 ...lastBinaryMetricsData,
-                name: expName,
-                description: expDescription || '',
+                name: testName,
+                description: testDescription || '',
                 prompt_text: promptText,
                 prompt_name: 'binary_classification'
             };
 
-            const result = await logExperiment(experimentData);
+            const result = await logTest(testData);
             if (result) {
-                alert(`Experiment logged successfully!\nID: ${result.id}\n\nView it in the Experiments tab.`);
+                alert(`Test logged successfully!\nID: ${result.id}\n\nView it in the Tests tab.`);
             } else {
-                alert('Failed to log experiment. Check console for details.');
+                alert('Failed to log test. Check console for details.');
             }
         }
 
@@ -8739,8 +8739,8 @@ Respond with ONLY a valid JSON array. No explanations.`;
                     clearWordSelection();
                 }
 
-                // Ctrl+Left/Right arrow to navigate between reports
-                if (e.ctrlKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+                // Left/Right arrow to navigate between reports
+                if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
                     e.preventDefault();
                     const entryInput = document.getElementById('entry-number');
                     if (!entryInput) return;
@@ -8777,36 +8777,36 @@ Respond with ONLY a valid JSON array. No explanations.`;
             console.log('Initialization complete');
         });
 
-        // ===== Experiment Logging Functions =====
+        // ===== Test Logging Functions =====
 
-        let allExperiments = [];
-        let selectedExperimentIds = [];
-        let currentExperimentFilter = 'all';
+        let allTests = [];
+        let selectedTestIds = [];
+        let currentTestFilter = 'all';
 
-        async function loadExperiments() {
+        async function loadTests() {
             try {
-                const response = await fetch('/llm/experiments/');
+                const response = await fetch('/llm/tests/');
                 const result = await response.json();
                 if (result.success) {
-                    allExperiments = result.experiments;
-                    renderExperimentsList();
+                    allTests = result.tests;
+                    renderTestsList();
                 } else {
-                    console.error('Failed to load experiments:', result.error);
+                    console.error('Failed to load tests:', result.error);
                 }
             } catch (error) {
-                console.error('Error loading experiments:', error);
+                console.error('Error loading tests:', error);
             }
         }
 
-        function refreshExperiments() {
-            loadExperiments();
+        function refreshTests() {
+            loadTests();
         }
 
-        function filterExperiments(filterType) {
-            currentExperimentFilter = filterType;
+        function filterTests(filterType) {
+            currentTestFilter = filterType;
 
             // Update filter button styles
-            document.querySelectorAll('.exp-filter-btn').forEach(btn => {
+            document.querySelectorAll('.test-filter-btn').forEach(btn => {
                 if (btn.dataset.filter === filterType) {
                     btn.style.background = '#8b5cf6';
                     btn.style.color = 'white';
@@ -8816,60 +8816,60 @@ Respond with ONLY a valid JSON array. No explanations.`;
                 }
             });
 
-            renderExperimentsList();
+            renderTestsList();
         }
 
-        function renderExperimentsList() {
-            const container = document.getElementById('experiments-list');
-            let filteredExperiments = allExperiments;
+        function renderTestsList() {
+            const container = document.getElementById('tests-list');
+            let filteredTests = allTests;
 
-            if (currentExperimentFilter !== 'all') {
-                filteredExperiments = allExperiments.filter(exp => exp.experiment_type === currentExperimentFilter);
+            if (currentTestFilter !== 'all') {
+                filteredTests = allTests.filter(t => t.test_type === currentTestFilter);
             }
 
-            if (filteredExperiments.length === 0) {
+            if (filteredTests.length === 0) {
                 container.innerHTML = `
                     <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 40px;">
                         <div style="font-size: 2em; margin-bottom: 10px;">📊</div>
-                        <div>No experiments logged yet.</div>
-                        <div style="margin-top: 10px; font-size: 0.9em;">Run extractions with "Log Experiment" enabled to start tracking.</div>
+                        <div>No tests logged yet.</div>
+                        <div style="margin-top: 10px; font-size: 0.9em;">Run extractions with "Log Test" enabled to start tracking.</div>
                     </div>
                 `;
                 return;
             }
 
-            container.innerHTML = filteredExperiments.map(exp => {
-                const metrics = exp.results?.metrics || {};
-                const config = exp.config || {};
-                const isSelected = selectedExperimentIds.includes(exp.id);
-                const timestamp = new Date(exp.timestamp).toLocaleString();
+            container.innerHTML = filteredTests.map(t => {
+                const metrics = t.results?.metrics || {};
+                const config = t.config || {};
+                const isSelected = selectedTestIds.includes(t.id);
+                const timestamp = new Date(t.timestamp).toLocaleString();
 
                 const f1Display = metrics.f1 !== undefined ? (metrics.f1 * 100).toFixed(1) + '%' : '-';
                 const precisionDisplay = metrics.precision !== undefined ? (metrics.precision * 100).toFixed(1) + '%' : '-';
                 const recallDisplay = metrics.recall !== undefined ? (metrics.recall * 100).toFixed(1) + '%' : '-';
 
                 return `
-                    <div class="experiment-card" style="background: ${isSelected ? '#fef3c7' : '#f9fafb'}; border: 1px solid ${isSelected ? '#f59e0b' : '#e5e7eb'}; border-radius: 8px; padding: 12px;">
+                    <div class="test-card" style="background: ${isSelected ? '#fef3c7' : '#f9fafb'}; border: 1px solid ${isSelected ? '#f59e0b' : '#e5e7eb'}; border-radius: 8px; padding: 12px;">
                         <div style="display: flex; justify-content: space-between; align-items: start;">
                             <div style="flex: 1;">
                                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-                                    <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleExperimentSelection('${exp.id}')" style="cursor: pointer;">
-                                    <span style="font-weight: 600; color: #374151; font-size: 0.9em;">${exp.name || 'Unnamed'}</span>
-                                    <span style="background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 4px; font-size: 0.7em;">${exp.experiment_type}</span>
+                                    <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleTestSelection('${t.id}')" style="cursor: pointer;">
+                                    <span style="font-weight: 600; color: #374151; font-size: 0.9em;">${t.name || 'Unnamed'}</span>
+                                    <span style="background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 4px; font-size: 0.7em;">${t.test_type}</span>
                                 </div>
                                 <div style="font-size: 0.75em; color: #6b7280; margin-bottom: 8px;">${timestamp}</div>
-                                ${exp.description ? `<div style="font-size: 0.8em; color: #4b5563; margin-bottom: 8px;">${exp.description}</div>` : ''}
+                                ${t.description ? `<div style="font-size: 0.8em; color: #4b5563; margin-bottom: 8px;">${t.description}</div>` : ''}
                                 <div style="display: flex; gap: 16px; font-size: 0.8em;">
                                     <div><span style="color: #6b7280;">F1:</span> <span style="font-weight: 600; color: #059669;">${f1Display}</span></div>
                                     <div><span style="color: #6b7280;">P:</span> <span style="color: #374151;">${precisionDisplay}</span></div>
                                     <div><span style="color: #6b7280;">R:</span> <span style="color: #374151;">${recallDisplay}</span></div>
-                                    <div><span style="color: #6b7280;">Entries:</span> <span style="color: #374151;">${exp.results?.total_entries || 0}</span></div>
+                                    <div><span style="color: #6b7280;">Entries:</span> <span style="color: #374151;">${t.results?.total_entries || 0}</span></div>
                                     ${config.temperature !== undefined ? `<div><span style="color: #6b7280;">T:</span> <span style="color: #374151;">${config.temperature}</span></div>` : ''}
                                 </div>
                             </div>
                             <div style="display: flex; gap: 4px;">
-                                <button onclick="viewExperimentDetail('${exp.id}')" style="padding: 4px 8px; background: #6366f1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75em;" title="View details">View</button>
-                                <button onclick="deleteExperiment('${exp.id}')" style="padding: 4px 8px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75em;" title="Delete">&times;</button>
+                                <button onclick="viewTestDetail('${t.id}')" style="padding: 4px 8px; background: #6366f1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75em;" title="View details">View</button>
+                                <button onclick="deleteTest('${t.id}')" style="padding: 4px 8px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75em;" title="Delete">&times;</button>
                             </div>
                         </div>
                     </div>
@@ -8877,43 +8877,43 @@ Respond with ONLY a valid JSON array. No explanations.`;
             }).join('');
         }
 
-        function toggleExperimentSelection(expId) {
-            const idx = selectedExperimentIds.indexOf(expId);
+        function toggleTestSelection(testId) {
+            const idx = selectedTestIds.indexOf(testId);
             if (idx >= 0) {
-                selectedExperimentIds.splice(idx, 1);
+                selectedTestIds.splice(idx, 1);
             } else {
-                selectedExperimentIds.push(expId);
+                selectedTestIds.push(testId);
             }
 
             // Update compare bar visibility
-            const compareBar = document.getElementById('experiment-compare-bar');
-            if (selectedExperimentIds.length >= 2) {
+            const compareBar = document.getElementById('test-compare-bar');
+            if (selectedTestIds.length >= 2) {
                 compareBar.style.display = 'block';
-                document.getElementById('compare-count').textContent = selectedExperimentIds.length;
+                document.getElementById('compare-count').textContent = selectedTestIds.length;
             } else {
                 compareBar.style.display = 'none';
             }
 
-            renderExperimentsList();
+            renderTestsList();
         }
 
-        function clearExperimentSelection() {
-            selectedExperimentIds = [];
-            document.getElementById('experiment-compare-bar').style.display = 'none';
-            renderExperimentsList();
+        function clearTestSelection() {
+            selectedTestIds = [];
+            document.getElementById('test-compare-bar').style.display = 'none';
+            renderTestsList();
         }
 
-        async function compareSelectedExperiments() {
-            if (selectedExperimentIds.length < 2) {
-                alert('Select at least 2 experiments to compare');
+        async function compareSelectedTests() {
+            if (selectedTestIds.length < 2) {
+                alert('Select at least 2 tests to compare');
                 return;
             }
 
             try {
-                const response = await fetch('/llm/experiments-compare/', {
+                const response = await fetch('/llm/tests-compare/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ experiment_ids: selectedExperimentIds })
+                    body: JSON.stringify({ test_ids: selectedTestIds })
                 });
                 const result = await response.json();
 
@@ -8923,13 +8923,13 @@ Respond with ONLY a valid JSON array. No explanations.`;
                     alert('Comparison failed: ' + result.error);
                 }
             } catch (error) {
-                console.error('Error comparing experiments:', error);
-                alert('Error comparing experiments');
+                console.error('Error comparing tests:', error);
+                alert('Error comparing tests');
             }
         }
 
         function renderComparisonModal(comparison, deltas) {
-            const modal = document.getElementById('experiment-comparison-modal');
+            const modal = document.getElementById('test-comparison-modal');
             const content = document.getElementById('comparison-content');
 
             // Build comparison table
@@ -8937,7 +8937,7 @@ Respond with ONLY a valid JSON array. No explanations.`;
                 <table style="width: 100%; border-collapse: collapse; font-size: 0.85em;">
                     <thead>
                         <tr style="background: #f3f4f6;">
-                            <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e5e7eb;">Experiment</th>
+                            <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e5e7eb;">Test</th>
                             <th style="padding: 10px; text-align: center; border-bottom: 2px solid #e5e7eb;">F1</th>
                             <th style="padding: 10px; text-align: center; border-bottom: 2px solid #e5e7eb;">Precision</th>
                             <th style="padding: 10px; text-align: center; border-bottom: 2px solid #e5e7eb;">Recall</th>
@@ -8948,8 +8948,8 @@ Respond with ONLY a valid JSON array. No explanations.`;
                     <tbody>
             `;
 
-            comparison.forEach((exp, idx) => {
-                const metrics = exp.metrics || {};
+            comparison.forEach((t, idx) => {
+                const metrics = t.metrics || {};
                 const f1 = metrics.f1 !== undefined ? (metrics.f1 * 100).toFixed(1) + '%' : '-';
                 const precision = metrics.precision !== undefined ? (metrics.precision * 100).toFixed(1) + '%' : '-';
                 const recall = metrics.recall !== undefined ? (metrics.recall * 100).toFixed(1) + '%' : '-';
@@ -8957,14 +8957,14 @@ Respond with ONLY a valid JSON array. No explanations.`;
                 tableHTML += `
                     <tr>
                         <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">
-                            <div style="font-weight: 500;">${exp.name || exp.id}</div>
-                            <div style="font-size: 0.8em; color: #6b7280;">${new Date(exp.timestamp).toLocaleString()}</div>
+                            <div style="font-weight: 500;">${t.name || t.id}</div>
+                            <div style="font-size: 0.8em; color: #6b7280;">${new Date(t.timestamp).toLocaleString()}</div>
                         </td>
                         <td style="padding: 10px; text-align: center; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #059669;">${f1}</td>
                         <td style="padding: 10px; text-align: center; border-bottom: 1px solid #e5e7eb;">${precision}</td>
                         <td style="padding: 10px; text-align: center; border-bottom: 1px solid #e5e7eb;">${recall}</td>
-                        <td style="padding: 10px; text-align: center; border-bottom: 1px solid #e5e7eb;">${exp.total_entries || 0}</td>
-                        <td style="padding: 10px; text-align: center; border-bottom: 1px solid #e5e7eb;">${exp.config?.temperature ?? '-'}</td>
+                        <td style="padding: 10px; text-align: center; border-bottom: 1px solid #e5e7eb;">${t.total_entries || 0}</td>
+                        <td style="padding: 10px; text-align: center; border-bottom: 1px solid #e5e7eb;">${t.config?.temperature ?? '-'}</td>
                     </tr>
                 `;
             });
@@ -8973,7 +8973,7 @@ Respond with ONLY a valid JSON array. No explanations.`;
 
             // Add deltas section
             if (deltas && deltas.length > 0) {
-                tableHTML += `<h4 style="margin-top: 20px; color: #374151;">Changes Between Experiments</h4>`;
+                tableHTML += `<h4 style="margin-top: 20px; color: #374151;">Changes Between Tests</h4>`;
                 deltas.forEach(delta => {
                     const f1Change = delta.metrics_delta?.f1?.change || 0;
                     const f1Pct = delta.metrics_delta?.f1?.change_percent || 0;
@@ -8996,24 +8996,24 @@ Respond with ONLY a valid JSON array. No explanations.`;
         }
 
         function closeComparisonModal() {
-            document.getElementById('experiment-comparison-modal').style.display = 'none';
+            document.getElementById('test-comparison-modal').style.display = 'none';
         }
 
-        async function viewExperimentDetail(expId) {
-            const exp = allExperiments.find(e => e.id === expId);
-            if (!exp) return;
+        async function viewTestDetail(testId) {
+            const t = allTests.find(e => e.id === testId);
+            if (!t) return;
 
-            const modal = document.getElementById('experiment-detail-modal');
-            const content = document.getElementById('experiment-detail-content');
+            const modal = document.getElementById('test-detail-modal');
+            const content = document.getElementById('test-detail-content');
 
-            const metrics = exp.results?.metrics || {};
-            const perLabel = exp.results?.per_label_metrics || {};
-            const config = exp.config || {};
+            const metrics = t.results?.metrics || {};
+            const perLabel = t.results?.per_label_metrics || {};
+            const config = t.config || {};
 
             let html = `
                 <div style="margin-bottom: 20px;">
-                    <input type="text" id="exp-detail-name" value="${exp.name || ''}" style="font-size: 1.1em; font-weight: 600; width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 4px; margin-bottom: 8px;">
-                    <textarea id="exp-detail-desc" placeholder="Add description..." style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 4px; min-height: 60px; font-size: 0.9em;">${exp.description || ''}</textarea>
+                    <input type="text" id="test-detail-name" value="${t.name || ''}" style="font-size: 1.1em; font-weight: 600; width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 4px; margin-bottom: 8px;">
+                    <textarea id="test-detail-desc" placeholder="Add description..." style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 4px; min-height: 60px; font-size: 0.9em;">${t.description || ''}</textarea>
                 </div>
 
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px;">
@@ -9032,11 +9032,11 @@ Respond with ONLY a valid JSON array. No explanations.`;
                 <div style="background: #f9fafb; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
                     <div style="font-weight: 500; margin-bottom: 8px; color: #374151;">Configuration</div>
                     <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 0.85em;">
-                        <div><span style="color: #6b7280;">Type:</span> ${exp.experiment_type}</div>
+                        <div><span style="color: #6b7280;">Type:</span> ${t.test_type}</div>
                         <div><span style="color: #6b7280;">Temperature:</span> ${config.temperature ?? '-'}</div>
                         <div><span style="color: #6b7280;">Model:</span> ${config.model || '-'}</div>
-                        <div><span style="color: #6b7280;">Entries:</span> ${exp.results?.total_entries || 0}</div>
-                        <div><span style="color: #6b7280;">Duration:</span> ${exp.results?.duration_seconds ? exp.results.duration_seconds.toFixed(1) + 's' : '-'}</div>
+                        <div><span style="color: #6b7280;">Entries:</span> ${t.results?.total_entries || 0}</div>
+                        <div><span style="color: #6b7280;">Duration:</span> ${t.results?.duration_seconds ? t.results.duration_seconds.toFixed(1) + 's' : '-'}</div>
                         <div><span style="color: #6b7280;">Schema:</span> ${config.schema || '-'}</div>
                     </div>
                 </div>
@@ -9074,12 +9074,12 @@ Respond with ONLY a valid JSON array. No explanations.`;
             html += `
                 <div style="margin-bottom: 15px;">
                     <div style="font-weight: 500; margin-bottom: 8px; color: #374151;">Notes</div>
-                    <textarea id="exp-detail-notes" placeholder="Add notes about this experiment..." style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 4px; min-height: 80px; font-size: 0.85em;">${exp.notes || ''}</textarea>
+                    <textarea id="test-detail-notes" placeholder="Add notes about this test..." style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 4px; min-height: 80px; font-size: 0.85em;">${t.notes || ''}</textarea>
                 </div>
 
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                    <button onclick="saveExperimentDetails('${exp.id}')" style="padding: 8px 16px; background: #8b5cf6; color: white; border: none; border-radius: 4px; cursor: pointer;">Save Changes</button>
-                    <button onclick="closeExperimentDetailModal()" style="padding: 8px 16px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer;">Close</button>
+                    <button onclick="saveTestDetails('${t.id}')" style="padding: 8px 16px; background: #8b5cf6; color: white; border: none; border-radius: 4px; cursor: pointer;">Save Changes</button>
+                    <button onclick="closeTestDetailModal()" style="padding: 8px 16px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer;">Close</button>
                 </div>
             `;
 
@@ -9087,17 +9087,17 @@ Respond with ONLY a valid JSON array. No explanations.`;
             modal.style.display = 'flex';
         }
 
-        function closeExperimentDetailModal() {
-            document.getElementById('experiment-detail-modal').style.display = 'none';
+        function closeTestDetailModal() {
+            document.getElementById('test-detail-modal').style.display = 'none';
         }
 
-        async function saveExperimentDetails(expId) {
-            const name = document.getElementById('exp-detail-name').value;
-            const description = document.getElementById('exp-detail-desc').value;
-            const notes = document.getElementById('exp-detail-notes').value;
+        async function saveTestDetails(testId) {
+            const name = document.getElementById('test-detail-name').value;
+            const description = document.getElementById('test-detail-desc').value;
+            const notes = document.getElementById('test-detail-notes').value;
 
             try {
-                const response = await fetch(`/llm/experiments/${expId}/`, {
+                const response = await fetch(`/llm/tests/${testId}/`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, description, notes })
@@ -9105,40 +9105,40 @@ Respond with ONLY a valid JSON array. No explanations.`;
                 const result = await response.json();
 
                 if (result.success) {
-                    closeExperimentDetailModal();
-                    loadExperiments();
+                    closeTestDetailModal();
+                    loadTests();
                 } else {
                     alert('Failed to save: ' + result.error);
                 }
             } catch (error) {
-                console.error('Error saving experiment:', error);
-                alert('Error saving experiment');
+                console.error('Error saving test:', error);
+                alert('Error saving test');
             }
         }
 
-        async function deleteExperiment(expId) {
-            if (!confirm('Delete this experiment? This cannot be undone.')) return;
+        async function deleteTest(testId) {
+            if (!confirm('Delete this test? This cannot be undone.')) return;
 
             try {
-                const response = await fetch(`/llm/experiments/${expId}/`, {
+                const response = await fetch(`/llm/tests/${testId}/`, {
                     method: 'DELETE'
                 });
                 const result = await response.json();
 
                 if (result.success) {
-                    loadExperiments();
+                    loadTests();
                 } else {
                     alert('Failed to delete: ' + result.error);
                 }
             } catch (error) {
-                console.error('Error deleting experiment:', error);
-                alert('Error deleting experiment');
+                console.error('Error deleting test:', error);
+                alert('Error deleting test');
             }
         }
 
-        async function exportExperimentsCSV() {
+        async function exportTestsCSV() {
             try {
-                const response = await fetch('/llm/experiments-export/');
+                const response = await fetch('/llm/tests-export/');
                 const result = await response.json();
 
                 if (!result.success) {
@@ -9167,34 +9167,34 @@ Respond with ONLY a valid JSON array. No explanations.`;
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `experiments_${new Date().toISOString().split('T')[0]}.csv`;
+                a.download = `tests_${new Date().toISOString().split('T')[0]}.csv`;
                 a.click();
                 URL.revokeObjectURL(url);
             } catch (error) {
-                console.error('Error exporting experiments:', error);
-                alert('Error exporting experiments');
+                console.error('Error exporting tests:', error);
+                alert('Error exporting tests');
             }
         }
 
-        // Function to log an experiment (called after extraction completes)
-        async function logExperiment(experimentData) {
+        // Function to log a test (called after extraction completes)
+        async function logTest(testData) {
             try {
-                const response = await fetch('/llm/experiments/', {
+                const response = await fetch('/llm/tests/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(experimentData)
+                    body: JSON.stringify(testData)
                 });
                 const result = await response.json();
 
                 if (result.success) {
-                    console.log('Experiment logged:', result.experiment.id);
-                    return result.experiment;
+                    console.log('Test logged:', result.test.id);
+                    return result.test;
                 } else {
-                    console.error('Failed to log experiment:', result.error);
+                    console.error('Failed to log test:', result.error);
                     return null;
                 }
             } catch (error) {
-                console.error('Error logging experiment:', error);
+                console.error('Error logging test:', error);
                 return null;
             }
         }
