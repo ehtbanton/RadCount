@@ -4499,9 +4499,12 @@ def extract_findings(request):
         with open(prompts_file, 'r', encoding='utf-8') as f:
             prompts_data = json.load(f)
 
-        # Get findings prompt
+        # Get findings prompt - check findings_prompts first, then fall back to prompts
         active_prompt_key = prompts_data.get('active_findings_prompt', 'concerning_findings')
-        prompt_template = prompts_data['prompts'].get(active_prompt_key, {}).get('template', '')
+        findings_prompts = prompts_data.get('findings_prompts', {})
+        prompt_template = findings_prompts.get(active_prompt_key, {}).get('template', '')
+        if not prompt_template:
+            prompt_template = prompts_data.get('prompts', {}).get(active_prompt_key, {}).get('template', '')
 
         if not prompt_template:
             return JsonResponse({'success': False, 'error': 'No findings prompt template found'}, status=400)
@@ -4683,14 +4686,25 @@ def get_findings_prompt(request):
         with open(prompts_file, 'r', encoding='utf-8') as f:
             prompts_data = json.load(f)
 
-        # Get findings prompt
+        # Get findings prompt - check findings_prompts first, then fall back to prompts
         active_prompt_key = prompts_data.get('active_findings_prompt', 'concerning_findings')
-        prompt_template = prompts_data['prompts'].get(active_prompt_key, {}).get('template', '')
+        findings_prompts = prompts_data.get('findings_prompts', {})
+        prompt_template = findings_prompts.get(active_prompt_key, {}).get('template', '')
+        if not prompt_template:
+            prompt_template = prompts_data.get('prompts', {}).get(active_prompt_key, {}).get('template', '')
+
+        # Get list of available findings prompts for switching
+        available_prompts = list(findings_prompts.keys())
+        # Also include prompts dict entries that have 'observations' or 'findings' in name
+        for key, val in prompts_data.get('prompts', {}).items():
+            if key not in available_prompts:
+                available_prompts.append(key)
 
         return JsonResponse({
             'success': True,
             'template': prompt_template,
-            'prompt_key': active_prompt_key
+            'prompt_key': active_prompt_key,
+            'available_prompts': available_prompts
         })
 
     except Exception as e:
@@ -4717,22 +4731,83 @@ def save_findings_prompt(request):
             with open(prompts_file, 'r', encoding='utf-8') as f:
                 prompts_data = json.load(f)
         else:
-            prompts_data = {'prompts': {}, 'active_findings_prompt': 'concerning_findings'}
+            prompts_data = {'prompts': {}, 'findings_prompts': {}, 'active_findings_prompt': 'concerning_findings'}
 
-        # Update the findings prompt
+        # Update the findings prompt - save to findings_prompts if key exists there, else prompts
         active_prompt_key = prompts_data.get('active_findings_prompt', 'concerning_findings')
-        if active_prompt_key not in prompts_data['prompts']:
-            prompts_data['prompts'][active_prompt_key] = {
-                'name': 'Concerning Findings Extraction',
-                'description': 'Extract concerning/abnormal findings from radiology reports with word locations'
-            }
+        findings_prompts = prompts_data.setdefault('findings_prompts', {})
 
-        prompts_data['prompts'][active_prompt_key]['template'] = template
+        if active_prompt_key in findings_prompts:
+            findings_prompts[active_prompt_key]['template'] = template
+        elif active_prompt_key in prompts_data.get('prompts', {}):
+            prompts_data['prompts'][active_prompt_key]['template'] = template
+        else:
+            # Create new entry in findings_prompts
+            findings_prompts[active_prompt_key] = {
+                'name': 'Custom Findings Extraction',
+                'description': 'Extract findings from radiology reports with word locations',
+                'template': template
+            }
 
         with open(prompts_file, 'w', encoding='utf-8') as f:
             json.dump(prompts_data, f, indent=2)
 
         return JsonResponse({'success': True})
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def switch_findings_prompt(request):
+    """Switch the active findings prompt to a different experiment prompt."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        prompt_key = data.get('prompt_key', '')
+
+        if not prompt_key:
+            return JsonResponse({'success': False, 'error': 'prompt_key is required'}, status=400)
+
+        prompts_file = PROJECT_ROOT / "extraction_prompts.json"
+        if not prompts_file.exists():
+            return JsonResponse({'success': False, 'error': 'extraction_prompts.json not found'}, status=404)
+
+        with open(prompts_file, 'r', encoding='utf-8') as f:
+            prompts_data = json.load(f)
+
+        # Verify the prompt exists in either findings_prompts or prompts
+        findings_prompts = prompts_data.get('findings_prompts', {})
+        prompts = prompts_data.get('prompts', {})
+
+        if prompt_key not in findings_prompts and prompt_key not in prompts:
+            available = list(findings_prompts.keys()) + list(prompts.keys())
+            return JsonResponse({
+                'success': False,
+                'error': f'Prompt key "{prompt_key}" not found. Available: {available}'
+            }, status=400)
+
+        # Update active prompt
+        prompts_data['active_findings_prompt'] = prompt_key
+
+        with open(prompts_file, 'w', encoding='utf-8') as f:
+            json.dump(prompts_data, f, indent=2)
+
+        # Get the template for confirmation
+        template = findings_prompts.get(prompt_key, {}).get('template', '')
+        if not template:
+            template = prompts.get(prompt_key, {}).get('template', '')
+
+        prompt_name = findings_prompts.get(prompt_key, {}).get('name', '')
+        if not prompt_name:
+            prompt_name = prompts.get(prompt_key, {}).get('name', prompt_key)
+
+        return JsonResponse({
+            'success': True,
+            'prompt_key': prompt_key,
+            'prompt_name': prompt_name,
+            'message': f'Switched to prompt: {prompt_name}'
+        })
 
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
@@ -5820,6 +5895,204 @@ def calculate_all_observation_metrics(request):
 
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def calculate_all_findings_metrics(request):
+    """Calculate findings metrics for all entries with ground truth and save to file.
+
+    This uses observations_ground_truth and observations_auto_extracted fields,
+    which are used by the simpler findings extraction (not the triplet extraction).
+    """
+    try:
+        # Load entities data
+        entities_file = PROJECT_ROOT / "entities.json"
+        if not entities_file.exists():
+            return JsonResponse({'success': False, 'error': 'entities.json not found'}, status=404)
+
+        with open(entities_file, 'r', encoding='utf-8') as f:
+            entities_data = json.load(f)
+
+        # Get current configuration
+        current_model = get_current_model() or "unknown"
+
+        prompts_file = PROJECT_ROOT / "extraction_prompts.json"
+        active_prompt = "unknown"
+        prompt_name = "unknown"
+        if prompts_file.exists():
+            with open(prompts_file, 'r', encoding='utf-8') as f:
+                prompts_data = json.load(f)
+                active_prompt = prompts_data.get('active_findings_prompt', 'unknown')
+                # Get prompt name
+                findings_prompts = prompts_data.get('findings_prompts', {})
+                prompt_name = findings_prompts.get(active_prompt, {}).get('name', '')
+                if not prompt_name:
+                    prompt_name = prompts_data.get('prompts', {}).get(active_prompt, {}).get('name', active_prompt)
+
+        # Check if LLM is running (for auto-extraction if needed)
+        llm_service = LlamaService()
+        llm_running = llm_service.is_server_running()
+
+        # Get the findings prompt template
+        prompt_template = ""
+        if prompts_file.exists():
+            with open(prompts_file, 'r', encoding='utf-8') as f:
+                prompts_data = json.load(f)
+            findings_prompts = prompts_data.get('findings_prompts', {})
+            prompt_template = findings_prompts.get(active_prompt, {}).get('template', '')
+            if not prompt_template:
+                prompt_template = prompts_data.get('prompts', {}).get(active_prompt, {}).get('template', '')
+
+        results = []
+        total_precision = 0
+        total_recall = 0
+        total_f1 = 0
+        entries_processed = 0
+        entries_skipped = []
+
+        for entry in entities_data:
+            entry_number = entry.get('entry')
+
+            # Skip config entry
+            if entry.get('_config'):
+                continue
+
+            ground_truth = entry.get('observations_ground_truth', [])
+
+            # Skip entries without ground truth
+            if not ground_truth:
+                entries_skipped.append({'entry': entry_number, 'reason': 'no ground truth'})
+                continue
+
+            auto_extracted = entry.get('observations_auto_extracted', [])
+
+            # If no auto_extracted and LLM is running, try to extract
+            if not auto_extracted and llm_running and prompt_template:
+                report_text, error = get_report_text_from_csv(entry_number)
+                if report_text:
+                    try:
+                        # Create indexed report as JSON array of [word, index] tuples
+                        words = report_text.split()
+                        indexed_report = json.dumps([[word, i] for i, word in enumerate(words)])
+                        prompt = prompt_template.replace('{indexed_report}', indexed_report)
+
+                        messages = [{'role': 'user', 'content': prompt}]
+                        response = requests.post(
+                            f"{llm_service.base_url}/v1/chat/completions",
+                            headers={'Content-Type': 'application/json'},
+                            json={'messages': messages, 'temperature': 0, 'max_tokens': 4000},
+                            timeout=180
+                        )
+
+                        if response.status_code == 200:
+                            result = response.json()
+                            generated_text = result['choices'][0]['message']['content']
+                            extraction_result, _ = extract_json_array(generated_text)
+                            if extraction_result:
+                                entry['observations_auto_extracted'] = extraction_result
+                                auto_extracted = extraction_result
+                    except Exception as e:
+                        pass  # Continue with empty auto_extracted
+
+            if not auto_extracted:
+                entries_skipped.append({'entry': entry_number, 'reason': 'no auto_extracted'})
+                continue
+
+            # Calculate metrics using word indices
+            # Ground truth format: [{"observation": ["word", index]}, ...]
+            gt_indices = set()
+            for obs in ground_truth:
+                observation = obs.get('observation', [])
+                if isinstance(observation, list) and len(observation) == 2:
+                    gt_indices.add(observation[1])
+
+            # Predicted format: same as ground truth
+            pred_indices = set()
+            for obs in auto_extracted:
+                observation = obs.get('observation', [])
+                if isinstance(observation, list) and len(observation) == 2:
+                    pred_indices.add(observation[1])
+
+            true_positives = len(gt_indices & pred_indices)
+            false_positives = len(pred_indices - gt_indices)
+            false_negatives = len(gt_indices - pred_indices)
+
+            precision = true_positives / (true_positives + false_positives) if (true_positives + false_positives) > 0 else 0
+            recall = true_positives / (true_positives + false_negatives) if (true_positives + false_negatives) > 0 else 0
+            f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+
+            results.append({
+                'entry': entry_number,
+                'precision': round(precision, 4),
+                'recall': round(recall, 4),
+                'f1': round(f1, 4),
+                'tp': true_positives,
+                'fp': false_positives,
+                'fn': false_negatives
+            })
+
+            total_precision += precision
+            total_recall += recall
+            total_f1 += f1
+            entries_processed += 1
+
+        # Calculate averages
+        avg_precision = total_precision / entries_processed if entries_processed > 0 else 0
+        avg_recall = total_recall / entries_processed if entries_processed > 0 else 0
+        avg_f1 = total_f1 / entries_processed if entries_processed > 0 else 0
+
+        # Save updated entities.json if any extractions were performed
+        with open(entities_file, 'w', encoding='utf-8') as f:
+            json.dump(entities_data, f, indent=2)
+
+        # Save results to file
+        app_control_dir = PROJECT_ROOT / "app_control"
+        app_control_dir.mkdir(exist_ok=True)
+        results_file = app_control_dir / "findings_results.txt"
+
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        with open(results_file, 'w', encoding='utf-8') as f:
+            f.write("# MedLint Findings Extraction Results\n")
+            f.write(f"# Generated: {timestamp}\n")
+            f.write(f"# Model: {current_model}\n")
+            f.write(f"# Prompt: {active_prompt} ({prompt_name})\n")
+            f.write(f"# Entries processed: {entries_processed}\n")
+            f.write(f"# Entries skipped: {len(entries_skipped)}\n")
+            f.write("\n")
+            f.write("## Per-Entry Results\n")
+            f.write("| Entry | Precision | Recall | F1     | TP | FP | FN |\n")
+            f.write("|-------|-----------|--------|--------|----|----|----|\n")
+
+            for r in results:
+                f.write(f"| {r['entry']:5} | {r['precision']:.4f}    | {r['recall']:.4f} | {r['f1']:.4f} | {r['tp']:2} | {r['fp']:2} | {r['fn']:2} |\n")
+
+            f.write("\n## Summary\n")
+            f.write(f"| Metric    | Value  |\n")
+            f.write(f"|-----------|--------|\n")
+            f.write(f"| Precision | {avg_precision:.4f} |\n")
+            f.write(f"| Recall    | {avg_recall:.4f} |\n")
+            f.write(f"| F1        | {avg_f1:.4f} |\n")
+
+        return JsonResponse({
+            'success': True,
+            'results': results,
+            'averages': {
+                'precision': round(avg_precision, 4),
+                'recall': round(avg_recall, 4),
+                'f1': round(avg_f1, 4)
+            },
+            'entries_processed': entries_processed,
+            'entries_skipped': len(entries_skipped),
+            'prompt': active_prompt,
+            'prompt_name': prompt_name,
+            'results_file': str(results_file)
+        })
+
+    except Exception as e:
+        import traceback
+        return JsonResponse({'success': False, 'error': str(e), 'traceback': traceback.format_exc()}, status=500)
 
 
 @require_http_methods(["GET"])

@@ -1,6 +1,33 @@
 {
   "active_prompt": "observation_location",
   "active_findings_prompt": "concerning_findings",
+  "findings_prompts": {
+    "obs_exp1_baseline": {
+      "name": "Exp 1: Baseline",
+      "description": "Original baseline prompt for observation extraction",
+      "template": "Extract observations from this radiology report.\n\nREPORT (as JSON array of [word, index] pairs):\n{indexed_report}\n\nEXTRACT each observation with:\n- observation: The core finding ONLY (e.g., \"tumour\", \"effusion\", \"opacity\"). Do NOT include location, size, or descriptors.\n\nCRITICAL RULES:\n- The report is provided as a JSON array where each element is [word, index].\n- EXTRACT THE EXACT WORDS as they appear in the text - do not paraphrase or modify them.\n- Return each observation as [\"word\", index] matching the input format.\n- observation = the finding itself (noun)\n\nOUTPUT FORMAT (JSON array):\n[{\"observation\": [\"<exact_word>\", index]}]\n\nRespond with ONLY a valid JSON array. No explanations."
+    },
+    "obs_exp2_clarified": {
+      "name": "Exp 2: Clarified Definition",
+      "description": "Adds explicit list of what counts as an observation",
+      "template": "Extract observations from this radiology report.\n\nREPORT (as JSON array of [word, index] pairs):\n{indexed_report}\n\nOBSERVATIONS are clinical findings - nouns representing abnormalities or medical conditions found in imaging.\n\nExamples of valid observations:\n- Tumours: tumour, tumor, mass, lesion, neoplasm\n- Nodules: nodule, nodularity\n- Fluid/Air: effusion, pneumothorax, ascites\n- Consolidation: consolidation, opacity, infiltrate, atelectasis\n- Spread: metastasis, metastases, spread, deposit\n- Growths: cyst, polyp, abscess\n- Inflammation: inflammation, infection, oedema, edema\n- Changes: thickening, enlargement, stenosis, obstruction\n\nCRITICAL RULES:\n- The report is provided as a JSON array where each element is [word, index].\n- EXTRACT THE EXACT WORDS as they appear in the text - do not paraphrase or modify them.\n- Return each observation as [\"word\", index] matching the input format.\n- observation = the finding itself (noun) - NOT location, NOT descriptors\n\nOUTPUT FORMAT (JSON array):\n[{\"observation\": [\"<exact_word>\", index]}]\n\nRespond with ONLY a valid JSON array. No explanations."
+    },
+    "obs_exp3_negative": {
+      "name": "Exp 3: Negative Examples",
+      "description": "Adds NOT observations list to clarify exclusions",
+      "template": "Extract observations from this radiology report.\n\nREPORT (as JSON array of [word, index] pairs):\n{indexed_report}\n\nEXTRACT each observation - clinical findings (nouns representing abnormalities).\n\nOBSERVATIONS ARE:\n- tumour, mass, lesion, nodule, effusion, consolidation, opacity, metastasis, cyst, abscess, inflammation, thickening, stenosis\n\nNOT OBSERVATIONS (do NOT extract):\n- Anatomy: lung, liver, spine, bone, lymph node, chest, brain, kidney\n- Locations: right, left, upper, lower, medial, lateral, anterior, posterior\n- Descriptors: large, small, mild, moderate, severe, stable, new, increased\n- Measurements: mm, cm, SUV, SUVmax\n- Negations: no, absent, without, resolved\n\nCRITICAL RULES:\n- The report is provided as a JSON array where each element is [word, index].\n- EXTRACT THE EXACT WORDS as they appear in the text - do not paraphrase.\n- Return each observation as [\"word\", index] matching the input format.\n\nOUTPUT FORMAT (JSON array):\n[{\"observation\": [\"<exact_word>\", index]}]\n\nRespond with ONLY a valid JSON array. No explanations."
+    },
+    "obs_exp4_fewshot": {
+      "name": "Exp 4: Few-Shot Examples",
+      "description": "Includes worked examples showing input and expected output",
+      "template": "Extract observations from this radiology report.\n\nREPORT (as JSON array of [word, index] pairs):\n{indexed_report}\n\nEXTRACT each observation - the clinical finding noun (tumour, effusion, nodule, etc.).\nDo NOT extract locations, descriptors, or anatomy.\n\nEXAMPLE 1:\nInput: [[\"Large\", 0], [\"FDG-avid\", 1], [\"tumour\", 2], [\"in\", 3], [\"the\", 4], [\"liver.\", 5]]\nOutput: [{\"observation\": [\"tumour\", 2]}]\nExplanation: \"tumour\" is the finding. \"Large\" and \"FDG-avid\" are descriptors. \"liver\" is anatomy.\n\nEXAMPLE 2:\nInput: [[\"No\", 0], [\"pneumothorax.\", 1], [\"Small\", 2], [\"pleural\", 3], [\"effusion.\", 4]]\nOutput: [{\"observation\": [\"pneumothorax.\", 1]}, {\"observation\": [\"effusion.\", 4]}]\nExplanation: Both findings extracted. \"No\" negates pneumothorax but we still extract it. \"pleural\" is anatomy.\n\nEXAMPLE 3:\nInput: [[\"Multiple\", 0], [\"pulmonary\", 1], [\"nodules\", 2], [\"and\", 3], [\"mediastinal\", 4], [\"lymphadenopathy.\", 5]]\nOutput: [{\"observation\": [\"nodules\", 2]}, {\"observation\": [\"lymphadenopathy.\", 5]}]\nExplanation: \"nodules\" and \"lymphadenopathy\" are findings. \"pulmonary\" and \"mediastinal\" are locations.\n\nCRITICAL RULES:\n- EXTRACT THE EXACT WORDS as they appear - do not modify.\n- Return as [\"word\", index] format.\n\nOUTPUT FORMAT (JSON array):\n[{\"observation\": [\"<exact_word>\", index]}]\n\nRespond with ONLY a valid JSON array. No explanations."
+    },
+    "obs_exp5_strict": {
+      "name": "Exp 5: Stricter Format",
+      "description": "More prescriptive output format instructions",
+      "template": "Extract clinical observations from this radiology report.\n\nREPORT:\n{indexed_report}\n\nTASK: Identify and extract ONLY the clinical finding nouns.\n\nSTEP 1: Scan the report for medical findings (tumour, mass, lesion, nodule, effusion, consolidation, opacity, metastasis, cyst, abscess, inflammation, etc.)\n\nSTEP 2: For each finding found, note the EXACT word and its index from the input array.\n\nSTEP 3: Output a JSON array where each element has exactly this structure:\n{\"observation\": [\"EXACT_WORD\", INDEX_NUMBER]}\n\nVALIDATION CHECKLIST:\n- Is it a medical finding/abnormality? (YES = include)\n- Is it anatomy or location? (NO = exclude)\n- Is it a descriptor or modifier? (NO = exclude)\n- Does the word EXACTLY match the input? (must match)\n- Is the index correct from the input array? (must match)\n\nOUTPUT REQUIREMENTS:\n- Valid JSON array only\n- Each object has exactly one key: \"observation\"\n- Value is array of [string, integer]\n- No additional text, explanations, or formatting\n\nOUTPUT:\n"
+    }
+  },
   "prompts": {
     "observation_location": {
       "name": "Observation-Location-Properties Extraction",

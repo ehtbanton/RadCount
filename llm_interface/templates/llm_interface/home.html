@@ -654,10 +654,18 @@
                         <div style="font-weight: 500; color: #374151; margin-bottom: 12px; font-size: 0.9em;">Evaluation</div>
                         <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
                             <button
+                                id="calculate-binary-metrics-btn"
                                 onclick="calculateBinaryMetrics()"
                                 style="padding: 8px 16px; background: #8b5cf6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 500;"
                             >
                                 Calculate Metrics
+                            </button>
+                            <button
+                                id="cancel-binary-metrics-btn"
+                                onclick="cancelBinaryMetrics()"
+                                style="display: none; padding: 8px 16px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 500;"
+                            >
+                                Cancel
                             </button>
                             <span id="binary-metrics-status" style="color: #6b7280; font-size: 0.85em;"></span>
                         </div>
@@ -738,6 +746,13 @@
                             style="padding: 8px 16px; background: #8b5cf6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 500;"
                         >
                             Calculate Metrics
+                        </button>
+                        <button
+                            id="cancel-obs-metrics-btn"
+                            onclick="cancelObsMetrics()"
+                            style="display: none; padding: 8px 16px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 500;"
+                        >
+                            Cancel
                         </button>
                         <span id="metrics-status" style="color: #6b7280; font-size: 0.85em;"></span>
                     </div>
@@ -852,6 +867,13 @@
                                 style="padding: 8px 16px; background: #8b5cf6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 500;"
                             >
                                 Calculate Metrics
+                            </button>
+                            <button
+                                id="cancel-simple-obs-metrics-btn"
+                                onclick="cancelSimpleObsMetrics()"
+                                style="display: none; padding: 8px 16px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 500;"
+                            >
+                                Cancel
                             </button>
                             <span id="simple-obs-metrics-status" style="color: #6b7280; font-size: 0.85em;"></span>
                         </div>
@@ -2317,6 +2339,99 @@
         let obsMetricsRunning = false;
         let obsMetricsCancelled = false;
 
+        // Metrics calculation state persistence (survives page refresh)
+        const METRICS_STATE_KEY = 'metricsCalculationState';
+
+        function saveMetricsState() {
+            const state = {
+                binary: binaryMetricsRunning,
+                observation: obsMetricsRunning,
+                simpleObs: simpleObsMetricsRunning,
+                timestamp: Date.now()
+            };
+            localStorage.setItem(METRICS_STATE_KEY, JSON.stringify(state));
+        }
+
+        function clearMetricsState(type) {
+            const stored = localStorage.getItem(METRICS_STATE_KEY);
+            if (stored) {
+                const state = JSON.parse(stored);
+                state[type] = false;
+                localStorage.setItem(METRICS_STATE_KEY, JSON.stringify(state));
+            }
+        }
+
+        function getMetricsState() {
+            const stored = localStorage.getItem(METRICS_STATE_KEY);
+            if (!stored) return null;
+            const state = JSON.parse(stored);
+            // Expire state after 1 hour (in case browser closed mid-calculation)
+            if (Date.now() - state.timestamp > 3600000) {
+                localStorage.removeItem(METRICS_STATE_KEY);
+                return null;
+            }
+            return state;
+        }
+
+        function updateCancelButtonVisibility(type, visible) {
+            const btnId = type === 'binary' ? 'cancel-binary-metrics-btn' :
+                          type === 'observation' ? 'cancel-obs-metrics-btn' :
+                          'cancel-simple-obs-metrics-btn';
+            const btn = document.getElementById(btnId);
+            if (btn) {
+                btn.style.display = visible ? 'inline-block' : 'none';
+            }
+        }
+
+        function cancelBinaryMetrics() {
+            if (binaryMetricsRunning) {
+                binaryMetricsCancelled = true;
+                clearMetricsState('binary');
+                document.getElementById('binary-metrics-status').textContent = 'Cancelled';
+                updateCancelButtonVisibility('binary', false);
+            }
+        }
+
+        function cancelObsMetrics() {
+            if (obsMetricsRunning) {
+                obsMetricsCancelled = true;
+                clearMetricsState('observation');
+                document.getElementById('metrics-status').textContent = 'Cancelled';
+                updateCancelButtonVisibility('observation', false);
+            }
+        }
+
+        function cancelSimpleObsMetrics() {
+            if (simpleObsMetricsRunning) {
+                simpleObsMetricsCancelled = true;
+                clearMetricsState('simpleObs');
+                document.getElementById('simple-obs-metrics-status').textContent = 'Cancelled';
+                updateCancelButtonVisibility('simpleObs', false);
+            }
+        }
+
+        function restoreMetricsStateUI() {
+            const state = getMetricsState();
+            if (!state) return;
+
+            // Show warning if calculation was interrupted
+            if (state.binary) {
+                document.getElementById('binary-metrics-status').innerHTML =
+                    '<span style="color: #dc2626;">Calculation was interrupted (page refreshed)</span>';
+                clearMetricsState('binary');
+            }
+            if (state.observation) {
+                document.getElementById('metrics-status').innerHTML =
+                    '<span style="color: #dc2626;">Calculation was interrupted (page refreshed)</span>';
+                clearMetricsState('observation');
+            }
+            if (state.simpleObs) {
+                document.getElementById('simple-obs-metrics-status').innerHTML =
+                    '<span style="color: #dc2626;">Calculation was interrupted (page refreshed)</span>';
+                clearMetricsState('simpleObs');
+            }
+        }
+
         // Legacy compatibility - stub variables and functions for old property code
         let propertiesData = []; // Empty array for legacy code compatibility
 
@@ -3032,6 +3147,8 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
             }
 
             binaryMetricsRunning = true;
+            saveMetricsState();
+            updateCancelButtonVisibility('binary', true);
             const startTime = Date.now();
 
             const labels = getGlobalClassificationLabels();
@@ -3039,6 +3156,8 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
             if (labels.length === 0) {
                 alert('No classification labels to evaluate');
                 binaryMetricsRunning = false;
+                clearMetricsState('binary');
+                updateCancelButtonVisibility('binary', false);
                 return;
             }
 
@@ -3059,6 +3178,8 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
             if (entriesWithGT.length === 0) {
                 alert('No reports found with ground truth classifications. Make sure you have set Yes/No values for at least one label on some reports.');
                 binaryMetricsRunning = false;
+                clearMetricsState('binary');
+                updateCancelButtonVisibility('binary', false);
                 return;
             }
 
@@ -3092,8 +3213,10 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
             for (const entry of entriesWithGT) {
                 // Check if cancelled (restart requested)
                 if (binaryMetricsCancelled) {
-                    console.log('Binary metrics calculation cancelled - restarting...');
+                    console.log('Binary metrics calculation cancelled');
                     binaryMetricsRunning = false;
+                    clearMetricsState('binary');
+                    updateCancelButtonVisibility('binary', false);
                     return;
                 }
 
@@ -3377,6 +3500,8 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
 
             statusEl.textContent = `Calculated (${reportsWithGT} reports)`;
             binaryMetricsRunning = false;
+            clearMetricsState('binary');
+            updateCancelButtonVisibility('binary', false);
         }
 
         async function logBinaryClassificationTest() {
@@ -4507,6 +4632,8 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
             }
 
             obsMetricsRunning = true;
+            saveMetricsState();
+            updateCancelButtonVisibility('observation', true);
 
             // Find all entries with ground truth annotations
             const entriesWithGT = entitiesData.filter(entry => {
@@ -4520,6 +4647,8 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
             if (entriesWithGT.length === 0) {
                 alert('No reports found with ground truth annotations. Make sure you have added annotations to at least one report.');
                 obsMetricsRunning = false;
+                clearMetricsState('observation');
+                updateCancelButtonVisibility('observation', false);
                 return;
             }
 
@@ -4556,8 +4685,10 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
             for (const entry of entriesWithGT) {
                 // Check if cancelled (restart requested)
                 if (obsMetricsCancelled) {
-                    console.log('Observation metrics calculation cancelled - restarting...');
+                    console.log('Observation metrics calculation cancelled');
                     obsMetricsRunning = false;
+                    clearMetricsState('observation');
+                    updateCancelButtonVisibility('observation', false);
                     return;
                 }
 
@@ -4673,6 +4804,8 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
 
             statusEl.textContent = `Calculated (${successful.length} reports)`;
             obsMetricsRunning = false;
+            clearMetricsState('observation');
+            updateCancelButtonVisibility('observation', false);
 
             // Store aggregated metrics for saving
             currentObservationMetrics = {
@@ -5129,6 +5262,8 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
             }
 
             simpleObsMetricsRunning = true;
+            saveMetricsState();
+            updateCancelButtonVisibility('simpleObs', true);
 
             // Find all entries with ground truth observations
             const entriesWithGT = entitiesData.filter(entry => {
@@ -5142,6 +5277,8 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
             if (entriesWithGT.length === 0) {
                 alert('No reports found with ground truth observations. Make sure you have added observations to at least one report.');
                 simpleObsMetricsRunning = false;
+                clearMetricsState('simpleObs');
+                updateCancelButtonVisibility('simpleObs', false);
                 return;
             }
 
@@ -5178,8 +5315,10 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
             for (const entry of entriesWithGT) {
                 // Check if cancelled (restart requested)
                 if (simpleObsMetricsCancelled) {
-                    console.log('Simple observations metrics calculation cancelled - restarting...');
+                    console.log('Simple observations metrics calculation cancelled');
                     simpleObsMetricsRunning = false;
+                    clearMetricsState('simpleObs');
+                    updateCancelButtonVisibility('simpleObs', false);
                     return;
                 }
 
@@ -5187,8 +5326,8 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
                 const currentEl = document.getElementById('simple-obs-metrics-current');
                 if (currentEl) currentEl.textContent = `Processing report ${entry.entry}...`;
 
-                // Check if observations_auto_extracted exists; if not, run extraction first
-                let needsExtraction = !entry.observations_auto_extracted || entry.observations_auto_extracted.length === 0;
+                // Always run extraction to ensure we're testing the current prompt
+                let needsExtraction = true;
 
                 if (needsExtraction) {
                     // Fetch report text
@@ -5295,6 +5434,8 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
 
             statusEl.textContent = `Calculated (${successful.length} reports)`;
             simpleObsMetricsRunning = false;
+            clearMetricsState('simpleObs');
+            updateCancelButtonVisibility('simpleObs', false);
 
             // Store aggregated metrics for saving
             currentSimpleObsMetrics = {
@@ -8772,6 +8913,8 @@ Respond with ONLY a valid JSON array. No explanations.`;
                 if (entryInput && entryInput.value) {
                     loadCsvEntry();
                 }
+                // Restore metrics calculation state if page was refreshed mid-calculation
+                restoreMetricsStateUI();
             });
 
             console.log('Initialization complete');
