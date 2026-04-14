@@ -1041,6 +1041,136 @@
                             <div style="color: #6b7280; font-size: 0.85em; text-align: center; padding: 10px;">No relations yet.</div>
                         </div>
                     </div>
+
+                    <!-- Auto-Extraction Section (Two-Stage: Entities then Relations) -->
+                    <div style="border-top: 2px solid #e5e7eb; padding-top: 15px; margin-top: 20px;">
+                        <div style="font-weight: 600; color: #374151; margin-bottom: 12px; font-size: 0.95em;">Auto-Extraction (Two-Stage Pipeline)</div>
+
+                        <!-- Auto-Extract Controls -->
+                        <div style="background: #fffbeb; padding: 12px; border-radius: 6px; border: 1px solid #fbbf24; margin-bottom: 15px;">
+                            <div style="font-weight: 500; color: #b45309; margin-bottom: 10px; font-size: 0.9em;">Extract for Current Report</div>
+                            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                <button
+                                    id="er-extract-entities-btn"
+                                    onclick="runEREntityExtraction()"
+                                    style="flex: 1; min-width: 140px; padding: 10px 16px; background: #f59e0b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: 500; transition: background 0.2s;"
+                                    onmouseover="this.style.background='#d97706'"
+                                    onmouseout="this.style.background='#f59e0b'"
+                                >
+                                    Stage 1: Extract Entities
+                                </button>
+                                <button
+                                    id="er-extract-relations-btn"
+                                    onclick="runERRelationExtraction()"
+                                    style="flex: 1; min-width: 140px; padding: 10px 16px; background: #8b5cf6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: 500; transition: background 0.2s;"
+                                    onmouseover="this.style.background='#7c3aed'"
+                                    onmouseout="this.style.background='#8b5cf6'"
+                                >
+                                    Stage 2: Extract Relations
+                                </button>
+                                <button
+                                    onclick="openERPromptEditor()"
+                                    style="padding: 10px 12px; background: #6366f1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; transition: background 0.2s;"
+                                    onmouseover="this.style.background='#4f46e5'"
+                                    onmouseout="this.style.background='#6366f1'"
+                                    title="Edit entity/relation extraction prompts"
+                                >
+                                    Edit Prompts
+                                </button>
+                            </div>
+                            <div style="font-size: 0.75em; color: #92400e; margin-top: 8px;">
+                                Two-stage pipeline: First extract entities, then extract relations between them.
+                            </div>
+                        </div>
+
+                        <!-- Auto-Extracted Entities Display -->
+                        <div style="margin-bottom: 15px;">
+                            <div style="font-weight: 500; color: #b45309; margin-bottom: 8px; font-size: 0.9em;">
+                                Auto-Extracted Entities (<span id="auto-entity-count">0</span>)
+                            </div>
+                            <div id="auto-entities-container" style="display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; background: #fffbeb; border-radius: 6px; min-height: 40px; max-height: 150px; overflow-y: auto;">
+                                <div style="color: #6b7280; font-size: 0.85em;">No entities extracted yet. Click "Extract Entities" to start.</div>
+                            </div>
+                        </div>
+
+                        <!-- Auto-Extracted Relations Display -->
+                        <div style="margin-bottom: 15px;">
+                            <div style="font-weight: 500; color: #7c3aed; margin-bottom: 8px; font-size: 0.9em;">
+                                Auto-Extracted Relations (<span id="auto-relation-count">0</span>)
+                            </div>
+                            <div id="auto-relations-container" style="display: flex; flex-direction: column; gap: 8px; padding: 10px; background: #f5f3ff; border-radius: 6px; min-height: 40px; max-height: 150px; overflow-y: auto;">
+                                <div style="color: #6b7280; font-size: 0.85em; text-align: center;">No relations extracted yet. Extract entities first, then click "Extract Relations".</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Test & Evaluate Section for Entities/Relations -->
+                    <div style="border-top: 2px solid #e5e7eb; padding-top: 15px; margin-top: 15px;">
+                        <div style="font-weight: 500; color: #374151; margin-bottom: 12px; font-size: 0.9em;">Test & Evaluate</div>
+
+                        <!-- Calculate Metrics Button -->
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
+                            <button
+                                id="calculate-er-metrics-btn"
+                                onclick="calculateAllERMetrics()"
+                                style="padding: 8px 16px; background: #8b5cf6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 500;"
+                            >
+                                Calculate Metrics
+                            </button>
+                            <button
+                                id="cancel-er-metrics-btn"
+                                onclick="cancelERMetrics()"
+                                style="display: none; padding: 8px 16px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 500;"
+                            >
+                                Cancel
+                            </button>
+                            <span id="er-metrics-status" style="color: #6b7280; font-size: 0.85em;"></span>
+                        </div>
+
+                        <!-- Entity Metrics Display -->
+                        <div id="er-entity-metrics-display" style="display: none; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                            <div style="font-weight: 500; color: #374151; margin-bottom: 10px; font-size: 0.85em;">Entity Metrics</div>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 10px;">
+                                <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                                    <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">Precision</div>
+                                    <div id="er-entity-precision" style="font-size: 1.5em; font-weight: 600; color: #059669;">-</div>
+                                </div>
+                                <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                                    <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">Recall</div>
+                                    <div id="er-entity-recall" style="font-size: 1.5em; font-weight: 600; color: #2563eb;">-</div>
+                                </div>
+                                <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                                    <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">F1 Score</div>
+                                    <div id="er-entity-f1" style="font-size: 1.5em; font-weight: 600; color: #7c3aed;">-</div>
+                                </div>
+                            </div>
+                            <div style="font-size: 0.8em; color: #6b7280;">
+                                TP: <span id="er-entity-tp">-</span> | FP: <span id="er-entity-fp">-</span> | FN: <span id="er-entity-fn">-</span> | GT: <span id="er-entity-gt-count">-</span> | Pred: <span id="er-entity-pred-count">-</span>
+                            </div>
+                        </div>
+
+                        <!-- Triplet/Relation Metrics Display -->
+                        <div id="er-triplet-metrics-display" style="display: none; background: #f5f3ff; border: 1px solid #c4b5fd; border-radius: 8px; padding: 15px;">
+                            <div style="font-weight: 500; color: #374151; margin-bottom: 10px; font-size: 0.85em;">Relation/Triplet Metrics</div>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 10px;">
+                                <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                                    <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">Precision</div>
+                                    <div id="er-triplet-precision" style="font-size: 1.5em; font-weight: 600; color: #059669;">-</div>
+                                </div>
+                                <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                                    <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">Recall</div>
+                                    <div id="er-triplet-recall" style="font-size: 1.5em; font-weight: 600; color: #2563eb;">-</div>
+                                </div>
+                                <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                                    <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">F1 Score</div>
+                                    <div id="er-triplet-f1" style="font-size: 1.5em; font-weight: 600; color: #7c3aed;">-</div>
+                                </div>
+                            </div>
+                            <div style="font-size: 0.8em; color: #6b7280;">
+                                TP: <span id="er-triplet-tp">-</span> | FP: <span id="er-triplet-fp">-</span> | FN: <span id="er-triplet-fn">-</span> | GT: <span id="er-triplet-gt-count">-</span> | Pred: <span id="er-triplet-pred-count">-</span>
+                            </div>
+                        </div>
+                    </div>
                 </div><!-- End schema-content-entities -->
 
                 <!-- Tests Schema Content -->
@@ -5954,6 +6084,481 @@ Respond with ONLY a valid JSON array. No explanations.`;
             } finally {
                 btn.textContent = originalText;
                 btn.disabled = false;
+            }
+        }
+
+        // ============================================================
+        // E&R Tab: Entity & Relation Extraction (Two-Stage Pipeline)
+        // ============================================================
+
+        // State for E&R metrics calculation
+        let erMetricsRunning = false;
+        let erMetricsCancelled = false;
+
+        // Run entity extraction for E&R tab (Stage 1)
+        async function runEREntityExtraction() {
+            if (!currentEntry) {
+                alert('Please select a CSV entry first. Click the "Load" button after entering an entry number.');
+                return;
+            }
+
+            const reportText = currentReportText;
+            if (!reportText) {
+                alert('No report text available');
+                return;
+            }
+
+            // Auto-create extraction method if needed
+            if (!await ensureExtractionMethodExists()) {
+                return;
+            }
+
+            const btn = document.getElementById('er-extract-entities-btn');
+            const originalText = btn.textContent;
+            btn.textContent = 'Extracting...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/llm/extract-entities-llm/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        method_id: activeMethodId,
+                        report_text: reportText
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Update local data
+                    const entryData = getEntityEntryData(currentEntry);
+                    if (entryData?.extraction_methods) {
+                        for (const schema in entryData.extraction_methods) {
+                            const method = entryData.extraction_methods[schema].find(m => m.id === activeMethodId);
+                            if (method) {
+                                method.entities = result.entities;
+                                method.triplets = [];
+                                break;
+                            }
+                        }
+                    }
+
+                    // Re-render both displays
+                    await renderAutoExtractedEntities();
+                    await renderAutoExtractedRelations();
+                    alert(`Stage 1 complete: Extracted ${result.count} entities. Now click "Stage 2: Extract Relations" to identify relationships.`);
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error extracting entities: ' + error.message);
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // Run relation extraction for E&R tab (Stage 2)
+        async function runERRelationExtraction() {
+            if (!currentEntry) {
+                alert('Please select a CSV entry first');
+                return;
+            }
+
+            if (!activeMethodId) {
+                alert('Please run Stage 1 (Extract Entities) first');
+                return;
+            }
+
+            // Check if entities exist
+            const entryData = getEntityEntryData(currentEntry);
+            let hasEntities = false;
+            if (entryData?.extraction_methods && activeMethodId) {
+                for (const schema in entryData.extraction_methods) {
+                    const method = entryData.extraction_methods[schema].find(m => m.id === activeMethodId);
+                    if (method && method.entities && method.entities.length > 0) {
+                        hasEntities = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!hasEntities) {
+                alert('No entities found. Please run Stage 1 (Extract Entities) first.');
+                return;
+            }
+
+            const reportText = currentReportText;
+            if (!reportText) {
+                alert('No report text available');
+                return;
+            }
+
+            const btn = document.getElementById('er-extract-relations-btn');
+            const originalText = btn.textContent;
+            btn.textContent = 'Extracting...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/llm/extract-relations-llm/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entry_number: currentEntry,
+                        method_id: activeMethodId,
+                        report_text: reportText
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Update local data
+                    const entryData = getEntityEntryData(currentEntry);
+                    if (entryData?.extraction_methods) {
+                        for (const schema in entryData.extraction_methods) {
+                            const method = entryData.extraction_methods[schema].find(m => m.id === activeMethodId);
+                            if (method) {
+                                method.triplets = result.relations;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Re-render
+                    await renderAutoExtractedRelations();
+                    alert(`Stage 2 complete: Extracted ${result.count} relations.`);
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error extracting relations: ' + error.message);
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // Open prompt editor for E&R extraction prompts
+        function openERPromptEditor() {
+            // Open the existing entity prompt editor - user can edit both entity and relation prompts
+            openPromptEditor('entity');
+        }
+
+        // Cancel E&R metrics calculation
+        function cancelERMetrics() {
+            erMetricsCancelled = true;
+            document.getElementById('cancel-er-metrics-btn').style.display = 'none';
+            document.getElementById('er-metrics-status').textContent = 'Cancelled';
+        }
+
+        // Update E&R metrics progress display
+        function updateERMetricsProgress(completed, total) {
+            const completedEl = document.getElementById('er-metrics-completed');
+            const progressBar = document.getElementById('er-metrics-progress-bar');
+            if (completedEl) completedEl.textContent = completed;
+            if (progressBar) progressBar.style.width = `${(completed / total) * 100}%`;
+        }
+
+        // Calculate E&R metrics across ALL reports with ground truth
+        async function calculateAllERMetrics() {
+            // If already running, cancel and restart
+            if (erMetricsRunning) {
+                console.log('E&R metrics calculation already running - cancelling and restarting...');
+                erMetricsCancelled = true;
+                await new Promise(resolve => setTimeout(resolve, 100));
+                erMetricsCancelled = false;
+            }
+
+            erMetricsRunning = true;
+            document.getElementById('cancel-er-metrics-btn').style.display = 'inline-block';
+
+            // Find all entries with ground truth entities or relations for the active schema
+            const activeSchema = document.getElementById('er-schema-selector')?.value || 'radgraph';
+            const entriesWithGT = entitiesData.filter(entry => {
+                if (entry.entry === 0 || entry._config) return false;
+                const gt = entry.ground_truths?.[activeSchema];
+                const hasEntities = gt?.entities && gt.entities.length > 0;
+                const hasRelations = gt?.triplets && gt.triplets.length > 0;
+                return hasEntities || hasRelations;
+            });
+
+            console.log('Entries with E&R ground truth:', entriesWithGT.map(e => e.entry));
+
+            if (entriesWithGT.length === 0) {
+                alert('No reports found with entity/relation ground truth annotations for schema "' + activeSchema + '". Add ground truth entities and relations first.');
+                erMetricsRunning = false;
+                document.getElementById('cancel-er-metrics-btn').style.display = 'none';
+                return;
+            }
+
+            // Show progress in display area
+            const entityDisplay = document.getElementById('er-entity-metrics-display');
+            const tripletDisplay = document.getElementById('er-triplet-metrics-display');
+            const statusEl = document.getElementById('er-metrics-status');
+            entityDisplay.style.display = 'block';
+            tripletDisplay.style.display = 'block';
+
+            const total = entriesWithGT.length;
+            let completed = 0;
+            const errors = [];
+            const successful = [];
+
+            // Aggregated entity metrics
+            let entityTP = 0, entityFP = 0, entityFN = 0;
+            // Aggregated triplet metrics
+            let tripletTP = 0, tripletFP = 0, tripletFN = 0;
+
+            // Show progress UI
+            entityDisplay.innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                    <div style="font-size: 0.85em; color: #6b7280; margin-bottom: 10px;">Calculating entity & relation metrics...</div>
+                    <div style="font-size: 1.5em; font-weight: 600; color: #8b5cf6;"><span id="er-metrics-completed">0</span>/${total}</div>
+                    <div id="er-metrics-current" style="font-size: 0.8em; color: #9ca3af; margin-top: 5px;">Starting...</div>
+                    <div style="margin-top: 10px; background: #e5e7eb; border-radius: 4px; height: 8px; overflow: hidden;">
+                        <div id="er-metrics-progress-bar" style="background: #8b5cf6; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                    </div>
+                </div>
+            `;
+            tripletDisplay.innerHTML = '<div style="text-align: center; padding: 20px; color: #6b7280;">Waiting for entity metrics...</div>';
+            statusEl.textContent = 'Calculating...';
+
+            // Process entries sequentially
+            for (const entry of entriesWithGT) {
+                if (erMetricsCancelled) {
+                    console.log('E&R metrics calculation cancelled');
+                    erMetricsRunning = false;
+                    document.getElementById('cancel-er-metrics-btn').style.display = 'none';
+                    return;
+                }
+
+                // Update current entry indicator
+                const currentEl = document.getElementById('er-metrics-current');
+                if (currentEl) currentEl.textContent = `Processing report ${entry.entry}...`;
+
+                // Check if extraction method and extractions exist; if not, run extraction first
+                let methodId = null;
+                let needsEntityExtraction = true;
+                let needsRelationExtraction = true;
+
+                if (entry.extraction_methods?.[activeSchema]) {
+                    const methods = entry.extraction_methods[activeSchema];
+                    if (methods.length > 0) {
+                        const method = methods[0];
+                        methodId = method.id;
+                        if (method.entities && method.entities.length > 0) {
+                            needsEntityExtraction = false;
+                        }
+                        if (method.triplets && method.triplets.length > 0) {
+                            needsRelationExtraction = false;
+                        }
+                    }
+                }
+
+                // Get report text for extraction
+                const reportText = await getReportTextForEntry(entry.entry);
+                if (!reportText) {
+                    errors.push({ entry: entry.entry, error: 'Could not fetch report text' });
+                    completed++;
+                    updateERMetricsProgress(completed, total);
+                    continue;
+                }
+
+                // Create extraction method if needed
+                if (!methodId) {
+                    try {
+                        const createResponse = await fetch('/llm/create-extraction-method/', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                entry_number: entry.entry,
+                                schema: activeSchema,
+                                name: `Auto-${new Date().toISOString().slice(0,10)}`
+                            })
+                        });
+                        const createResult = await createResponse.json();
+                        if (createResult.success) {
+                            methodId = createResult.method_id;
+                            await loadEntities();
+                        } else {
+                            errors.push({ entry: entry.entry, error: 'Failed to create method: ' + createResult.error });
+                            completed++;
+                            updateERMetricsProgress(completed, total);
+                            continue;
+                        }
+                    } catch (err) {
+                        errors.push({ entry: entry.entry, error: 'Method creation error: ' + err.message });
+                        completed++;
+                        updateERMetricsProgress(completed, total);
+                        continue;
+                    }
+                }
+
+                // Run entity extraction if needed
+                if (needsEntityExtraction) {
+                    try {
+                        const extractResponse = await fetch('/llm/extract-entities-llm/', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                entry_number: entry.entry,
+                                method_id: methodId,
+                                report_text: reportText
+                            })
+                        });
+                        const extractResult = await extractResponse.json();
+                        if (!extractResult.success) {
+                            errors.push({ entry: entry.entry, error: 'Entity extraction failed: ' + extractResult.error });
+                            completed++;
+                            updateERMetricsProgress(completed, total);
+                            continue;
+                        }
+                        await loadEntities();
+                        needsRelationExtraction = true; // Relations need re-extraction after entities
+                    } catch (err) {
+                        errors.push({ entry: entry.entry, error: 'Entity extraction error: ' + err.message });
+                        completed++;
+                        updateERMetricsProgress(completed, total);
+                        continue;
+                    }
+                }
+
+                // Run relation extraction if needed
+                if (needsRelationExtraction) {
+                    try {
+                        const relResponse = await fetch('/llm/extract-relations-llm/', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                entry_number: entry.entry,
+                                method_id: methodId,
+                                report_text: reportText
+                            })
+                        });
+                        const relResult = await relResponse.json();
+                        if (!relResult.success) {
+                            errors.push({ entry: entry.entry, error: 'Relation extraction failed: ' + relResult.error });
+                            completed++;
+                            updateERMetricsProgress(completed, total);
+                            continue;
+                        }
+                        await loadEntities();
+                    } catch (err) {
+                        errors.push({ entry: entry.entry, error: 'Relation extraction error: ' + err.message });
+                        completed++;
+                        updateERMetricsProgress(completed, total);
+                        continue;
+                    }
+                }
+
+                // Now calculate metrics for this entry
+                try {
+                    const response = await fetch('/llm/calculate-metrics/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            entry_number: entry.entry,
+                            method_id: methodId
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        const metrics = result.metrics;
+                        successful.push(entry.entry);
+
+                        // Aggregate entity metrics
+                        entityTP += metrics.entity.true_positives;
+                        entityFP += metrics.entity.false_positives;
+                        entityFN += metrics.entity.false_negatives;
+
+                        // Aggregate triplet metrics
+                        tripletTP += metrics.triplet.true_positives;
+                        tripletFP += metrics.triplet.false_positives;
+                        tripletFN += metrics.triplet.false_negatives;
+                    } else {
+                        errors.push({ entry: entry.entry, error: result.error });
+                    }
+                } catch (err) {
+                    errors.push({ entry: entry.entry, error: 'Metrics calculation error: ' + err.message });
+                }
+
+                completed++;
+                updateERMetricsProgress(completed, total);
+            }
+
+            // Calculate aggregate precision, recall, F1 for entities
+            const entityPrecision = entityTP + entityFP > 0 ? entityTP / (entityTP + entityFP) : 0;
+            const entityRecall = entityTP + entityFN > 0 ? entityTP / (entityTP + entityFN) : 0;
+            const entityF1 = entityPrecision + entityRecall > 0 ? 2 * entityPrecision * entityRecall / (entityPrecision + entityRecall) : 0;
+
+            // Calculate aggregate precision, recall, F1 for triplets
+            const tripletPrecision = tripletTP + tripletFP > 0 ? tripletTP / (tripletTP + tripletFP) : 0;
+            const tripletRecall = tripletTP + tripletFN > 0 ? tripletTP / (tripletTP + tripletFN) : 0;
+            const tripletF1 = tripletPrecision + tripletRecall > 0 ? 2 * tripletPrecision * tripletRecall / (tripletPrecision + tripletRecall) : 0;
+
+            // Display entity metrics
+            entityDisplay.innerHTML = `
+                <div style="font-weight: 500; color: #374151; margin-bottom: 10px; font-size: 0.85em;">Entity Metrics (${successful.length} reports)</div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 10px;">
+                    <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                        <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">Precision</div>
+                        <div id="er-entity-precision" style="font-size: 1.5em; font-weight: 600; color: #059669;">${entityPrecision.toFixed(4)}</div>
+                    </div>
+                    <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                        <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">Recall</div>
+                        <div id="er-entity-recall" style="font-size: 1.5em; font-weight: 600; color: #2563eb;">${entityRecall.toFixed(4)}</div>
+                    </div>
+                    <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                        <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">F1 Score</div>
+                        <div id="er-entity-f1" style="font-size: 1.5em; font-weight: 600; color: #7c3aed;">${entityF1.toFixed(4)}</div>
+                    </div>
+                </div>
+                <div style="font-size: 0.8em; color: #6b7280;">
+                    TP: ${entityTP} | FP: ${entityFP} | FN: ${entityFN}
+                </div>
+            `;
+
+            // Display triplet metrics
+            tripletDisplay.innerHTML = `
+                <div style="font-weight: 500; color: #374151; margin-bottom: 10px; font-size: 0.85em;">Relation/Triplet Metrics (${successful.length} reports)</div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 10px;">
+                    <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                        <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">Precision</div>
+                        <div id="er-triplet-precision" style="font-size: 1.5em; font-weight: 600; color: #059669;">${tripletPrecision.toFixed(4)}</div>
+                    </div>
+                    <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                        <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">Recall</div>
+                        <div id="er-triplet-recall" style="font-size: 1.5em; font-weight: 600; color: #2563eb;">${tripletRecall.toFixed(4)}</div>
+                    </div>
+                    <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                        <div style="font-size: 0.75em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">F1 Score</div>
+                        <div id="er-triplet-f1" style="font-size: 1.5em; font-weight: 600; color: #7c3aed;">${tripletF1.toFixed(4)}</div>
+                    </div>
+                </div>
+                <div style="font-size: 0.8em; color: #6b7280;">
+                    TP: ${tripletTP} | FP: ${tripletFP} | FN: ${tripletFN}
+                </div>
+            `;
+
+            // Update status
+            if (errors.length > 0) {
+                statusEl.textContent = `Completed with ${errors.length} error(s). ${successful.length}/${total} reports processed.`;
+                console.log('E&R metrics errors:', errors);
+            } else {
+                statusEl.textContent = `Completed successfully. ${successful.length} reports processed.`;
+            }
+
+            erMetricsRunning = false;
+            document.getElementById('cancel-er-metrics-btn').style.display = 'none';
+
+            // Refresh display for current entry
+            if (currentEntry) {
+                await renderAutoExtractedEntities();
+                await renderAutoExtractedRelations();
             }
         }
 

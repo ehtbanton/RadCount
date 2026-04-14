@@ -39,5 +39,30 @@
       "description": "Extract observations from radiology reports with word locations",
       "template": "Extract observations from this radiology report.\n\nREPORT (as JSON array of [word, index] pairs):\n{indexed_report}\n\nEXTRACT each observation with:\n- observation: The core finding ONLY (e.g., \"tumour\", \"effusion\", \"opacity\"). Do NOT include location, size, or descriptors.\n\nCRITICAL RULES:\n- The report is provided as a JSON array where each element is [word, index].\n- EXTRACT THE EXACT WORDS as they appear in the text - do not paraphrase or modify them.\n- Return each observation as [\"word\", index] matching the input format. Return the word without adjoined punctuation or space.\n- observation = the finding itself (noun)\n\nOUTPUT FORMAT (JSON array):\n[\n  {\n    \"observation\": [\"<exact_word>\", index]\n  }\n]\n\nEXAMPLE:\nInput: [[\"Large\", 0], [\"FDG-avid\", 1], [\"tumour\", 2], [\"in\", 3], [\"the\", 4], [\"distal\", 5], [\"oesophagus.\", 6]]\nOutput:\n[\n  {\n    \"observation\": [\"tumour\", 2]\n  }\n]\n\nEXAMPLE:\nInput: [[\"No\", 0], [\"pneumothorax.\", 1], [\"Stable\", 2], [\"small\", 3], [\"effusion.\", 4]]\nOutput:\n[\n  {\"observation\": [\"pneumothorax.\", 1]},\n  {\"observation\": [\"effusion.\", 4]}\n]\n\nEXAMPLE:\nInput: [[\"New\", 0], [\"right\", 1], [\"lower\", 2], [\"lobe\", 3], [\"consolidation.\", 4]]\nOutput:\n[\n  {\n    \"observation\": [\"consolidation.\", 4]\n  }\n]\n\nRespond with ONLY a valid JSON array. No explanations."
     }
+  },
+  "entity_extraction": {
+    "active_prompt": "default_entity",
+    "prompts": {
+      "default_entity": {
+        "name": "Two-Stage Entity Extraction (Stage 1)",
+        "description": "Extract clinical entities from radiology reports - first stage of two-stage pipeline",
+        "template": "You are a clinical NLP system extracting entities from radiology reports following the {schema_name} schema.\n\nENTITY TYPES:\n{entity_types}\n\nTASK: Extract all clinical entities from the report below. For each entity, identify:\n- text: The exact word(s) from the report\n- type: One of the entity types listed above\n- start_word: The word index where the entity starts (0-based)\n- end_word: The word index where the entity ends (0-based, inclusive)\n\nGUIDELINES:\n- Extract observations (clinical findings like tumour, effusion, nodule)\n- Extract anatomical structures (lung, liver, pleura, spine)\n- Extract modifiers that describe observations (large, stable, new, FDG-avid)\n- Be comprehensive - extract ALL relevant entities\n- Use exact text as it appears in the report\n\nOUTPUT FORMAT (JSON array):\n[\n  {{\"text\": \"tumour\", \"type\": \"OBS\", \"start_word\": 5, \"end_word\": 5}},\n  {{\"text\": \"left lung\", \"type\": \"ANAT\", \"start_word\": 8, \"end_word\": 9}},\n  {{\"text\": \"large\", \"type\": \"OBS-MOD\", \"start_word\": 4, \"end_word\": 4}}\n]\n\nExtract entities only. Do NOT identify relations - that will be done in a second step.\n\nRespond with ONLY a valid JSON array. No explanations."
+      },
+      "indexed_entity": {
+        "name": "Indexed Entity Extraction",
+        "description": "Entity extraction with indexed report text for precise word matching",
+        "template": "You are a clinical NLP system extracting entities from radiology reports following the {schema_name} schema.\n\nENTITY TYPES:\n{entity_types}\n\nREPORT TEXT (with word indices):\n{indexed_report}\n\nTASK: Extract all clinical entities. For each entity:\n- text: The exact word(s) as they appear\n- type: One of the entity types above\n- start_word: Index of the first word\n- end_word: Index of the last word (same as start_word for single words)\n\nEXAMPLE:\nFor text \"[0]Large [1]FDG-avid [2]tumour [3]in [4]the [5]left [6]lung.\"\nOutput:\n[\n  {{\"text\": \"Large\", \"type\": \"OBS-MOD\", \"start_word\": 0, \"end_word\": 0}},\n  {{\"text\": \"FDG-avid\", \"type\": \"OBS-MOD\", \"start_word\": 1, \"end_word\": 1}},\n  {{\"text\": \"tumour\", \"type\": \"OBS\", \"start_word\": 2, \"end_word\": 2}},\n  {{\"text\": \"left lung\", \"type\": \"ANAT\", \"start_word\": 5, \"end_word\": 6}}\n]\n\nRespond with ONLY a valid JSON array. No explanations."
+      }
+    }
+  },
+  "relation_extraction": {
+    "active_prompt": "default_relation",
+    "prompts": {
+      "default_relation": {
+        "name": "Two-Stage Relation Extraction (Stage 2)",
+        "description": "Extract relations between entities - second stage of two-stage pipeline",
+        "template": "You are a clinical NLP system identifying relations between entities in radiology reports following the {schema_name} schema.\n\nRELATION TYPES:\n{relation_types}\n\nEXTRACTED ENTITIES:\n{entities_list}\n\nTASK: Identify relations between the entities listed above. For each relation:\n- entity1_id: The ID of the first entity (source)\n- entity2_id: The ID of the second entity (target)\n- relation_type: One of the relation types listed above\n\nGUIDELINES:\n- located_at: Links an observation to its anatomical location (e.g., \"tumour\" located_at \"lung\")\n- modify: Links a modifier to the observation it describes (e.g., \"large\" modify \"tumour\")\n- suggestive_of: Links a finding to a condition it suggests\n- Only create relations explicitly supported by the report text\n- Each entity can participate in multiple relations\n\nOUTPUT FORMAT (JSON array):\n[\n  {{\"entity1_id\": \"e1\", \"entity2_id\": \"e3\", \"relation_type\": \"located_at\"}},\n  {{\"entity1_id\": \"e2\", \"entity2_id\": \"e1\", \"relation_type\": \"modify\"}}\n]\n\nRespond with ONLY a valid JSON array. No explanations."
+      }
+    }
   }
 }
