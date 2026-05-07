@@ -1,0 +1,256 @@
+[
+  {
+    "entry": 0,
+    "_config": true,
+    "classification_labels": [
+      "Disease progression (assuming no prior comparison data implies disease progression)",
+      "Tumour/mass",
+      "Nodule (explicit mention of nodule, ignore nodes)"
+    ],
+    "annotations": []
+  },
+  {
+    "entry": 1,
+    "annotations": [
+      {
+        "observation": [
+          "mass",
+          29
+        ],
+        "location": "right upper lobe",
+        "properties": "3.2 cm fdg-avid suvmax=11.8"
+      },
+      {
+        "observation": [
+          "node",
+          50
+        ],
+        "location": "right hilar",
+        "properties": "12mm mildly fdg-avid suvmax=3.1"
+      },
+      {
+        "observation": [
+          "nodule",
+          58
+        ],
+        "location": "left lower lobe",
+        "properties": "7mm ground glass not significantly fdg-avid"
+      },
+      {
+        "observation": [
+          "lesions",
+          73
+        ],
+        "location": "bone",
+        "properties": "absent"
+      },
+      {
+        "observation": [
+          "uptake",
+          77
+        ],
+        "location": "thoracic spine",
+        "properties": "mild degenerative"
+      }
+    ],
+    "binary_classifications": {
+      "ground_truth": {
+        "Tumour/mass": "yes",
+        "Disease progression (assuming no prior comparison data implies disease progression)": "yes",
+        "Nodule (explicit mention of nodule, ignore nodes)": "yes"
+      }
+    }
+  },
+  {
+    "entry": 2,
+    "annotations": [
+      {
+        "observation": [
+          "mass",
+          22
+        ],
+        "location": "right upper lobe",
+        "properties": "4.1 cm fdg-avid suvmax=15.2 increased"
+      },
+      {
+        "observation": [
+          "node",
+          50
+        ],
+        "location": "right hilar",
+        "properties": "18mm fdg-avid suvmax=5.7 increased"
+      },
+      {
+        "observation": [
+          "nodule",
+          70
+        ],
+        "location": "left adrenal",
+        "properties": "9mm moderately fdg-avid suvmax=4.9 new suspicious metastatic"
+      },
+      {
+        "observation": [
+          "nodule",
+          82
+        ],
+        "location": "left lower lobe",
+        "properties": "7mm ground glass stable not significantly fdg-avid"
+      }
+    ],
+    "binary_classifications": {
+      "ground_truth": {
+        "Tumour/mass": "yes",
+        "Disease progression (assuming no prior comparison data implies disease progression)": "yes",
+        "Nodule (explicit mention of nodule, ignore nodes)": "yes"
+      }
+    }
+  },
+  {
+    "entry": 3,
+    "annotations": [
+      {
+        "observation": [
+          "nodule",
+          25
+        ],
+        "location": "right middle lobe",
+        "properties": "15mm fdg-avid suvmax=8.4 spiculated margins"
+      },
+      {
+        "observation": [
+          "lymphadenopathy",
+          40
+        ],
+        "location": "mediastinal hilar",
+        "properties": "absent"
+      },
+      {
+        "observation": [
+          "granuloma",
+          48
+        ],
+        "location": "left upper lobe",
+        "properties": "4mm calcified benign-appearing"
+      },
+      {
+        "observation": [
+          "effusions",
+          58
+        ],
+        "location": "bilateral pleural",
+        "properties": "small larger on right"
+      },
+      {
+        "observation": [
+          "uptake",
+          67
+        ],
+        "location": "gastro-oesophageal junction",
+        "properties": "mild likely physiological"
+      }
+    ],
+    "binary_classifications": {
+      "ground_truth": {
+        "Tumour/mass": "no",
+        "Disease progression (assuming no prior comparison data implies disease progression)": "yes",
+        "Nodule (explicit mention of nodule, ignore nodes)": "yes"
+      }
+    }
+  },
+  {
+    "entry": 4,
+    "annotations": [
+      {
+        "observation": [
+          "mastectomy",
+          20
+        ],
+        "location": "left",
+        "properties": "interval post-surgical changes mild fdg uptake healing"
+      },
+      {
+        "observation": [
+          "nodule",
+          45
+        ],
+        "location": "right lower lobe",
+        "properties": "8mm fdg-avid suvmax=3.8 new pulmonary"
+      },
+      {
+        "observation": [
+          "nodule",
+          55
+        ],
+        "location": "left upper lobe",
+        "properties": "6mm non-fdg-avid stable likely benign"
+      },
+      {
+        "observation": [
+          "node",
+          70
+        ],
+        "location": "left internal mammary",
+        "properties": "mildly fdg-avid suvmax=2.9 indeterminate"
+      },
+      {
+        "observation": [
+          "metastases",
+          77
+        ],
+        "location": "bone",
+        "properties": "absent"
+      }
+    ],
+    "binary_classifications": {
+      "ground_truth": {
+        "Tumour/mass": "no",
+        "Disease progression (assuming no prior comparison data implies disease progression)": "no",
+        "Nodule (explicit mention of nodule, ignore nodes)": "yes"
+      }
+    }
+  },
+  {
+    "entry": 5,
+    "annotations": [
+      {
+        "observation": [
+          "mass",
+          30
+        ],
+        "location": "distal oesophagus gastro-oesophageal junction",
+        "properties": "6.5 cm heterogeneously fdg-avid suvmax=18.7"
+      },
+      {
+        "observation": [
+          "nodes",
+          46
+        ],
+        "location": "coeliac axis",
+        "properties": "multiple fdg-avid largest 22mm suvmax=9.4"
+      },
+      {
+        "observation": [
+          "nodule",
+          60
+        ],
+        "location": "peritoneal greater omentum",
+        "properties": "14mm fdg-avid suvmax=6.1"
+      },
+      {
+        "observation": [
+          "hypodensities",
+          73
+        ],
+        "location": "liver segments vi vii",
+        "properties": "small 8mm 6mm hepatic not significantly fdg-avid"
+      }
+    ],
+    "binary_classifications": {
+      "ground_truth": {
+        "Tumour/mass": "yes",
+        "Disease progression (assuming no prior comparison data implies disease progression)": "yes",
+        "Nodule (explicit mention of nodule, ignore nodes)": "yes"
+      }
+    }
+  }
+]

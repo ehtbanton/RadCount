@@ -21,7 +21,7 @@ PROJECT_ROOT = Path(__file__).parent.resolve()
 VENV_DIR = PROJECT_ROOT / "venv"
 REQUIREMENTS_FILE = PROJECT_ROOT / "requirements.txt"
 LLAMA_CPP_DIR = PROJECT_ROOT / "llama_cpp"
-MODELS_DIR = PROJECT_ROOT / "models"
+MODELS_DIR = PROJECT_ROOT / "llm_models"
 CONTEXT_DIR = PROJECT_ROOT / "Context"
 
 # Global variable to track llama.cpp server process
@@ -335,9 +335,8 @@ def download_llama_cpp(gpu_type):
 
 
 def check_model_downloaded():
-    """Check if a model is already downloaded in either the relative models directory or F:/_llm_models/."""
-    # Define directories to search
-    search_dirs = [MODELS_DIR, Path("F:/_llm_models")]
+    """Check if a model is already downloaded in the llm_models directory."""
+    search_dirs = [MODELS_DIR]
 
     for models_dir in search_dirs:
         if not models_dir.exists():
@@ -452,7 +451,7 @@ def download_vision_model():
                 print_status("Trying next model option...")
             else:
                 print_status("All model download attempts failed.")
-                print_status("You can manually download a vision model (.gguf) to the 'models' folder or F:/_llm_models/")
+                print_status("You can manually download a vision model (.gguf) to the 'llm_models' folder")
                 print_status("Recommended: LLaVA models from https://huggingface.co/")
                 return False
 

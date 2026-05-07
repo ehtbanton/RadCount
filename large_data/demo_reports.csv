@@ -1,0 +1,56 @@
+patient_id,imaging_date,imaging_code,imaging_name,accession_number,report_text
+DEMO001,15/03/2024,PGENW,PET FDG Whole Body,RTH00000001,"PET FDG Whole Body :
+Skull base to upper thigh.
+Blood glucose=5.4 mmol/l.
+No relevant prior study available for comparison.
+
+Findings:
+1. There is a 3.2 cm FDG-avid (SUVmax=11.8) mass in the right upper lobe abutting the oblique fissure.
+2. There is a mildly FDG-avid (SUVmax=3.1) 12mm right hilar lymph node.
+3. There is a 7mm ground glass nodule in the left lower lobe which is not significantly FDG-avid.
+4. No FDG-avid bone lesions identified. Mild degenerative uptake noted in the thoracic spine.
+5. Unremarkable appearances of the liver, spleen, and adrenal glands."
+DEMO002,22/06/2024,PGENW,PET FDG Whole Body,RTH00000002,"PET FDG Whole Body :
+Skull base to upper thighs.
+Blood glucose=5.8 mmol/l.
+Comparison: PET/CT 15/03/2024.
+
+Findings:
+1. The right upper lobe mass has increased in size to 4.1 cm (previously 3.2 cm) with increased FDG avidity (SUVmax=15.2, previously 11.8), in keeping with disease progression.
+2. The right hilar lymph node has increased to 18mm and is more FDG-avid (SUVmax=5.7, previously 3.1).
+3. New moderately FDG-avid (SUVmax=4.9) 9mm left adrenal nodule, suspicious for metastatic disease.
+4. The left lower lobe ground glass nodule is stable at 7mm and remains not significantly FDG-avid.
+5. No new FDG-avid bone lesions."
+DEMO003,10/09/2024,PGENW,PET FDG Whole Body,RTH00000003,"PET FDG Whole Body :
+Skull base to upper thighs.
+Blood glucose=6.2 mmol/l.
+Comparison: CT chest 01/09/2024.
+
+Findings:
+1. There is a 15mm FDG-avid (SUVmax=8.4) nodule in the right middle lobe with spiculated margins.
+2. No FDG-avid mediastinal or hilar lymphadenopathy.
+3. There is a benign-appearing 4mm calcified granuloma in the left upper lobe.
+4. Bilateral small pleural effusions, larger on the right side.
+5. Mild FDG uptake in the gastro-oesophageal junction, likely physiological."
+DEMO004,03/11/2024,PGENW,PET FDG Whole Body,RTH00000004,"PET FDG Whole Body :
+Skull base to upper thighs.
+Blood glucose=5.1 mmol/l.
+Comparison: PET/CT 22/06/2024.
+
+Findings:
+1. Interval left mastectomy. Post-surgical changes in the left breast and axilla with mild FDG uptake consistent with healing.
+2. There is a new 8mm FDG-avid (SUVmax=3.8) pulmonary nodule in the right lower lobe.
+3. Stable 6mm non-FDG-avid nodule in the left upper lobe, likely benign.
+4. Mildly FDG-avid left internal mammary lymph node (SUVmax=2.9), indeterminate.
+5. No FDG-avid bone metastases. Mild degenerative uptake in the lumbar spine."
+DEMO005,18/01/2025,PGENW,PET FDG Whole Body,RTH00000005,"PET FDG Whole Body :
+Skull base to upper thighs.
+Blood glucose=5.6 mmol/l.
+No prior imaging available for comparison.
+
+Findings:
+1. There is a large 6.5 cm heterogeneously FDG-avid (SUVmax=18.7) mass in the distal oesophagus extending to the gastro-oesophageal junction.
+2. Multiple FDG-avid coeliac axis lymph nodes, the largest measuring 22mm (SUVmax=9.4).
+3. There is a 14mm FDG-avid (SUVmax=6.1) peritoneal nodule adjacent to the greater omentum.
+4. Two small (8mm and 6mm) hepatic hypodensities in segments VI and VII, too small to characterise but not significantly FDG-avid.
+5. No FDG-avid bone lesions or pulmonary nodules identified."

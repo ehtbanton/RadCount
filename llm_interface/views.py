@@ -267,7 +267,7 @@ def create_indexed_report_text(report_text):
 
 # Get project root
 PROJECT_ROOT = Path(__file__).parent.parent
-MODELS_DIR = PROJECT_ROOT / "models"
+MODELS_DIR = PROJECT_ROOT / "llm_models"
 LLAMA_CPP_DIR = PROJECT_ROOT / "llama_cpp"
 
 
@@ -474,14 +474,10 @@ def detect_gpu():
 
 
 def get_available_models():
-    """Get list of available models from both the models directory and F:/_llm_models/."""
+    """Get list of available models from the llm_models directory."""
     models = []
 
-    # Define directories to search
     search_dirs = [MODELS_DIR]
-    external_models_dir = Path("F:/_llm_models")
-    if external_models_dir.exists():
-        search_dirs.append(external_models_dir)
 
     # Search all directories
     for models_dir in search_dirs:
@@ -747,18 +743,12 @@ def start_server(request):
                 'error': 'No model specified'
             }, status=400)
 
-        # Find the model file in either directory
         model_path = MODELS_DIR / model_filename
         if not model_path.exists():
-            # Try external models directory
-            external_model_path = Path("F:/_llm_models") / model_filename
-            if external_model_path.exists():
-                model_path = external_model_path
-            else:
-                return JsonResponse({
-                    'success': False,
-                    'error': f'Model file not found: {model_filename}'
-                }, status=404)
+            return JsonResponse({
+                'success': False,
+                'error': f'Model file not found: {model_filename}'
+            }, status=404)
 
         # Check if server is already running
         llm_service = LlamaService()
