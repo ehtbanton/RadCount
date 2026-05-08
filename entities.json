@@ -11,90 +11,82 @@
   },
   {
     "entry": 1,
-    "annotations": [
-      {
-        "observation": [
-          "mass",
-          29
-        ],
-        "location": "right upper lobe",
-        "properties": "3.2 cm fdg-avid suvmax=11.8"
-      },
-      {
-        "observation": [
-          "node",
-          50
-        ],
-        "location": "right hilar",
-        "properties": "12mm mildly fdg-avid suvmax=3.1"
-      },
-      {
-        "observation": [
-          "nodule",
-          58
-        ],
-        "location": "left lower lobe",
-        "properties": "7mm ground glass not significantly fdg-avid"
-      },
-      {
-        "observation": [
-          "lesions",
-          73
-        ],
-        "location": "bone",
-        "properties": "absent"
-      },
-      {
-        "observation": [
-          "uptake",
-          77
-        ],
-        "location": "thoracic spine",
-        "properties": "mild degenerative"
-      }
-    ],
-    "binary_classifications": {
-      "ground_truth": {
-        "Tumour/mass": "yes",
-        "Disease progression (assuming no prior comparison data implies disease progression)": "yes",
-        "Nodule (explicit mention of nodule, ignore nodes)": "yes"
-      }
-    }
+    "annotations": []
   },
   {
     "entry": 2,
     "annotations": [
       {
         "observation": [
-          "mass",
-          22
+          "thickening",
+          31
         ],
-        "location": "right upper lobe",
-        "properties": "4.1 cm fdg-avid suvmax=15.2 increased"
+        "location": "sigmoid colon",
+        "properties": "moderately fdg-avid suv max = 8.7 concentric 4 cm"
       },
       {
         "observation": [
-          "node",
-          50
+          "focus",
+          47
         ],
-        "location": "right hilar",
-        "properties": "18mm fdg-avid suvmax=5.7 increased"
+        "location": "segment vii liver",
+        "properties": "1.2 cm markedly increased fdg uptake suvmax=14.1 suspicious hepatic metastasis"
+      },
+      {
+        "observation": [
+          "lesion",
+          71
+        ],
+        "location": "segment iii",
+        "properties": "sub-centimetre low-density not significantly fdg-avid"
+      },
+      {
+        "observation": [
+          "nodes",
+          96
+        ],
+        "location": "pericolic",
+        "properties": "two mildly fdg-avid suvmax=3.2"
       },
       {
         "observation": [
           "nodule",
-          70
+          107
         ],
         "location": "left adrenal",
-        "properties": "9mm moderately fdg-avid suvmax=4.9 new suspicious metastatic"
+        "properties": "low-density 2.1 cm background fdg-avid incidental adenoma"
+      }
+    ],
+    "observations_ground_truth": [
+      {
+        "observation": [
+          "thickening",
+          31
+        ]
+      },
+      {
+        "observation": [
+          "focus",
+          47
+        ]
+      },
+      {
+        "observation": [
+          "lesion",
+          71
+        ]
+      },
+      {
+        "observation": [
+          "nodes",
+          96
+        ]
       },
       {
         "observation": [
           "nodule",
-          82
-        ],
-        "location": "left lower lobe",
-        "properties": "7mm ground glass stable not significantly fdg-avid"
+          107
+        ]
       }
     ],
     "binary_classifications": {
@@ -110,139 +102,117 @@
     "annotations": [
       {
         "observation": [
-          "nodule",
-          25
+          "mastectomy",
+          22
         ],
-        "location": "right middle lobe",
-        "properties": "15mm fdg-avid suvmax=8.4 spiculated margins"
+        "location": "right",
+        "properties": "interval axillary clearance moderate fdg uptake post-operative suvmax=4.2"
       },
       {
         "observation": [
           "lymphadenopathy",
-          40
+          53
         ],
-        "location": "mediastinal hilar",
-        "properties": "absent"
-      },
-      {
-        "observation": [
-          "granuloma",
-          48
-        ],
-        "location": "left upper lobe",
-        "properties": "4mm calcified benign-appearing"
-      },
-      {
-        "observation": [
-          "effusions",
-          58
-        ],
-        "location": "bilateral pleural",
-        "properties": "small larger on right"
-      },
-      {
-        "observation": [
-          "uptake",
-          67
-        ],
-        "location": "gastro-oesophageal junction",
-        "properties": "mild likely physiological"
-      }
-    ],
-    "binary_classifications": {
-      "ground_truth": {
-        "Tumour/mass": "no",
-        "Disease progression (assuming no prior comparison data implies disease progression)": "yes",
-        "Nodule (explicit mention of nodule, ignore nodes)": "yes"
-      }
-    }
-  },
-  {
-    "entry": 4,
-    "annotations": [
-      {
-        "observation": [
-          "mastectomy",
-          20
-        ],
-        "location": "left",
-        "properties": "interval post-surgical changes mild fdg uptake healing"
-      },
-      {
-        "observation": [
-          "nodule",
-          45
-        ],
-        "location": "right lower lobe",
-        "properties": "8mm fdg-avid suvmax=3.8 new pulmonary"
-      },
-      {
-        "observation": [
-          "nodule",
-          55
-        ],
-        "location": "left upper lobe",
-        "properties": "6mm non-fdg-avid stable likely benign"
+        "location": "bilateral internal mammary mediastinal",
+        "properties": "increased size and fdg avidity prevascular node 1.9 cm suvmax=11.8"
       },
       {
         "observation": [
           "node",
-          70
+          71
         ],
-        "location": "left internal mammary",
-        "properties": "mildly fdg-avid suvmax=2.9 indeterminate"
+        "location": "right supraclavicular",
+        "properties": "new mildly fdg-avid suvmax=3.6"
+      },
+      {
+        "observation": [
+          "foci",
+          79
+        ],
+        "location": "liver segments ii iva",
+        "properties": "new small moderately fdg-avid hepatic suvmax=7.1 5.9 suspicious metastatic"
       },
       {
         "observation": [
           "metastases",
-          77
+          101
         ],
         "location": "bone",
-        "properties": "absent"
-      }
-    ],
-    "binary_classifications": {
-      "ground_truth": {
-        "Tumour/mass": "no",
-        "Disease progression (assuming no prior comparison data implies disease progression)": "no",
-        "Nodule (explicit mention of nodule, ignore nodes)": "yes"
-      }
-    }
-  },
-  {
-    "entry": 5,
-    "annotations": [
-      {
-        "observation": [
-          "mass",
-          30
-        ],
-        "location": "distal oesophagus gastro-oesophageal junction",
-        "properties": "6.5 cm heterogeneously fdg-avid suvmax=18.7"
-      },
-      {
-        "observation": [
-          "nodes",
-          46
-        ],
-        "location": "coeliac axis",
-        "properties": "multiple fdg-avid largest 22mm suvmax=9.4"
+        "properties": "marked progression new foci t7 right iliac wing left femoral neck l3 increased"
       },
       {
         "observation": [
           "nodule",
-          60
+          139
         ],
-        "location": "peritoneal greater omentum",
-        "properties": "14mm fdg-avid suvmax=6.1"
+        "location": "right upper lobe",
+        "properties": "new fdg-avid 8mm pulmonary suvmax=4.7"
       },
       {
         "observation": [
-          "hypodensities",
-          73
+          "nodule",
+          146
         ],
-        "location": "liver segments vi vii",
-        "properties": "small 8mm 6mm hepatic not significantly fdg-avid"
+        "location": "left lower lobe",
+        "properties": "stable 5mm not fdg-avid"
+      },
+      {
+        "observation": [
+          "foci",
+          151
+        ],
+        "location": "left parietal lobe",
+        "properties": "reduced uptake low attenuation concerning intracranial metastatic"
+      }
+    ],
+    "observations_ground_truth": [
+      {
+        "observation": [
+          "mastectomy",
+          22
+        ]
+      },
+      {
+        "observation": [
+          "lymphadenopathy",
+          53
+        ]
+      },
+      {
+        "observation": [
+          "node",
+          71
+        ]
+      },
+      {
+        "observation": [
+          "foci",
+          79
+        ]
+      },
+      {
+        "observation": [
+          "metastases",
+          101
+        ]
+      },
+      {
+        "observation": [
+          "nodule",
+          139
+        ]
+      },
+      {
+        "observation": [
+          "nodule",
+          146
+        ]
+      },
+      {
+        "observation": [
+          "foci",
+          151
+        ]
       }
     ],
     "binary_classifications": {
@@ -250,6 +220,18 @@
         "Tumour/mass": "yes",
         "Disease progression (assuming no prior comparison data implies disease progression)": "yes",
         "Nodule (explicit mention of nodule, ignore nodes)": "yes"
+      }
+    }
+  },
+  {
+    "entry": 4,
+    "annotations": [],
+    "observations_ground_truth": [],
+    "binary_classifications": {
+      "ground_truth": {
+        "Tumour/mass": "no",
+        "Disease progression (assuming no prior comparison data implies disease progression)": "no",
+        "Nodule (explicit mention of nodule, ignore nodes)": "no"
       }
     }
   }

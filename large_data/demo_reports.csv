@@ -1,56 +1,45 @@
 patient_id,imaging_date,imaging_code,imaging_name,accession_number,report_text
-DEMO001,15/03/2024,PGENW,PET FDG Whole Body,RTH00000001,"PET FDG Whole Body :
+DEMO000,01/01/2000,INFO,SIMULATED DATA,RTH00000000,"NOTE: This CSV contains entirely simulated radiology reports created for demonstration purposes. These are not real patient reports. No real patient data is included in this repository. The reports are modelled on the structure and language of PET-CT oncology reports to provide realistic test data for the extraction pipeline."
+DEMO001,08/04/2024,PGENW,PET FDG Whole Body,RTH00000001,"PET FDG Whole Body :
 Skull base to upper thigh.
 Blood glucose=5.4 mmol/l.
 No relevant prior study available for comparison.
 
 Findings:
-1. There is a 3.2 cm FDG-avid (SUVmax=11.8) mass in the right upper lobe abutting the oblique fissure.
-2. There is a mildly FDG-avid (SUVmax=3.1) 12mm right hilar lymph node.
-3. There is a 7mm ground glass nodule in the left lower lobe which is not significantly FDG-avid.
-4. No FDG-avid bone lesions identified. Mild degenerative uptake noted in the thoracic spine.
-5. Unremarkable appearances of the liver, spleen, and adrenal glands."
-DEMO002,22/06/2024,PGENW,PET FDG Whole Body,RTH00000002,"PET FDG Whole Body :
-Skull base to upper thighs.
-Blood glucose=5.8 mmol/l.
-Comparison: PET/CT 15/03/2024.
+1. There is moderately FDG-avid (SUV max = 8.7) concentric thickening of the sigmoid colon extending for approximately 4 cm.
+2. There is a 1.2 cm focus of markedly increased FDG uptake (SUVmax=14.1) in segment VII of the liver, suspicious for a solitary hepatic metastasis.
+3. A further sub-centimetre low-density lesion in segment III is not significantly FDG-avid and is too small to characterise with PET.
+4. There are two mildly FDG-avid (SUVmax=3.2) pericolic lymph nodes adjacent to the primary tumour.
+5. A low-density 2.1 cm nodule arising from the left adrenal gland is background FDG-avid, in keeping with an incidental adenoma.
+6. The remainder of FDG uptake is physiological. The unenhanced CT does not add further clinically relevant information.
+
+Conclusion:
+Moderately FDG-avid sigmoid colonic tumour with a solitary markedly FDG-avid hepatic metastasis in segment VII. Pericolic lymphadenopathy. Left adrenal adenoma."
+DEMO002,14/11/2024,PGENW,PET FDG Whole Body,RTH00000002,"PET/CT 18FDG Whole Body :
 
 Findings:
-1. The right upper lobe mass has increased in size to 4.1 cm (previously 3.2 cm) with increased FDG avidity (SUVmax=15.2, previously 11.8), in keeping with disease progression.
-2. The right hilar lymph node has increased to 18mm and is more FDG-avid (SUVmax=5.7, previously 3.1).
-3. New moderately FDG-avid (SUVmax=4.9) 9mm left adrenal nodule, suspicious for metastatic disease.
-4. The left lower lobe ground glass nodule is stable at 7mm and remains not significantly FDG-avid.
-5. No new FDG-avid bone lesions."
-DEMO003,10/09/2024,PGENW,PET FDG Whole Body,RTH00000003,"PET FDG Whole Body :
-Skull base to upper thighs.
-Blood glucose=6.2 mmol/l.
-Comparison: CT chest 01/09/2024.
+Skull vertex to upper thighs.
+Blood glucose: 5.8 mmol/litre. Non-diabetic.
+Comparison: PET/CT 03/06/2024.
 
-Findings:
-1. There is a 15mm FDG-avid (SUVmax=8.4) nodule in the right middle lobe with spiculated margins.
-2. No FDG-avid mediastinal or hilar lymphadenopathy.
-3. There is a benign-appearing 4mm calcified granuloma in the left upper lobe.
-4. Bilateral small pleural effusions, larger on the right side.
-5. Mild FDG uptake in the gastro-oesophageal junction, likely physiological."
-DEMO004,03/11/2024,PGENW,PET FDG Whole Body,RTH00000004,"PET FDG Whole Body :
-Skull base to upper thighs.
-Blood glucose=5.1 mmol/l.
-Comparison: PET/CT 22/06/2024.
+1. Interval right mastectomy and axillary clearance. There is moderate FDG uptake in the surgical bed consistent with post-operative change (SUVmax=4.2).
+2. Increase in size and FDG avidity of bilateral internal mammary and mediastinal lymphadenopathy, e.g. prevascular node now 1.9 cm (previously 1.1 cm, SUVmax=11.8, previously 5.4). New mildly FDG-avid right supraclavicular node (SUVmax=3.6).
+3. New small moderately FDG-avid hepatic foci in segments II and IVa (SUVmax=7.1 and 5.9 respectively), suspicious for metastatic disease. Previously unremarkable liver.
+4. Marked progression of bone metastases with new FDG-avid foci in T7 vertebral body (SUVmax=9.3), right iliac wing (SUVmax=6.8), and left femoral neck (SUVmax=5.1). Previously identified L3 lesion has increased in avidity (SUVmax=12.4, previously 7.6).
+5. New FDG-avid 8mm right upper lobe pulmonary nodule (SUVmax=4.7). Stable 5mm left lower lobe nodule remains not FDG-avid.
+6. Foci of reduced uptake in the left parietal lobe with corresponding low attenuation on CT, concerning for intracranial metastatic disease. No midline shift.
+7. The remainder of FDG distribution is physiological.
 
-Findings:
-1. Interval left mastectomy. Post-surgical changes in the left breast and axilla with mild FDG uptake consistent with healing.
-2. There is a new 8mm FDG-avid (SUVmax=3.8) pulmonary nodule in the right lower lobe.
-3. Stable 6mm non-FDG-avid nodule in the left upper lobe, likely benign.
-4. Mildly FDG-avid left internal mammary lymph node (SUVmax=2.9), indeterminate.
-5. No FDG-avid bone metastases. Mild degenerative uptake in the lumbar spine."
-DEMO005,18/01/2025,PGENW,PET FDG Whole Body,RTH00000005,"PET FDG Whole Body :
-Skull base to upper thighs.
-Blood glucose=5.6 mmol/l.
-No prior imaging available for comparison.
+Comment:
+Marked disease progression with nodal, hepatic, osseous, pulmonary and possible intracranial metastases. MRI brain recommended for further evaluation of the left parietal lesion. The structural bone lesion at left femoral neck should be assessed for fracture risk.
+ICD10-Z087"
+DEMO003,22/01/2025,PGENW,PET FDG Whole Body,RTH00000003,"Technique: Skull base to upper thighs, 362.7 MBq of FDG injected, blood glucose 5.9 mmol per litre.
 
-Findings:
-1. There is a large 6.5 cm heterogeneously FDG-avid (SUVmax=18.7) mass in the distal oesophagus extending to the gastro-oesophageal junction.
-2. Multiple FDG-avid coeliac axis lymph nodes, the largest measuring 22mm (SUVmax=9.4).
-3. There is a 14mm FDG-avid (SUVmax=6.1) peritoneal nodule adjacent to the greater omentum.
-4. Two small (8mm and 6mm) hepatic hypodensities in segments VI and VII, too small to characterise but not significantly FDG-avid.
-5. No FDG-avid bone lesions or pulmonary nodules identified."
+Findings: Compared to the PET/CT scan of 14/08/2024.
+#1. There is normal physiological distribution of FDG.
+#2. No FDG-avid lymphadenopathy above or below the diaphragm.
+#3. The CT component of the scan does not demonstrate any new clinically significant abnormality.
+
+Conclusion: No evidence of local or distant disease relapse.
+
+ICD 10 - Z080"
