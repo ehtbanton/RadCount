@@ -364,44 +364,30 @@ def download_progress_hook(block_num, block_size, total_size):
                 print()
 
 
-def download_vision_model():
-    """Download a vision-language model."""
-    print_status("Downloading vision-language model (this may take several minutes)...")
+def download_model():
+    """Download a language model for inference."""
+    print_status("Downloading language model (this may take several minutes)...")
 
     MODELS_DIR.mkdir(exist_ok=True)
 
-    # Try multiple model sources in order of preference
     model_options = [
-        # Option 1: LLaVA 1.6 Mistral 7B Q4 (~4GB, recent and capable)
         {
-            "url": "https://huggingface.co/cjpais/llava-1.6-mistral-7b-gguf/resolve/main/llava-v1.6-mistral-7b.Q4_K_M.gguf",
-            "filename": "llava-v1.6-mistral-7b.Q4_K_M.gguf",
-            "mmproj_url": "https://huggingface.co/cjpais/llava-1.6-mistral-7b-gguf/resolve/main/mmproj-model-f16.gguf",
-            "mmproj_filename": "mmproj-llava-v1.6-f16.gguf"
+            "url": "https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/main/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+            "filename": "Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
         },
-        # Option 2: LLaVA 1.5 7B Q4 (~4GB, stable)
-        {
-            "url": "https://huggingface.co/mys/ggml_llava-v1.5-7b/resolve/main/ggml-model-q4_k.gguf",
-            "filename": "llava-v1.5-7b-Q4_K.gguf",
-            "mmproj_url": "https://huggingface.co/mys/ggml_llava-v1.5-7b/resolve/main/mmproj-model-f16.gguf",
-            "mmproj_filename": "mmproj-llava-v1.5-f16.gguf"
-        }
     ]
 
     for i, model_option in enumerate(model_options, 1):
         print_status(f"Trying model option {i}/{len(model_options)}: {model_option['filename']}...")
 
         model_path = MODELS_DIR / model_option["filename"]
-        mmproj_path = MODELS_DIR / model_option.get("mmproj_filename", "")
 
         try:
-            # Download main model
             print_status(f"Downloading {model_option['filename']}...")
 
             import requests
             headers = {'User-Agent': 'Mozilla/5.0'}
 
-            # Download main model
             response = requests.get(model_option["url"], headers=headers, stream=True, timeout=30)
             response.raise_for_status()
 
@@ -417,42 +403,18 @@ def download_vision_model():
                         download_progress_hook(block_num, block_size, total_size)
 
             print_status("Model downloaded successfully")
-
-            # Download mmproj (multimodal projector) if specified
-            if "mmproj_url" in model_option and model_option["mmproj_url"]:
-                print_status(f"Downloading vision projector {model_option['mmproj_filename']}...")
-
-                response = requests.get(model_option["mmproj_url"], headers=headers, stream=True, timeout=30)
-                response.raise_for_status()
-
-                total_size = int(response.headers.get('content-length', 0))
-                downloaded = 0
-
-                with open(mmproj_path, 'wb') as f:
-                    for block_num, chunk in enumerate(response.iter_content(chunk_size=block_size)):
-                        if chunk:
-                            f.write(chunk)
-                            downloaded += len(chunk)
-                            download_progress_hook(block_num, block_size, total_size)
-
-                print_status("Vision projector downloaded successfully")
-
             return True
 
         except Exception as e:
             print_status(f"Failed to download model option {i}: {e}")
-            # Clean up partial downloads
             if model_path.exists():
                 model_path.unlink()
-            if mmproj_path and mmproj_path.exists():
-                mmproj_path.unlink()
 
             if i < len(model_options):
                 print_status("Trying next model option...")
             else:
                 print_status("All model download attempts failed.")
-                print_status("You can manually download a vision model (.gguf) to the 'llm_models' folder")
-                print_status("Recommended: LLaVA models from https://huggingface.co/")
+                print_status("You can manually download a .gguf model to the 'llm_models' folder")
                 return False
 
     return False
@@ -475,18 +437,6 @@ def cleanup_llama_server():
     # Note: Server is now managed by the web interface, not by startup.py
     # This function is kept for backward compatibility but does nothing
     pass
-
-
-def get_mmproj_path():
-    """Get the path to the multimodal projector file."""
-    if not MODELS_DIR.exists():
-        return None
-
-    mmproj_files = list(MODELS_DIR.glob("mmproj*.gguf"))
-    if mmproj_files:
-        return mmproj_files[0]
-
-    return None
 
 
 def start_llama_server(gpu_type):
@@ -534,12 +484,6 @@ def start_llama_server(gpu_type):
         "-c", "4096",  # context size
         "--n-gpu-layers", "33" if gpu_type in ["cuda", "metal"] else "0",
     ]
-
-    # Add mmproj for vision support
-    mmproj_path = get_mmproj_path()
-    if mmproj_path:
-        cmd.extend(["--mmproj", str(mmproj_path)])
-        print_status(f"Vision support enabled with {mmproj_path.name}")
 
     try:
         # Start server as background process
@@ -599,8 +543,8 @@ def setup_llm():
 
     # Check/download model
     if not check_model_downloaded():
-        print_status("Model not found, downloading vision-language model...")
-        if not download_vision_model():
+        print_status("Model not found, downloading language model...")
+        if not download_model():
             print_status("Failed to download model. Continuing without LLM support.")
             return False
     else:

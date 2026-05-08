@@ -780,12 +780,6 @@ def start_server(request):
                 'error': 'llama-server executable not found. Please run startup.py to install llama.cpp.'
             }, status=500)
 
-        # Check for mmproj file
-        mmproj_path = None
-        for mmproj_file in MODELS_DIR.glob("mmproj*.gguf"):
-            mmproj_path = mmproj_file
-            break
-
         # Detect GPU for optimal settings
         gpu_type = detect_gpu()
         gpu_layers = "33" if gpu_type in ["cuda", "metal"] else "0"
@@ -799,9 +793,6 @@ def start_server(request):
             "-c", str(context_size),
             "--n-gpu-layers", gpu_layers,
         ]
-
-        if mmproj_path:
-            cmd.extend(["--mmproj", str(mmproj_path)])
 
         # Start server
         process = subprocess.Popen(
