@@ -237,6 +237,43 @@ def extract_json_object(text):
         return None, f"JSON parse error: {str(e)}"
 
 
+def normalise_observation_format(parsed):
+    """Normalise LLM output to [{"observation": ["word", index]}] format.
+
+    Handles common LLM deviations:
+    - Flat pair: ["word", 34] -> [{"observation": ["word", 34]}]
+    - List of pairs: [["word", 34], ["word2", 56]] -> wrapped in dicts
+    - Alternating: ["word", 34, "word2", 56] -> paired and wrapped
+    """
+    if not isinstance(parsed, list) or len(parsed) == 0:
+        return parsed
+
+    if isinstance(parsed[0], dict) and "observation" in parsed[0]:
+        return parsed
+
+    if len(parsed) == 2 and isinstance(parsed[0], str) and isinstance(parsed[1], (int, float)):
+        return [{"observation": [parsed[0], int(parsed[1])]}]
+
+    if isinstance(parsed[0], list):
+        return [
+            {"observation": item} for item in parsed
+            if isinstance(item, list) and len(item) == 2
+        ]
+
+    if isinstance(parsed[0], str) and len(parsed) >= 2 and isinstance(parsed[1], (int, float)):
+        result = []
+        i = 0
+        while i + 1 < len(parsed):
+            if isinstance(parsed[i], str) and isinstance(parsed[i + 1], (int, float)):
+                result.append({"observation": [parsed[i], int(parsed[i + 1])]})
+                i += 2
+            else:
+                i += 1
+        return result
+
+    return parsed
+
+
 def create_indexed_report_text(report_text):
     """
     Create an indexed version of the report text where each word is preceded
@@ -728,6 +765,65 @@ def token_count(request):
         }, status=500)
 
 
+def start_llm_server_process(model_filename, context_size=4096):
+    """Start the llama.cpp server process. Returns a dict with success/error info."""
+    model_path = MODELS_DIR / model_filename
+    if not model_path.exists():
+        return {'success': False, 'error': f'Model file not found: {model_filename}'}
+
+    llm_service = LlamaService()
+    if llm_service.is_server_running():
+        return {'success': False, 'error': 'Server is already running. Stop it first before starting with a different model.'}
+
+    if sys.platform == "win32":
+        server_exe = None
+        for potential_exe in LLAMA_CPP_DIR.rglob("llama-server.exe"):
+            server_exe = potential_exe
+            break
+        if not server_exe:
+            server_exe = LLAMA_CPP_DIR / "llama-server.exe"
+    else:
+        server_exe = None
+        for potential_exe in LLAMA_CPP_DIR.rglob("llama-server"):
+            server_exe = potential_exe
+            break
+        if not server_exe:
+            server_exe = LLAMA_CPP_DIR / "llama-server"
+
+    if not server_exe or not server_exe.exists():
+        return {'success': False, 'error': 'llama-server executable not found. Please run startup.py to install llama.cpp.'}
+
+    gpu_type = detect_gpu()
+    gpu_layers = "33" if gpu_type in ["cuda", "metal"] else "0"
+
+    cmd = [
+        str(server_exe),
+        "-m", str(model_path),
+        "--host", "127.0.0.1",
+        "--port", "8080",
+        "-c", str(context_size),
+        "--n-gpu-layers", gpu_layers,
+    ]
+
+    process = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        cwd=str(LLAMA_CPP_DIR),
+        creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0
+    )
+
+    import os
+    pid_file = PROJECT_ROOT / "llama_server.pid"
+    with open(pid_file, 'w') as f:
+        f.write(str(process.pid))
+
+    set_current_model(model_filename)
+    set_current_context_size(context_size)
+
+    return {'success': True, 'message': f'Server starting with model: {model_filename}', 'pid': process.pid}
+
+
 @csrf_exempt
 @require_http_methods(["POST"])
 def start_server(request):
@@ -743,81 +839,21 @@ def start_server(request):
                 'error': 'No model specified'
             }, status=400)
 
-        model_path = MODELS_DIR / model_filename
-        if not model_path.exists():
-            return JsonResponse({
-                'success': False,
-                'error': f'Model file not found: {model_filename}'
-            }, status=404)
+        result = start_llm_server_process(model_filename, context_size)
 
-        # Check if server is already running
-        llm_service = LlamaService()
-        if llm_service.is_server_running():
-            return JsonResponse({
-                'success': False,
-                'error': 'Server is already running. Stop it first before starting with a different model.'
-            }, status=400)
+        if result['success']:
+            return JsonResponse(result)
 
-        # Find llama-server executable
-        if sys.platform == "win32":
-            server_exe = None
-            for potential_exe in LLAMA_CPP_DIR.rglob("llama-server.exe"):
-                server_exe = potential_exe
-                break
-            if not server_exe:
-                server_exe = LLAMA_CPP_DIR / "llama-server.exe"
+        error = result['error']
+        if 'Model file not found' in error:
+            status = 404
+        elif 'already running' in error:
+            status = 400
+        elif 'executable not found' in error:
+            status = 500
         else:
-            server_exe = None
-            for potential_exe in LLAMA_CPP_DIR.rglob("llama-server"):
-                server_exe = potential_exe
-                break
-            if not server_exe:
-                server_exe = LLAMA_CPP_DIR / "llama-server"
-
-        if not server_exe or not server_exe.exists():
-            return JsonResponse({
-                'success': False,
-                'error': 'llama-server executable not found. Please run startup.py to install llama.cpp.'
-            }, status=500)
-
-        # Detect GPU for optimal settings
-        gpu_type = detect_gpu()
-        gpu_layers = "33" if gpu_type in ["cuda", "metal"] else "0"
-
-        # Build command
-        cmd = [
-            str(server_exe),
-            "-m", str(model_path),
-            "--host", "127.0.0.1",
-            "--port", "8080",
-            "-c", str(context_size),
-            "--n-gpu-layers", gpu_layers,
-        ]
-
-        # Start server
-        process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            cwd=str(LLAMA_CPP_DIR),
-            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0
-        )
-
-        # Store process ID for later stopping
-        import os
-        pid_file = PROJECT_ROOT / "llama_server.pid"
-        with open(pid_file, 'w') as f:
-            f.write(str(process.pid))
-
-        # Store the current model and context size
-        set_current_model(model_filename)
-        set_current_context_size(context_size)
-
-        return JsonResponse({
-            'success': True,
-            'message': f'Server starting with model: {model_filename}',
-            'pid': process.pid
-        })
+            status = 500
+        return JsonResponse(result, status=status)
 
     except json.JSONDecodeError:
         return JsonResponse({
@@ -2077,7 +2113,7 @@ def extract_entities_relations(request):
             headers={'Content-Type': 'application/json'},
             json={
                 'messages': messages,
-                'temperature': 0.1,  # Low temperature for consistency
+                'temperature': 0,
                 'max_tokens': 8000   # Allow longer responses for complex reports
             },
             timeout=120  # Longer timeout for complex extraction
@@ -2144,6 +2180,145 @@ def extract_entities_relations(request):
         return JsonResponse({'success': False, 'error': f'Failed to extract entities: {str(e)}'}, status=500)
 
 
+# Post-Processing Pipeline (Chapter 4, Section 4.3.2)
+
+CONCLUSION_MARKERS = {'conclusion', 'summary', 'impression', 'comment'}
+NEGATION_CUES = {'no', 'not', 'without', 'absence', 'nor', 'negative'}
+NON_OBSERVATION_WORDS = {
+    'disease', 'change', 'uptake', 'response', 'distribution',
+    'information', 'history', 'comparison', 'technique', 'glucose',
+    'lymph', 'findings', 'result', 'status', 'activity',
+}
+
+
+def normalise_obs_word(word):
+    return re.sub(r'[^a-z]', '', word.lower())
+
+
+def correct_observation_indices(observations, report_words, window=10):
+    corrected = []
+    for obs in observations:
+        observation = obs.get('observation', [])
+        if not isinstance(observation, list) or len(observation) != 2:
+            corrected.append(obs)
+            continue
+        word, pred_idx = observation
+        if not isinstance(pred_idx, int):
+            try:
+                pred_idx = int(pred_idx)
+            except (ValueError, TypeError):
+                corrected.append(obs)
+                continue
+        norm_word = normalise_obs_word(word)
+        if not norm_word:
+            corrected.append(obs)
+            continue
+        best_idx = None
+        best_dist = window + 1
+        for j in range(max(0, pred_idx - window), min(len(report_words), pred_idx + window + 1)):
+            if normalise_obs_word(report_words[j]) == norm_word:
+                dist = abs(j - pred_idx)
+                if dist < best_dist:
+                    best_dist = dist
+                    best_idx = j
+        if best_idx is not None:
+            corrected.append({**obs, 'observation': [report_words[best_idx], best_idx]})
+        else:
+            corrected.append(obs)
+    return corrected
+
+
+def strip_conclusion_observations(observations, report_words):
+    conclusion_idx = None
+    for i, word in enumerate(report_words):
+        if word.lower().rstrip(':') in CONCLUSION_MARKERS:
+            conclusion_idx = i
+            break
+    if conclusion_idx is None:
+        return observations
+    filtered = []
+    for obs in observations:
+        observation = obs.get('observation', [])
+        if isinstance(observation, list) and len(observation) == 2:
+            if observation[1] < conclusion_idx:
+                filtered.append(obs)
+        else:
+            filtered.append(obs)
+    return filtered
+
+
+def filter_negated_observations(observations, report_words):
+    filtered = []
+    for obs in observations:
+        observation = obs.get('observation', [])
+        if not isinstance(observation, list) or len(observation) != 2:
+            filtered.append(obs)
+            continue
+        _, idx = observation
+        if not isinstance(idx, int):
+            filtered.append(obs)
+            continue
+        negated = False
+        for j in range(max(0, idx - 4), idx):
+            if report_words[j].lower().rstrip('.,;:') in NEGATION_CUES:
+                negated = True
+                break
+        if not negated:
+            filtered.append(obs)
+    return filtered
+
+
+def filter_non_observation_words(observations):
+    filtered = []
+    for obs in observations:
+        observation = obs.get('observation', [])
+        if isinstance(observation, list) and len(observation) == 2:
+            word = normalise_obs_word(observation[0])
+            if word not in NON_OBSERVATION_WORDS:
+                filtered.append(obs)
+        else:
+            filtered.append(obs)
+    return filtered
+
+
+def post_process_observations(observations, report_text):
+    if not observations or not any(isinstance(obs, dict) for obs in observations):
+        return observations
+    observations = [obs for obs in observations if isinstance(obs, dict)]
+    report_words = report_text.split()
+    observations = correct_observation_indices(observations, report_words, window=10)
+    observations = strip_conclusion_observations(observations, report_words)
+    observations = filter_negated_observations(observations, report_words)
+    observations = filter_non_observation_words(observations)
+    return observations
+
+
+def match_observations_bipartite(gt_list, pred_list, window=10):
+    """Bipartite matching using normalised string matching within ±w window.
+
+    Each input is a list of (normalised_word, index) tuples.
+    Returns (tp, fp, fn, matched_pairs) where matched_pairs is list of (gt_idx, pred_idx).
+    """
+    candidates = []
+    for pi, (pw, pidx) in enumerate(pred_list):
+        for gi, (gw, gidx) in enumerate(gt_list):
+            if pw == gw and abs(pidx - gidx) <= window:
+                candidates.append((abs(pidx - gidx), pi, gi))
+    candidates.sort()
+    matched_gt = set()
+    matched_pred = set()
+    matched_pairs = []
+    for dist, pi, gi in candidates:
+        if pi not in matched_pred and gi not in matched_gt:
+            matched_pred.add(pi)
+            matched_gt.add(gi)
+            matched_pairs.append((gi, pi))
+    tp = len(matched_pairs)
+    fp = len(pred_list) - tp
+    fn = len(gt_list) - tp
+    return tp, fp, fn, matched_pairs
+
+
 # Simplified Observation-Location Extraction
 
 @csrf_exempt
@@ -2202,7 +2377,7 @@ def extract_observations(request):
             headers={'Content-Type': 'application/json'},
             json={
                 'messages': messages,
-                'temperature': 0.1,
+                'temperature': 0,
                 'max_tokens': 4000
             },
             timeout=180
@@ -2445,6 +2620,22 @@ def extract_entities_llm(request):
         # Create indexed report text for word-based indexing
         indexed_report, word_list = create_indexed_report_text(report_text)
 
+        # Strip conclusion/comment section from indexed text to prevent extraction from it
+        indexed_lines = indexed_report.split('\n')
+        truncated_lines = []
+        for line in indexed_lines:
+            line_words = line.split()
+            stop = False
+            for w in line_words:
+                clean = re.sub(r'^\[\d+\]', '', w).rstrip(':.,;').lower()
+                if clean in CONCLUSION_MARKERS:
+                    stop = True
+                    break
+            if stop:
+                break
+            truncated_lines.append(line)
+        indexed_report = '\n'.join(truncated_lines)
+
         # Check if prompt uses indexed_report (new style) or not (legacy)
         uses_word_indexing = '{indexed_report}' in prompt_template
 
@@ -2483,7 +2674,7 @@ def extract_entities_llm(request):
             headers={'Content-Type': 'application/json'},
             json={
                 'messages': messages,
-                'temperature': 0.1,
+                'temperature': 0,
                 'max_tokens': 8000
             },
             timeout=120
@@ -2561,6 +2752,15 @@ def extract_entities_llm(request):
                         entity['end_word'] = None
                 else:
                     entity['end_word'] = None
+
+            # Post-processing: filter entities before first numbered finding (1.)
+            first_finding_idx = None
+            for i, w in enumerate(word_list):
+                if w == '1.':
+                    first_finding_idx = i
+                    break
+            if first_finding_idx is not None:
+                entities = [e for e in entities if e.get('start_word') is None or e['start_word'] >= first_finding_idx]
 
             # Save entities to method
             target_method['entities'] = entities
@@ -2724,7 +2924,7 @@ def extract_relations_llm(request):
             headers={'Content-Type': 'application/json'},
             json={
                 'messages': messages,
-                'temperature': 0.1,
+                'temperature': 0,
                 'max_tokens': 4000
             },
             timeout=180
@@ -2957,7 +3157,7 @@ Important:
             headers={'Content-Type': 'application/json'},
             json={
                 'messages': messages,
-                'temperature': 0.1,
+                'temperature': 0,
                 'max_tokens': 4000
             },
             timeout=180
@@ -3234,7 +3434,7 @@ def run_extraction_method(request):
             headers={'Content-Type': 'application/json'},
             json={
                 'messages': messages,
-                'temperature': 0.1,
+                'temperature': 0,
                 'max_tokens': 8000
             },
             timeout=120
@@ -4490,9 +4690,8 @@ def extract_findings(request):
         if not prompt_template:
             return JsonResponse({'success': False, 'error': 'No findings prompt template found'}, status=400)
 
-        # Create indexed report as JSON array of [word, index] tuples
-        words = report_text.split()
-        indexed_report = json.dumps([[word, i] for i, word in enumerate(words)])
+        # Create indexed report in human-readable format
+        indexed_report, words = create_indexed_report_text(report_text)
 
         # Build prompt
         prompt = prompt_template.replace('{indexed_report}', indexed_report)
@@ -4516,7 +4715,7 @@ def extract_findings(request):
             headers={'Content-Type': 'application/json'},
             json={
                 'messages': messages,
-                'temperature': 0.1,
+                'temperature': 0,
                 'max_tokens': 4000
             },
             timeout=180
@@ -4536,6 +4735,27 @@ def extract_findings(request):
                 'error': f'Failed to parse LLM response: {parse_error}',
                 'raw_response': generated_text
             }, status=400)
+
+        # Normalise to [{"observation": ["word", index]}] format
+        # LLM sometimes returns flat arrays instead of wrapped dicts
+        extraction_result = normalise_observation_format(extraction_result)
+
+        # Post-process: index correction, conclusion stripping, negation filtering
+        extraction_result = post_process_observations(extraction_result, report_text)
+
+        # Deduplicate by index (keep first occurrence)
+        seen_indices = set()
+        deduped = []
+        for obs in extraction_result:
+            observation = obs.get('observation', [])
+            if isinstance(observation, list) and len(observation) == 2:
+                idx = observation[1]
+                if idx not in seen_indices:
+                    seen_indices.add(idx)
+                    deduped.append(obs)
+            else:
+                deduped.append(obs)
+        extraction_result = deduped
 
         # Store extracted findings in entities.json
         entities_file = PROJECT_ROOT / "entities.json"
@@ -5774,7 +5994,7 @@ def calculate_all_observation_metrics(request):
                                 response = requests.post(
                                     f"{llm_service.base_url}/v1/chat/completions",
                                     headers={'Content-Type': 'application/json'},
-                                    json={'messages': messages, 'temperature': 0.1, 'max_tokens': 4000},
+                                    json={'messages': messages, 'temperature': 0, 'max_tokens': 4000},
                                     timeout=180
                                 )
 
@@ -5846,7 +6066,7 @@ def calculate_all_observation_metrics(request):
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
         with open(results_file, 'w', encoding='utf-8') as f:
-            f.write("# MedLint Test Results\n")
+            f.write("# RadCount Test Results\n")
             f.write(f"# Generated: {timestamp}\n")
             f.write(f"# Model: {current_model}\n")
             f.write(f"# Prompt: {active_prompt}\n")
@@ -6035,7 +6255,7 @@ def calculate_all_findings_metrics(request):
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
         with open(results_file, 'w', encoding='utf-8') as f:
-            f.write("# MedLint Findings Extraction Results\n")
+            f.write("# RadCount Findings Extraction Results\n")
             f.write(f"# Generated: {timestamp}\n")
             f.write(f"# Model: {current_model}\n")
             f.write(f"# Prompt: {active_prompt} ({prompt_name})\n")

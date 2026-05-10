@@ -31,6 +31,10 @@ staticfiles/
 *~
 .DS_Store
 
+# Reports and PDFs
+*.pdf
+project_report/
+
 # Environment variables
 .env
 .env.local

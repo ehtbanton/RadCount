@@ -1,9 +1,19 @@
 {
-  "active_prompt": "exp1_simplified_nodule",
+  "active_prompt": "exp3_criteria",
   "prompts": {
-    "baseline": {
-      "name": "Baseline (Clarified Labels)",
-      "description": "Current best: 89.7% accuracy, 91.9% F1",
+    "exp1_baseline": {
+      "name": "Exp 1: Baseline (Generic Labels)",
+      "description": "Generic label text, simple yes/no question. Overall F1 80.1%",
+      "template": "Does this radiology report indicate {label}?\n\nReport:\n{report_text}\n\nAnswer with ONLY \"yes\" or \"no\".",
+      "labels": {
+        "disease_progression": "Disease progression",
+        "tumour": "Tumour",
+        "nodule": "Nodule"
+      }
+    },
+    "exp2_clarified": {
+      "name": "Exp 2: Clarified Labels & Objective",
+      "description": "Operationally precise label definitions, analytical framing. Overall F1 92.0%",
       "template": "Analyze the following radiology report and determine: {label}\n\nReport:\n{report_text}\n\nBased on the report, is \"{label}\" present or applicable? Answer with ONLY \"yes\" or \"no\" (lowercase, no other text).",
       "labels": {
         "disease_progression": "Disease progression (assuming no prior comparison data implies disease progression)",
@@ -11,19 +21,19 @@
         "nodule": "Nodule (explicit mention of nodule, ignore nodes)"
       }
     },
-    "exp1_simplified_nodule": {
-      "name": "Exp 1: Simplified Nodule Label",
-      "description": "Hypothesis: 'ignore nodes' instruction confuses model, hurts recall",
-      "template": "Analyze the following radiology report and determine: {label}\n\nReport:\n{report_text}\n\nBased on the report, is \"{label}\" present or applicable? Answer with ONLY \"yes\" or \"no\" (lowercase, no other text).",
+    "exp3_criteria": {
+      "name": "Exp 3: Edge-Case Criteria",
+      "description": "Clarified labels + explicit rules for negation, uncertainty, relevance. Overall F1 92.5%",
+      "template": "Analyze the following radiology report and determine: {label}\n\nReport:\n{report_text}\n\nCRITERIA:\n- Negated findings (\"no tumour\", \"no evidence of\") count as ABSENT\n- Uncertain findings (\"possible\", \"cannot exclude\") count as PRESENT\n- The finding must be clinically relevant, not incidental mentions\n\nBased on the report, is \"{label}\" present or applicable? Answer with ONLY \"yes\" or \"no\" (lowercase, no other text).",
       "labels": {
         "disease_progression": "Disease progression (assuming no prior comparison data implies disease progression)",
         "tumour": "Tumour/mass",
-        "nodule": "Nodule (explicit mention)"
+        "nodule": "Nodule (explicit mention of nodule, ignore nodes)"
       }
     },
-    "exp2_few_shot": {
-      "name": "Exp 2: Few-Shot Examples",
-      "description": "Hypothesis: Examples help model understand task format",
+    "exp4_few_shot": {
+      "name": "Exp 4: Few-Shot Examples",
+      "description": "Two examples prepended. Severe regression to 64.1% F1 — examples set overly conservative threshold",
       "template": "Classify whether this radiology report indicates {label}.\n\nEXAMPLES:\n\nReport: \"PET FDG Whole Body. Findings: Increased FDG uptake in the known primary lung mass, now measuring 4.2cm (previously 3.1cm). New FDG-avid mediastinal lymph nodes.\"\nAnswer: yes\n\nReport: \"PET FDG Whole Body. Findings: No significant FDG uptake. The previously noted lung nodule shows no metabolic activity. Stable appearance.\"\nAnswer: no\n\nNOW CLASSIFY:\n\nReport:\n{report_text}\n\nAnswer (yes or no):",
       "labels": {
         "disease_progression": "Disease progression (assuming no prior comparison data implies disease progression)",
@@ -31,9 +41,9 @@
         "nodule": "Nodule (explicit mention of nodule, ignore nodes)"
       }
     },
-    "exp3_evidence_first": {
-      "name": "Exp 3: Evidence-First (Mild CoT)",
-      "description": "Hypothesis: Listing evidence before deciding may improve accuracy",
+    "exp5_evidence_first": {
+      "name": "Exp 5: Evidence-First (CoT)",
+      "description": "List evidence before deciding. F1 82.2%, 8x slower — deliberation errors",
       "template": "Task: Determine if this report shows {label}.\n\nReport:\n{report_text}\n\nFirst, list relevant findings (one per line, or \"None\").\nThen write: ANSWER: yes or ANSWER: no",
       "labels": {
         "disease_progression": "Disease progression (assuming no prior comparison data implies disease progression)",
@@ -41,30 +51,10 @@
         "nodule": "Nodule (explicit mention of nodule, ignore nodes)"
       }
     },
-    "exp4_json_confidence": {
-      "name": "Exp 4: JSON with Confidence",
-      "description": "Hypothesis: Structured output with confidence may improve calibration",
-      "template": "Analyze this radiology report for: {label}\n\nReport:\n{report_text}\n\nRespond with JSON:\n{\"answer\": \"yes\" or \"no\", \"confidence\": \"high/medium/low\"}",
-      "labels": {
-        "disease_progression": "Disease progression (assuming no prior comparison data implies disease progression)",
-        "tumour": "Tumour/mass",
-        "nodule": "Nodule (explicit mention of nodule, ignore nodes)"
-      }
-    },
-    "exp5_negative_prompting": {
-      "name": "Exp 5: Negative Prompting",
-      "description": "Hypothesis: Explicit 'do NOT' instructions reduce false positives",
+    "exp6_negative_prompting": {
+      "name": "Exp 6: Negative Prompting",
+      "description": "Explicit 'do NOT' instructions. Worst at 61.5% F1 — systematically conservative",
       "template": "Determine if this report mentions {label}.\n\nIMPORTANT:\n- Do NOT assume information not explicitly stated\n- Do NOT confuse similar terms (nodule vs node, mass vs lesion)\n- Do NOT answer \"yes\" unless there is clear evidence\n\nReport:\n{report_text}\n\nAnswer (yes/no):",
-      "labels": {
-        "disease_progression": "Disease progression (assuming no prior comparison data implies disease progression)",
-        "tumour": "Tumour/mass",
-        "nodule": "Nodule (explicit mention of nodule, ignore nodes)"
-      }
-    },
-    "exp6_strict_criteria": {
-      "name": "Exp 6: Strict Criteria",
-      "description": "Hypothesis: Clear rules for edge cases improve consistency",
-      "template": "Does this report contain {label}?\n\nCRITERIA:\n- The finding must be explicitly stated, not implied\n- Negated findings (e.g., \"no tumour\") count as \"no\"\n- Uncertain findings (e.g., \"possible nodule\") count as \"yes\"\n\nReport:\n{report_text}\n\nAnswer (yes/no):",
       "labels": {
         "disease_progression": "Disease progression (assuming no prior comparison data implies disease progression)",
         "tumour": "Tumour/mass",

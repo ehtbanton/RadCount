@@ -33,13 +33,20 @@ Comparison: PET/CT 03/06/2024.
 Comment:
 Marked disease progression with nodal, hepatic, osseous, pulmonary and possible intracranial metastases. MRI brain recommended for further evaluation of the left parietal lesion. The structural bone lesion at left femoral neck should be assessed for fracture risk.
 ICD10-Z087"
-DEMO003,22/01/2025,PGENW,PET FDG Whole Body,RTH00000003,"Technique: Skull base to upper thighs, 362.7 MBq of FDG injected, blood glucose 5.9 mmol per litre.
+DEMO003,22/01/2025,PGENW,PET FDG Whole Body,RTH00000003,"PET FDG Whole Body :
+Skull base to upper thighs.
+Clinical history: Non-Hodgkin lymphoma, post-chemotherapy restaging.
+Blood glucose: 6.1 mmol/l. Non-diabetic.
+Comparison: PET/CT 22/09/2024.
 
-Findings: Compared to the PET/CT scan of 14/08/2024.
-#1. There is normal physiological distribution of FDG.
-#2. No FDG-avid lymphadenopathy above or below the diaphragm.
-#3. The CT component of the scan does not demonstrate any new clinically significant abnormality.
+Findings:
+1. Previously noted FDG-avid cervical lymphadenopathy has resolved. No residual FDG-avid disease above the diaphragm.
+2. Interval reduction in size and FDG avidity of the previously noted large mediastinal mass now measuring 3.2 x 2.8 cm (previously 6.1 x 5.4 cm) with residual moderate FDG uptake (SUVmax=4.8, previously 15.2). Consistent with partial metabolic response.
+3. New mildly FDG-avid 1.4 cm left axillary lymph node (SUVmax=3.1), indeterminate and may represent reactive change versus residual disease.
+4. Persistent mildly FDG-avid splenomegaly (SUVmax=3.4), unchanged from prior study.
+5. The liver, kidneys and remaining solid organs are unremarkable. No FDG-avid skeletal lesions identified.
+6. Small bilateral pleural effusions are noted since the prior study, not significantly FDG-avid.
+7. The remainder of FDG distribution is physiological.
 
-Conclusion: No evidence of local or distant disease relapse.
-
-ICD 10 - Z080"
+Conclusion:
+Partial metabolic response of mediastinal mass. New indeterminate left axillary lymph node. Persistent splenomegaly. New small bilateral pleural effusions. Recommend clinical correlation and interval follow-up."

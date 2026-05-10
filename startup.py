@@ -550,9 +550,7 @@ def setup_llm():
     else:
         print_status("Model already downloaded")
 
-    # NOTE: Server is NOT started automatically
-    # Users must manually start the server from the web interface
-    print_status("LLM infrastructure ready. Start the server from the web interface.")
+    print_status("LLM infrastructure ready. Server will auto-start when Django loads.")
 
     return True
 

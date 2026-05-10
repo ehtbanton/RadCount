@@ -1930,10 +1930,12 @@
 
                     // Update current entry for properties system
                     currentEntry = parseInt(entryNumber);
+                    // Invalidate metrics cache for new entry
+                    cachedMatchingData = null;
+                    cachedMatchingDataTimestamp = null;
                     console.log('Entry loaded successfully, currentEntry set to:', currentEntry);
-                    renderEntities();
 
-                    // Restore activeMethodId from existing extraction methods
+                    // Restore activeMethodId from existing extraction methods BEFORE rendering
                     const entryData = getEntityEntryData(currentEntry);
                     console.log('Loading entry', currentEntry, 'entryData:', entryData);
                     console.log('entitiesData length:', entitiesData.length);
@@ -1958,6 +1960,8 @@
                     } else {
                         activeMethodId = null;
                     }
+
+                    renderEntities();
 
                     // Format the JSON data nicely for JSON view
                     jsonDisplayArea.textContent = JSON.stringify(data.data, null, 2);
@@ -3689,6 +3693,13 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
                 renderBinaryClassificationUI();
             } else if (activeAnnotationSchema === 'observations') {
                 renderSimpleObsAnnotations();
+            } else if (activeAnnotationSchema === 'entities') {
+                renderERGroundTruthEntities();
+                renderERGroundTruthRelations();
+                updateEREntityDropdowns();
+                await renderAutoExtractedEntities();
+                await renderAutoExtractedRelations();
+                await renderAutoExtractedMetrics();
             } else {
                 // Render the active tab content (triplets schema)
                 if (activeAnnotationTab === 'ground-truth') {

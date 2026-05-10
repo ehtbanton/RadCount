@@ -85,7 +85,7 @@ def correct_index(extracted_word, predicted_index, indexed_report, window=10):
 def validate_and_correct_extractions(extractions, indexed_report, threshold=0.7):
     """Validate and correct indices for a list of extractions.
 
-    Each extraction should have a 'finding' field with [word, index].
+    Each extraction should have an 'observation' field with [word, index].
 
     Returns:
         List of corrected extractions and a summary of corrections made.
@@ -96,12 +96,12 @@ def validate_and_correct_extractions(extractions, indexed_report, threshold=0.7)
 
     for extraction in extractions:
         stats["total"] += 1
-        finding = extraction.get("finding", [])
-        if not finding or len(finding) != 2:
+        observation = extraction.get("observation", [])
+        if not observation or len(observation) != 2:
             stats["failed"] += 1
             continue
 
-        word, idx = finding
+        word, idx = observation
         actual_word = index_to_word.get(idx, "")
 
         if actual_word.lower() == word.lower():
@@ -114,7 +114,7 @@ def validate_and_correct_extractions(extractions, indexed_report, threshold=0.7)
         if result["similarity"] >= threshold:
             stats["corrected"] += 1
             new_extraction = dict(extraction)
-            new_extraction["finding"] = [result["corrected_word"], result["corrected_index"]]
+            new_extraction["observation"] = [result["corrected_word"], result["corrected_index"]]
             corrected.append(new_extraction)
         else:
             stats["failed"] += 1
