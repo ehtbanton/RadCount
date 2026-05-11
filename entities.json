@@ -364,6 +364,11 @@
         "Tumour/mass": "yes",
         "Disease progression (assuming no prior comparison data implies disease progression)": "yes",
         "Nodule (explicit mention of nodule, ignore nodes)": "yes"
+      },
+      "auto_extracted": {
+        "Disease progression (assuming no prior comparison data implies disease progression)": "yes",
+        "Tumour/mass": "yes",
+        "Nodule (explicit mention of nodule, ignore nodes)": "yes"
       }
     },
     "active_schema": "radgraph",
@@ -623,6 +628,11 @@
       "ground_truth": {
         "Tumour/mass": "yes",
         "Disease progression (assuming no prior comparison data implies disease progression)": "no",
+        "Nodule (explicit mention of nodule, ignore nodes)": "no"
+      },
+      "auto_extracted": {
+        "Disease progression (assuming no prior comparison data implies disease progression)": "no",
+        "Tumour/mass": "yes",
         "Nodule (explicit mention of nodule, ignore nodes)": "no"
       }
     },

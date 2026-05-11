@@ -4314,19 +4314,15 @@ def calculate_observation_metrics(request):
         gt_observations = set()
         for annotation in ground_truth:
             obs = annotation.get('observation', [])
-            for word_pair in obs:
-                if isinstance(word_pair, list) and len(word_pair) == 2:
-                    word, idx = word_pair
-                    gt_observations.add((word.lower().strip(), idx))
+            if isinstance(obs, list) and len(obs) == 2 and isinstance(obs[0], str):
+                gt_observations.add((obs[0].lower().strip(), obs[1]))
 
         # Build observation signatures from auto-extracted
         pred_observations = set()
         for annotation in auto_extracted:
             obs = annotation.get('observation', [])
-            for word_pair in obs:
-                if isinstance(word_pair, list) and len(word_pair) == 2:
-                    word, idx = word_pair
-                    pred_observations.add((word.lower().strip(), idx))
+            if isinstance(obs, list) and len(obs) == 2 and isinstance(obs[0], str):
+                pred_observations.add((obs[0].lower().strip(), obs[1]))
 
         # Calculate metrics
         true_positives = len(gt_observations & pred_observations)
