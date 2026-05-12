@@ -267,6 +267,11 @@
             transition: background 0.2s;
         }
 
+        .word-span:not(.word-selected):hover {
+            background-color: #fef08a !important;
+            border-radius: 2px;
+        }
+
         .upload-label:hover {
             background: #2563eb;
         }
@@ -780,24 +785,15 @@
                         </div>
                     </div>
 
-                    <!-- Save Results Section -->
-                    <div id="save-results-section" style="display: none; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 15px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <div>
-                                <span style="font-size: 0.9em; font-weight: 500; color: #166534;">Version: </span>
-                                <span id="detected-version-name" style="font-size: 0.9em; font-weight: 600; color: #166534;">-</span>
-                                <span id="version-status-badge" style="display: none; margin-left: 8px; padding: 2px 8px; border-radius: 10px; font-size: 0.7em; font-weight: 500;"></span>
-                            </div>
-                            <button
-                                id="save-results-btn"
-                                onclick="saveTestResults()"
-                                style="padding: 8px 16px; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 500;"
-                            >
-                                Save to Results
-                            </button>
-                        </div>
-                        <div id="version-config-info" style="font-size: 0.75em; color: #6b7280; margin-bottom: 8px;"></div>
-                        <div id="save-results-message" style="font-size: 0.8em; color: #166534;"></div>
+                    <!-- Log Test Button -->
+                    <div id="triplet-log-test-section" style="display: none; margin-top: 10px;">
+                        <button
+                            id="triplet-log-test-btn"
+                            onclick="logTripletTest()"
+                            style="padding: 8px 16px; background: #6366f1; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 500;"
+                        >
+                            Log to Tests
+                        </button>
                     </div>
                 </div><!-- End test-evaluate-section -->
                 </div><!-- End schema-content-triplets -->
@@ -882,22 +878,15 @@
                         <div id="simple-obs-metrics-display" style="display: none; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
                         </div>
 
-                        <!-- Save Results Section -->
-                        <div id="simple-obs-save-results-section" style="display: none; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 15px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                <div>
-                                    <span style="font-size: 0.9em; font-weight: 500; color: #166534;">Version: </span>
-                                    <span id="simple-obs-detected-version-name" style="font-size: 0.9em; font-weight: 600; color: #166534;">-</span>
-                                </div>
-                                <button
-                                    id="simple-obs-save-results-btn"
-                                    onclick="saveSimpleObsTestResults()"
-                                    style="padding: 8px 16px; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 500;"
-                                >
-                                    Save to Results
-                                </button>
-                            </div>
-                            <div id="simple-obs-save-results-message" style="font-size: 0.8em; color: #166534;"></div>
+                        <!-- Log Test Button -->
+                        <div id="simple-obs-log-test-section" style="display: none; margin-top: 10px;">
+                            <button
+                                id="simple-obs-log-test-btn"
+                                onclick="logSimpleObsTest()"
+                                style="padding: 8px 16px; background: #6366f1; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 500;"
+                            >
+                                Log to Tests
+                            </button>
                         </div>
                     </div>
                 </div><!-- End schema-content-observations -->
@@ -1635,6 +1624,7 @@
         let isDraggingSelection = false; // Track if user is dragging to select
         let dragStartIndex = null; // Starting index of drag selection
         let wasDragging = false; // Track if user actually dragged (vs just clicked)
+        let tripletFillCycle = 0; // 0=obs, 1=loc, 2=props - cycles on each click/selection in triplets tab
 
         // Create word-span version of report text (always creates spans for hover highlighting)
         // If showIndices is true, also shows subscript word indices
@@ -1664,9 +1654,10 @@
         }
 
         // Highlight words in the report text by their indices
-        function highlightWordRange(startWord, endWord) {
+        function highlightWordRange(startWord, endWord, color) {
             if (startWord === null || startWord === undefined) return;
             if (endWord === null || endWord === undefined) endWord = startWord;
+            if (!color) color = '#fef08a';
 
             const textDisplayArea = document.getElementById('csv-entry-text-display');
             if (!textDisplayArea) return;
@@ -1675,7 +1666,7 @@
             for (let i = startWord; i <= endWord; i++) {
                 const span = textDisplayArea.querySelector(`.word-span[data-word-index="${i}"]`);
                 if (span) {
-                    span.style.backgroundColor = '#fef08a';  // yellow highlight
+                    span.style.backgroundColor = color;
                     span.style.borderRadius = '2px';
                 }
             }
@@ -1744,20 +1735,45 @@
                 }
             }
 
-            // Update form inputs
+            // Update form inputs based on active annotation tab
             if (selectedWordIndices.size > 0) {
                 const indices = Array.from(selectedWordIndices).sort((a, b) => a - b);
                 const startWord = indices[0];
                 const endWord = indices[indices.length - 1];
                 const selectedWords = indices.map(i => currentReportWords[i]).join(' ');
 
-                const startInput = document.getElementById('gt-entity-start-word');
-                const endInput = document.getElementById('gt-entity-end-word');
-                const textInput = document.getElementById('gt-entity-text');
+                if (activeAnnotationSchema === 'observations') {
+                    const indexInput = document.getElementById('simple-obs-index-input');
+                    if (indexInput) indexInput.value = startWord;
+                } else if (activeAnnotationSchema === 'triplets') {
+                    const obsInput = document.getElementById('obs-tokens-input');
+                    const locInput = document.getElementById('loc-tokens-input');
+                    const propsInput = document.getElementById('props-tokens-input');
 
-                if (startInput) startInput.value = startWord;
-                if (endInput) endInput.value = endWord;
-                if (textInput) textInput.value = selectedWords;
+                    if (tripletFillCycle === 0 && obsInput?.value && locInput?.value && propsInput?.value) {
+                        obsInput.value = '';
+                        locInput.value = '';
+                        propsInput.value = '';
+                    }
+
+                    const rangeStr = `${startWord}-${endWord}`;
+
+                    if (tripletFillCycle === 0 && obsInput) {
+                        obsInput.value = rangeStr;
+                    } else if (tripletFillCycle === 1 && locInput) {
+                        locInput.value = rangeStr;
+                    } else if (tripletFillCycle === 2 && propsInput) {
+                        propsInput.value = rangeStr;
+                    }
+                } else {
+                    const startInput = document.getElementById('gt-entity-start-word');
+                    const endInput = document.getElementById('gt-entity-end-word');
+                    const textInput = document.getElementById('gt-entity-text');
+
+                    if (startInput) startInput.value = startWord;
+                    if (endInput) endInput.value = endWord;
+                    if (textInput) textInput.value = selectedWords;
+                }
             }
         }
 
@@ -1833,6 +1849,11 @@
                 selectedWordIndices.clear();
                 selectedWordIndices.add(dragStartIndex);
                 updateSelectedWords();
+            }
+
+            // Advance triplet fill cycle after selection is finalized
+            if (activeAnnotationSchema === 'triplets' && selectedWordIndices.size > 0) {
+                tripletFillCycle = (tripletFillCycle + 1) % 3;
             }
 
             isDraggingSelection = false;
@@ -2704,9 +2725,16 @@
                 const range = indices.length > 0 ? [Math.min(...indices), Math.max(...indices)] : null;
                 return { text, range, words };
             } else if (Array.isArray(field) && field.length >= 2) {
-                // Old format: [text, [start, end]]
+                // Old format: [text, [start, end]] or [text, index]
                 const text = field[0] || '';
-                const range = Array.isArray(field[1]) ? field[1] : null;
+                let range;
+                if (Array.isArray(field[1])) {
+                    range = field[1];
+                } else if (typeof field[1] === 'number') {
+                    range = [field[1], field[1]];
+                } else {
+                    range = null;
+                }
                 return { text, range, words: [] };
             }
             return { text: '', range: null, words: [] };
@@ -2758,6 +2786,7 @@
         // Switch between annotation schemas (binary vs triplets vs observations vs entities)
         function switchAnnotationSchema(schemaName) {
             activeAnnotationSchema = schemaName;
+            tripletFillCycle = 0;
 
             // Update tab button styles
             const binaryTab = document.getElementById('schema-tab-binary');
@@ -4121,6 +4150,7 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
                     document.getElementById('obs-tokens-input').value = '';
                     document.getElementById('loc-tokens-input').value = '';
                     document.getElementById('props-tokens-input').value = '';
+                    tripletFillCycle = 0;
                     clearWordSelection();
                     renderAlignedAnnotations();
                 } else {
@@ -4617,8 +4647,10 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
                 if (prop.range) ranges.push({start: prop.range[0], end: prop.range[1], color: '#fef3c7'});
             });
 
-            return `<div class="annotation-row" data-index="${index}" data-ranges='${JSON.stringify(ranges)}' style="background: #eff6ff; border-radius: 4px; overflow: hidden; border-left: 3px solid #3b82f6;">
-                <div style="display: flex; align-items: center; gap: 6px; padding: 5px 8px; cursor: pointer;" onmouseenter="highlightAnnotationRanges(this.parentElement)" onmouseleave="clearWordHighlights()">
+            const highlightCalls = ranges.map(r => `highlightWordRange(${r.start}, ${r.end}, '${r.color}')`).join('; ');
+
+            return `<div class="annotation-row" data-index="${index}" style="background: #eff6ff; border-radius: 4px; overflow: hidden; border-left: 3px solid #3b82f6;">
+                <div style="display: flex; align-items: center; gap: 6px; padding: 5px 8px; cursor: pointer;" onmouseenter="${highlightCalls}" onmouseleave="clearWordHighlights()">
                     <button class="json-toggle-btn" onclick="event.stopPropagation(); toggleAnnotationJson(${index})" style="background: none; border: none; color: #6b7280; cursor: pointer; padding: 0; font-size: 0.75em; width: 14px;">▶</button>
                     <span style="color: #1d4ed8; font-weight: 500; font-size: 0.8em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px;" title="${escapeHtml(obsText)}">${escapeHtml(obsText)}</span>
                     <span style="color: #9ca3af; font-size: 0.7em;">${obsRange}</span>
@@ -4656,8 +4688,10 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
                 if (prop.range) ranges.push({start: prop.range[0], end: prop.range[1], color: '#dbeafe'});
             });
 
-            return `<div class="auto-annotation-row" data-index="${index}" data-ranges='${JSON.stringify(ranges)}' style="background: #fefce8; border-radius: 4px; overflow: hidden; border-left: 3px solid #f59e0b;">
-                <div style="display: flex; align-items: center; gap: 6px; padding: 5px 8px; cursor: pointer;" onmouseenter="highlightAutoAnnotationRanges(this.parentElement)" onmouseleave="clearWordHighlights()">
+            const autoHighlightCalls = ranges.map(r => `highlightWordRange(${r.start}, ${r.end}, '${r.color}')`).join('; ');
+
+            return `<div class="auto-annotation-row" data-index="${index}" style="background: #fefce8; border-radius: 4px; overflow: hidden; border-left: 3px solid #f59e0b;">
+                <div style="display: flex; align-items: center; gap: 6px; padding: 5px 8px; cursor: pointer;" onmouseenter="${autoHighlightCalls}" onmouseleave="clearWordHighlights()">
                     <button class="json-toggle-btn" onclick="event.stopPropagation(); toggleAutoAnnotationJson(${index})" style="background: none; border: none; color: #6b7280; cursor: pointer; padding: 0; font-size: 0.75em; width: 14px;">▶</button>
                     <span style="color: #b45309; font-weight: 500; font-size: 0.8em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px;" title="${escapeHtml(obsText)}">${escapeHtml(obsText)}</span>
                     <span style="color: #9ca3af; font-size: 0.7em;">${obsRange}</span>
@@ -4669,42 +4703,8 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
             </div>`;
         }
 
-        // Store current observation metrics for saving
-        let currentObservationMetrics = null;
-
-        // Fetch and display current version info
-        async function fetchCurrentVersionInfo() {
-            try {
-                const response = await fetch('/llm/get-current-version-info/');
-                const result = await response.json();
-
-                if (result.success) {
-                    const versionSpan = document.getElementById('detected-version-name');
-                    const badge = document.getElementById('version-status-badge');
-                    const configInfo = document.getElementById('version-config-info');
-
-                    versionSpan.textContent = result.version_name;
-
-                    if (result.is_new_version) {
-                        badge.textContent = 'NEW';
-                        badge.style.display = 'inline';
-                        badge.style.background = '#dbeafe';
-                        badge.style.color = '#1d4ed8';
-                    } else {
-                        badge.textContent = 'EXISTING';
-                        badge.style.display = 'inline';
-                        badge.style.background = '#f3f4f6';
-                        badge.style.color = '#6b7280';
-                    }
-
-                    const modelName = result.config.model || 'Unknown';
-                    const promptName = result.config.extraction_prompt || 'Unknown';
-                    configInfo.textContent = `Model: ${modelName} | Prompt: ${promptName}`;
-                }
-            } catch (error) {
-                console.error('Failed to fetch version info:', error);
-            }
-        }
+        // Store last triplet metrics data for test logging
+        let lastTripletMetricsData = null;
 
         // Calculate observation metrics (precision, recall, F1)
         async function calculateObservationMetrics() {
@@ -4731,8 +4731,6 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
 
                 if (result.success) {
                     const metrics = result.metrics;
-                    currentObservationMetrics = { entry: currentEntry, ...metrics };
-
                     // Update display
                     document.getElementById('metric-precision').textContent = metrics.precision.toFixed(4);
                     document.getElementById('metric-recall').textContent = metrics.recall.toFixed(4);
@@ -4744,15 +4742,10 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
                     document.getElementById('metric-pred-count').textContent = metrics.predicted_count;
 
                     document.getElementById('observation-metrics-display').style.display = 'block';
-                    document.getElementById('save-results-section').style.display = 'block';
                     statusSpan.textContent = 'Metrics calculated successfully';
-
-                    // Fetch and display version info
-                    await fetchCurrentVersionInfo();
                 } else {
                     statusSpan.textContent = 'Error: ' + result.error;
                     document.getElementById('observation-metrics-display').style.display = 'none';
-                    document.getElementById('save-results-section').style.display = 'none';
                 }
             } catch (error) {
                 statusSpan.textContent = 'Error: ' + error.message;
@@ -4948,20 +4941,22 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
             clearMetricsState('observation');
             updateCancelButtonVisibility('observation', false);
 
-            // Store aggregated metrics for saving
-            currentObservationMetrics = {
-                entry: 'all',
-                precision: overallPrecision,
-                recall: overallRecall,
-                f1: overallF1,
-                true_positives: totalTP,
-                false_positives: totalFP,
-                false_negatives: totalFN
+            lastTripletMetricsData = {
+                test_type: 'observation_extraction',
+                model: document.getElementById('model-select')?.value || 'unknown',
+                entries_processed: successful,
+                total_entries: successful.length,
+                metrics: {
+                    precision: overallPrecision,
+                    recall: overallRecall,
+                    f1: overallF1,
+                    true_positives: totalTP,
+                    false_positives: totalFP,
+                    false_negatives: totalFN
+                }
             };
 
-            // Show save section
-            document.getElementById('save-results-section').style.display = 'block';
-            await fetchCurrentVersionInfo();
+            document.getElementById('triplet-log-test-section').style.display = 'block';
         }
 
         // Helper to update progress bar for observation metrics
@@ -5054,50 +5049,30 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
         }
 
         // Save test results to file (version auto-detected)
-        async function saveTestResults() {
-            if (!currentObservationMetrics) {
-                alert('Please calculate metrics first');
+        async function logTripletTest() {
+            if (!lastTripletMetricsData) {
+                alert('No metrics data available. Run "Calculate Metrics" first.');
                 return;
             }
 
-            const btn = document.getElementById('save-results-btn');
-            const messageDiv = document.getElementById('save-results-message');
-            const originalText = btn.textContent;
-            btn.textContent = 'Saving...';
-            btn.disabled = true;
+            const defaultName = `Triplet Extraction - ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`;
+            const testName = prompt('Enter a name for this test:', defaultName);
+            if (!testName) return;
 
-            try {
-                const response = await fetch('/llm/save-test-results/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        results: [{
-                            entry: currentObservationMetrics.entry,
-                            precision: currentObservationMetrics.precision,
-                            recall: currentObservationMetrics.recall,
-                            f1: currentObservationMetrics.f1
-                        }]
-                    })
-                });
+            const testDescription = prompt('Enter a description (optional):', '');
 
-                const result = await response.json();
+            const testData = {
+                ...lastTripletMetricsData,
+                name: testName,
+                description: testDescription || '',
+                prompt_name: 'triplet_extraction'
+            };
 
-                if (result.success) {
-                    const versionName = result.version_info?.name || 'Unknown';
-                    messageDiv.textContent = `Saved to Version ${versionName}: ${result.message}`;
-                    messageDiv.style.color = '#166534';
-                    // Update version display
-                    document.getElementById('detected-version-name').textContent = versionName;
-                } else {
-                    messageDiv.textContent = 'Error: ' + result.error;
-                    messageDiv.style.color = '#dc2626';
-                }
-            } catch (error) {
-                messageDiv.textContent = 'Error: ' + error.message;
-                messageDiv.style.color = '#dc2626';
-            } finally {
-                btn.textContent = originalText;
-                btn.disabled = false;
+            const result = await logTest(testData);
+            if (result) {
+                alert(`Test logged successfully!\nID: ${result.id}\n\nView it in the Tests tab.`);
+            } else {
+                alert('Failed to log test. Check console for details.');
             }
         }
 
@@ -5106,7 +5081,7 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
         // Simple observations metrics calculation state
         let simpleObsMetricsRunning = false;
         let simpleObsMetricsCancelled = false;
-        let currentSimpleObsMetrics = null;
+        let lastSimpleObsMetricsData = null;
 
         // Render simple observations annotations (aligned auto-extracted and ground truth by position)
         // Data format: {observation: [word, index]}
@@ -5578,19 +5553,22 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
             clearMetricsState('simpleObs');
             updateCancelButtonVisibility('simpleObs', false);
 
-            // Store aggregated metrics for saving
-            currentSimpleObsMetrics = {
-                entry: 'all',
-                precision: overallPrecision,
-                recall: overallRecall,
-                f1: overallF1,
-                true_positives: totalTP,
-                false_positives: totalFP,
-                false_negatives: totalFN
+            lastSimpleObsMetricsData = {
+                test_type: 'observation_extraction',
+                model: document.getElementById('model-select')?.value || 'unknown',
+                entries_processed: successful,
+                total_entries: successful.length,
+                metrics: {
+                    precision: overallPrecision,
+                    recall: overallRecall,
+                    f1: overallF1,
+                    true_positives: totalTP,
+                    false_positives: totalFP,
+                    false_negatives: totalFN
+                }
             };
 
-            // Show save section
-            document.getElementById('simple-obs-save-results-section').style.display = 'block';
+            document.getElementById('simple-obs-log-test-section').style.display = 'block';
         }
 
         // Helper to update progress bar for simple observations metrics
@@ -5682,51 +5660,30 @@ Based on the report, is "{label}" present or applicable? Answer with ONLY "yes" 
             `;
         }
 
-        // Save simple observations test results
-        async function saveSimpleObsTestResults() {
-            if (!currentSimpleObsMetrics) {
-                alert('Please calculate metrics first');
+        async function logSimpleObsTest() {
+            if (!lastSimpleObsMetricsData) {
+                alert('No metrics data available. Run "Calculate Metrics" first.');
                 return;
             }
 
-            const btn = document.getElementById('simple-obs-save-results-btn');
-            const messageDiv = document.getElementById('simple-obs-save-results-message');
-            const originalText = btn.textContent;
-            btn.textContent = 'Saving...';
-            btn.disabled = true;
+            const defaultName = `Observation Extraction - ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`;
+            const testName = prompt('Enter a name for this test:', defaultName);
+            if (!testName) return;
 
-            try {
-                const response = await fetch('/llm/save-test-results/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        results: [{
-                            entry: currentSimpleObsMetrics.entry,
-                            precision: currentSimpleObsMetrics.precision,
-                            recall: currentSimpleObsMetrics.recall,
-                            f1: currentSimpleObsMetrics.f1,
-                            schema: 'observations'
-                        }]
-                    })
-                });
+            const testDescription = prompt('Enter a description (optional):', '');
 
-                const result = await response.json();
+            const testData = {
+                ...lastSimpleObsMetricsData,
+                name: testName,
+                description: testDescription || '',
+                prompt_name: 'observation_extraction'
+            };
 
-                if (result.success) {
-                    const versionName = result.version_info?.name || 'Unknown';
-                    messageDiv.textContent = `Saved to Version ${versionName}: ${result.message}`;
-                    messageDiv.style.color = '#166534';
-                    document.getElementById('simple-obs-detected-version-name').textContent = versionName;
-                } else {
-                    messageDiv.textContent = 'Error: ' + result.error;
-                    messageDiv.style.color = '#dc2626';
-                }
-            } catch (error) {
-                messageDiv.textContent = 'Error: ' + error.message;
-                messageDiv.style.color = '#dc2626';
-            } finally {
-                btn.textContent = originalText;
-                btn.disabled = false;
+            const result = await logTest(testData);
+            if (result) {
+                alert(`Test logged successfully!\nID: ${result.id}\n\nView it in the Tests tab.`);
+            } else {
+                alert('Failed to log test. Check console for details.');
             }
         }
 

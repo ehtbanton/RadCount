@@ -57,9 +57,6 @@ urlpatterns = [
     path('execute-extraction/', views.execute_extraction_function, name='execute_extraction_function'),
     # Test & Evaluation
     path('calculate-observation-metrics/', views.calculate_observation_metrics, name='calculate_observation_metrics'),
-    path('save-test-results/', views.save_test_results, name='save_test_results'),
-    path('get-test-versions/', views.get_test_versions, name='get_test_versions'),
-    path('get-current-version-info/', views.get_current_version_info, name='get_current_version_info'),
     # Findings extraction
     path('extract-findings/', views.extract_findings, name='extract_findings'),
     path('calculate-findings-metrics/', views.calculate_findings_metrics, name='calculate_findings_metrics'),
