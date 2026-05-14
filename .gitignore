@@ -31,6 +31,13 @@ staticfiles/
 *~
 .DS_Store
 
+# Extracted data (gathered at runtime)
+entities.json
+
+# Test results
+tests/
+tests.json
+
 # Reports and PDFs
 *.pdf
 project_report/

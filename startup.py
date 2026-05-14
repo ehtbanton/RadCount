@@ -1,22 +1,28 @@
 #!/usr/bin/env python3
 """
-Startup script that automatically manages virtual environment and dependencies.
-Checks requirements.txt and installs/removes packages as needed before starting Django.
-Also manages llama.cpp installation and LLM server startup.
+RadCount startup script — fully automated setup and launch.
+Handles: venv, GPU-aware PyTorch, pip dependencies, llama.cpp,
+LLM model download (with resume), Django migrations, and server launch.
+
+Can be run directly (python startup.py) or via setup.bat which
+also bootstraps Python if it's not installed.
 """
 import os
 import sys
+import re
 import subprocess
 import platform
 import zipfile
 import shutil
-import time
 import signal
 import atexit
+import json
 from pathlib import Path
-from urllib.request import urlretrieve
+from urllib.request import urlopen, Request
+from urllib.error import URLError, HTTPError
 
-# Get the project root directory
+# ─── Constants ────────────────────────────────────────────────
+
 PROJECT_ROOT = Path(__file__).parent.resolve()
 VENV_DIR = PROJECT_ROOT / "venv"
 REQUIREMENTS_FILE = PROJECT_ROOT / "requirements.txt"
@@ -24,10 +30,6 @@ LLAMA_CPP_DIR = PROJECT_ROOT / "llama_cpp"
 MODELS_DIR = PROJECT_ROOT / "llm_models"
 CONTEXT_DIR = PROJECT_ROOT / "Context"
 
-# Global variable to track llama.cpp server process
-llama_server_process = None
-
-# Platform-specific venv paths
 if sys.platform == "win32":
     VENV_PYTHON = VENV_DIR / "Scripts" / "python.exe"
     VENV_PIP = VENV_DIR / "Scripts" / "pip.exe"
@@ -35,614 +37,551 @@ else:
     VENV_PYTHON = VENV_DIR / "bin" / "python"
     VENV_PIP = VENV_DIR / "bin" / "pip"
 
+LLAMA_CPP_VERSION = "b6736"
+DEFAULT_MODEL_URL = (
+    "https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF"
+    "/resolve/main/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
+)
+DEFAULT_MODEL_FILENAME = "Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
+MIN_PYTHON = (3, 10)  # Django 5.0 requires 3.10+
+MIN_VRAM_WARNING_MB = 6000
+REQUIRED_DISK_GB = 12
 
-def print_status(message):
-    """Print a status message."""
-    print(f"[STARTUP] {message}")
+
+# ─── Output Helpers ───────────────────────────────────────────
+
+def print_status(msg):
+    print(f"  [*] {msg}")
+
+def print_success(msg):
+    print(f"  [+] {msg}")
+
+def print_warning(msg):
+    print(f"  [!] {msg}")
+
+def print_error(msg):
+    print(f"  [-] {msg}")
+
+def print_header(msg):
+    print(f"\n{'=' * 60}\n  {msg}\n{'=' * 60}")
 
 
-def check_venv_exists():
-    """Check if virtual environment exists."""
-    return VENV_DIR.exists() and VENV_PYTHON.exists()
+# ─── Pre-flight Checks ───────────────────────────────────────
 
-
-def create_venv():
-    """Create a new virtual environment."""
-    print_status("Virtual environment not found. Creating...")
-    try:
-        subprocess.run([sys.executable, "-m", "venv", str(VENV_DIR)], check=True)
-        print_status("Virtual environment created successfully.")
-        return True
-    except subprocess.CalledProcessError as e:
-        print_status(f"Failed to create virtual environment: {e}")
+def check_python_version():
+    v = sys.version_info
+    if (v.major, v.minor) < MIN_PYTHON:
+        print_error(
+            f"Python {MIN_PYTHON[0]}.{MIN_PYTHON[1]}+ required "
+            f"(found {v.major}.{v.minor}.{v.micro})"
+        )
+        print_error("Install from https://www.python.org/downloads/")
         return False
-
-
-def get_installed_packages():
-    """Get a dict of installed packages and their versions."""
-    try:
-        result = subprocess.run(
-            [str(VENV_PIP), "list", "--format=json"],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        import json
-        packages = json.loads(result.stdout)
-        return {pkg["name"].lower(): pkg["version"] for pkg in packages}
-    except Exception as e:
-        print_status(f"Error getting installed packages: {e}")
-        return {}
-
-
-def get_all_dependencies(packages):
-    """Get all dependencies (including transitive) for the given packages."""
-    try:
-        # Install the packages to ensure we have them and their deps
-        result = subprocess.run(
-            [str(VENV_PIP), "show"] + packages,
-            capture_output=True,
-            text=True,
-            check=False
-        )
-
-        all_deps = set()
-        for line in result.stdout.split('\n'):
-            if line.startswith('Requires:'):
-                deps = line.replace('Requires:', '').strip()
-                if deps:
-                    for dep in deps.split(','):
-                        all_deps.add(dep.strip().lower())
-
-        # Recursively get dependencies of dependencies
-        if all_deps:
-            nested_deps = get_all_dependencies(list(all_deps))
-            all_deps.update(nested_deps)
-
-        return all_deps
-    except Exception as e:
-        print_status(f"Error getting dependencies: {e}")
-        return set()
-
-
-def get_required_packages():
-    """Parse requirements.txt and return required packages."""
-    if not REQUIREMENTS_FILE.exists():
-        print_status("requirements.txt not found.")
-        return {}
-
-    required = {}
-    with open(REQUIREMENTS_FILE, "r") as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#"):
-                # Simple parsing - handle package names with version specifiers
-                package_name = line.split("==")[0].split(">=")[0].split("<=")[0].split(">")[0].split("<")[0].split("!=")[0].strip()
-                required[package_name.lower()] = line
-    return required
-
-
-def sync_dependencies():
-    """Synchronize installed packages with requirements.txt."""
-    print_status("Checking dependencies...")
-
-    installed = get_installed_packages()
-    required = get_required_packages()
-
-    # Filter out pip, setuptools, and wheel from comparison
-    base_packages = {"pip", "setuptools", "wheel"}
-    installed_filtered = {k: v for k, v in installed.items() if k not in base_packages}
-
-    # Find packages to install (in requirements but not installed or different version)
-    to_install = []
-    for pkg_name, pkg_spec in required.items():
-        if pkg_name not in installed:
-            to_install.append(pkg_spec)
-            print_status(f"Package '{pkg_name}' needs to be installed.")
-
-    # Install missing packages first
-    if to_install:
-        print_status(f"Installing {len(to_install)} package(s)...")
-        try:
-            subprocess.run(
-                [str(VENV_PIP), "install"] + to_install,
-                check=True
-            )
-            print_status("Packages installed successfully.")
-        except subprocess.CalledProcessError as e:
-            print_status(f"Failed to install packages: {e}")
-            return False
-
-    # Get all dependencies of required packages (including transitive deps)
-    all_required_deps = set(required.keys())
-    if required:
-        transitive_deps = get_all_dependencies(list(required.keys()))
-        all_required_deps.update(transitive_deps)
-
-    # Find packages to remove (installed but not in requirements or their dependencies)
-    to_remove = []
-    for pkg_name in installed_filtered:
-        if pkg_name not in all_required_deps:
-            to_remove.append(pkg_name)
-            print_status(f"Package '{pkg_name}' is no longer required and will be removed.")
-
-    # Remove extra packages
-    if to_remove:
-        print_status(f"Removing {len(to_remove)} package(s)...")
-        try:
-            subprocess.run(
-                [str(VENV_PIP), "uninstall", "-y"] + to_remove,
-                check=True
-            )
-            print_status("Packages removed successfully.")
-        except subprocess.CalledProcessError as e:
-            print_status(f"Failed to remove packages: {e}")
-            return False
-
-    if not to_install and not to_remove:
-        print_status("All dependencies are up to date.")
-
+    print_success(f"Python {v.major}.{v.minor}.{v.micro}")
     return True
 
 
-def run_migrations():
-    """Run Django migrations if needed."""
-    print_status("Checking for pending migrations...")
-    manage_py = PROJECT_ROOT / "manage.py"
-
-    if not manage_py.exists():
-        print_status("manage.py not found. Skipping migrations.")
-        return True
-
+def check_venv_module():
     try:
-        # Check if there are unapplied migrations
-        result = subprocess.run(
-            [str(VENV_PYTHON), str(manage_py), "showmigrations", "--plan"],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-
-        # If there are any "[ ]" (unapplied) migrations, run migrate
-        if "[ ]" in result.stdout:
-            print_status("Applying migrations...")
-            subprocess.run(
-                [str(VENV_PYTHON), str(manage_py), "migrate"],
-                check=True
-            )
-            print_status("Migrations applied successfully.")
-        else:
-            print_status("All migrations are up to date.")
-
+        import venv  # noqa: F401
         return True
-    except subprocess.CalledProcessError as e:
-        print_status(f"Migration error: {e}")
+    except ImportError:
+        print_error("Python 'venv' module not available.")
+        if platform.system() == "Linux":
+            print_error("  Debian/Ubuntu: sudo apt install python3-venv")
+            print_error("  Fedora:        sudo dnf install python3-venv")
         return False
 
 
 def detect_gpu():
-    """Detect available GPU hardware."""
-    print_status("Detecting GPU hardware...")
+    """Detect GPU type, name, VRAM, and max supported CUDA version."""
+    info = {"type": "cpu", "name": None, "vram_mb": 0, "cuda_version": None}
 
-    # Check for NVIDIA GPU
     try:
         result = subprocess.run(
-            ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
-            capture_output=True,
-            text=True,
-            timeout=5
+            ["nvidia-smi", "--query-gpu=name,memory.total",
+             "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=10,
         )
         if result.returncode == 0 and result.stdout.strip():
-            gpu_name = result.stdout.strip().split('\n')[0]
-            print_status(f"NVIDIA GPU detected: {gpu_name}")
-            return "cuda"
-    except (FileNotFoundError, subprocess.TimeoutExpired):
+            parts = [p.strip() for p in result.stdout.strip().split("\n")[0].split(",")]
+            info["name"] = parts[0] if parts else "Unknown NVIDIA GPU"
+            info["vram_mb"] = int(parts[1]) if len(parts) > 1 else 0
+            info["type"] = "cuda"
+
+            # Parse max CUDA version from nvidia-smi banner
+            header = subprocess.run(
+                ["nvidia-smi"], capture_output=True, text=True, timeout=10,
+            )
+            if header.returncode == 0:
+                m = re.search(r"CUDA Version:\s*(\d+\.\d+)", header.stdout)
+                if m:
+                    info["cuda_version"] = m.group(1)
+            return info
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
         pass
 
-    # Check for AMD GPU (basic check)
-    if platform.system() == "Linux":
-        try:
-            result = subprocess.run(
-                ["lspci"], capture_output=True, text=True, timeout=5
-            )
-            if "AMD" in result.stdout and "VGA" in result.stdout:
-                print_status("AMD GPU detected")
-                return "rocm"
-        except (FileNotFoundError, subprocess.TimeoutExpired):
-            pass
-
-    # Check for Apple Silicon
     if platform.system() == "Darwin" and platform.machine() == "arm64":
-        print_status("Apple Silicon detected")
-        return "metal"
+        info.update(type="metal", name="Apple Silicon")
+        return info
 
-    print_status("No GPU detected, using CPU")
-    return "cpu"
+    return info
 
 
-def check_llama_cpp_installed():
-    """Check if llama.cpp is already installed."""
-    if not LLAMA_CPP_DIR.exists():
+def check_disk_space():
+    free_gb = shutil.disk_usage(PROJECT_ROOT).free / (1024 ** 3)
+    if free_gb < REQUIRED_DISK_GB:
+        print_warning(
+            f"Low disk space: {free_gb:.1f} GB free "
+            f"({REQUIRED_DISK_GB} GB recommended for all downloads)"
+        )
+    else:
+        print_success(f"Disk space: {free_gb:.1f} GB free")
+
+
+# ─── Virtual Environment ─────────────────────────────────────
+
+def ensure_venv():
+    if VENV_DIR.exists() and VENV_PYTHON.exists():
+        print_success("Virtual environment found")
+        return True
+
+    print_status("Creating virtual environment...")
+    try:
+        subprocess.run(
+            [sys.executable, "-m", "venv", str(VENV_DIR)], check=True,
+        )
+        print_success("Virtual environment created")
+        return True
+    except subprocess.CalledProcessError as e:
+        print_error(f"Failed to create virtual environment: {e}")
         return False
 
-    # Check for server executable
-    if sys.platform == "win32":
-        server_exe = LLAMA_CPP_DIR / "llama-server.exe"
+
+def upgrade_pip():
+    try:
+        subprocess.run(
+            [str(VENV_PYTHON), "-m", "pip", "install", "--upgrade", "pip"],
+            capture_output=True, check=True, timeout=120,
+        )
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        pass  # non-critical
+
+
+# ─── Dependencies ─────────────────────────────────────────────
+
+def _check_torch_cuda():
+    """Return (is_installed, has_cuda, version_string)."""
+    try:
+        r = subprocess.run(
+            [str(VENV_PYTHON), "-c",
+             "import torch; print(torch.cuda.is_available()); print(torch.__version__)"],
+            capture_output=True, text=True, timeout=30,
+        )
+        if r.returncode == 0:
+            lines = r.stdout.strip().splitlines()
+            return True, lines[0].strip() == "True", lines[1].strip() if len(lines) > 1 else "?"
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        pass
+    return False, False, None
+
+
+def _pytorch_index_url(gpu_info):
+    """Pick the right PyTorch wheel index for the detected CUDA version."""
+    if gpu_info["type"] != "cuda":
+        return None  # default PyPI → CPU torch
+
+    cuda = gpu_info.get("cuda_version") or ""
+    if not cuda:
+        return "https://download.pytorch.org/whl/cu124"
+
+    major, minor = (int(x) for x in cuda.split(".")[:2])
+    if major >= 12 and minor >= 4:
+        return "https://download.pytorch.org/whl/cu124"
+    if major >= 12:
+        return "https://download.pytorch.org/whl/cu121"
+    if major == 11 and minor >= 8:
+        return "https://download.pytorch.org/whl/cu118"
+
+    print_warning(f"CUDA {cuda} is too old for GPU-accelerated PyTorch")
+    return None
+
+
+def install_torch(gpu_info):
+    installed, has_cuda, version = _check_torch_cuda()
+
+    if installed and has_cuda:
+        print_success(f"PyTorch {version} (CUDA) already installed")
+        return True
+    if installed and gpu_info["type"] != "cuda":
+        print_success(f"PyTorch {version} (CPU) already installed")
+        return True
+
+    index_url = _pytorch_index_url(gpu_info)
+
+    # If CPU torch is present but we want CUDA, remove the CPU build first
+    # so pip doesn't consider the requirement satisfied.
+    if installed and not has_cuda and index_url:
+        print_status("Replacing CPU PyTorch with CUDA build...")
+        subprocess.run(
+            [str(VENV_PIP), "uninstall", "-y", "torch"],
+            capture_output=True, check=False,
+        )
+
+    cmd = [str(VENV_PIP), "install", "torch"]
+    if index_url:
+        cmd += ["--index-url", index_url]
+        print_status("Installing PyTorch with CUDA support (may take a few minutes)...")
     else:
-        server_exe = LLAMA_CPP_DIR / "llama-server"
+        print_status("Installing PyTorch...")
 
-    return server_exe.exists()
+    try:
+        subprocess.run(cmd, check=True, timeout=600)
+        _, got_cuda, ver = _check_torch_cuda()
+        tag = " (CUDA)" if got_cuda else " (CPU)"
+        print_success(f"PyTorch {ver}{tag} installed")
+        return True
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        if index_url:
+            print_warning("CUDA install failed — falling back to CPU PyTorch...")
+            try:
+                subprocess.run(
+                    [str(VENV_PIP), "install", "torch"],
+                    check=True, timeout=600,
+                )
+                print_success("PyTorch (CPU fallback) installed")
+                return True
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+                pass
+        print_error("Failed to install PyTorch")
+        return False
 
 
-def download_llama_cpp(gpu_type):
-    """Download and install llama.cpp for the detected GPU type."""
-    print_status(f"Downloading llama.cpp ({gpu_type} build)...")
+def install_requirements():
+    if not REQUIREMENTS_FILE.exists():
+        print_warning("requirements.txt not found")
+        return True
 
-    LLAMA_CPP_DIR.mkdir(exist_ok=True)
+    print_status("Installing remaining dependencies...")
+    try:
+        subprocess.run(
+            [str(VENV_PIP), "install", "-r", str(REQUIREMENTS_FILE)],
+            check=True, timeout=600,
+        )
+        print_success("Dependencies installed")
+        return True
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+        print_error(f"Dependency install failed: {e}")
+        return False
 
-    # Determine download URL based on platform and GPU
-    # Using pre-built releases from llama.cpp GitHub (latest release: b6736)
-    base_url = "https://github.com/ggml-org/llama.cpp/releases/download/b6736"
 
+# ─── Django Migrations ────────────────────────────────────────
+
+def run_migrations():
+    manage_py = PROJECT_ROOT / "manage.py"
+    if not manage_py.exists():
+        print_warning("manage.py not found — skipping migrations")
+        return True
+    try:
+        result = subprocess.run(
+            [str(VENV_PYTHON), str(manage_py), "showmigrations", "--plan"],
+            capture_output=True, text=True, check=True,
+        )
+        if "[ ]" in result.stdout:
+            print_status("Applying database migrations...")
+            subprocess.run(
+                [str(VENV_PYTHON), str(manage_py), "migrate"], check=True,
+            )
+            print_success("Migrations applied")
+        else:
+            print_success("Database up to date")
+        return True
+    except subprocess.CalledProcessError as e:
+        print_error(f"Migration error: {e}")
+        return False
+
+
+# ─── Downloads ────────────────────────────────────────────────
+
+def download_file(url, dest_path, label=""):
+    """Download a URL to dest_path with progress and resume support.
+
+    Writes to a .partial temp file, then renames on completion so
+    interrupted downloads can resume on the next run.
+    """
+    partial = dest_path.parent / (dest_path.name + ".partial")
+
+    resume_from = 0
+    if partial.exists():
+        resume_from = partial.stat().st_size
+        print_status(f"Resuming from {resume_from / 1024 / 1024:.0f} MB...")
+
+    headers = {"User-Agent": "Mozilla/5.0 (RadCount-Setup)"}
+    if resume_from > 0:
+        headers["Range"] = f"bytes={resume_from}-"
+
+    try:
+        resp = urlopen(Request(url, headers=headers), timeout=30)
+    except HTTPError as e:
+        if e.code == 416 and resume_from > 0:
+            # Already fully downloaded
+            if dest_path.exists():
+                dest_path.unlink()
+            partial.rename(dest_path)
+            return True
+        raise
+
+    cl = resp.headers.get("Content-Length")
+    total = int(cl) + resume_from if cl else 0
+
+    downloaded = resume_from
+    last_pct = -10
+
+    with open(partial, "ab" if resume_from else "wb") as f:
+        while True:
+            chunk = resp.read(65536)
+            if not chunk:
+                break
+            f.write(chunk)
+            downloaded += len(chunk)
+            if total > 0:
+                pct = downloaded * 100 // total
+                if pct - last_pct >= 5 or downloaded >= total:
+                    mb = downloaded / (1024 * 1024)
+                    mb_total = total / (1024 * 1024)
+                    print(
+                        f"\r  [*] {label}: {pct}% "
+                        f"({mb:.0f}/{mb_total:.0f} MB)   ",
+                        end="", flush=True,
+                    )
+                    last_pct = pct
+
+    if total > 0:
+        print()  # newline after progress bar
+
+    if dest_path.exists():
+        dest_path.unlink()
+    partial.rename(dest_path)
+    return True
+
+
+# ─── LLM Infrastructure ──────────────────────────────────────
+
+def check_llama_cpp_installed():
+    if not LLAMA_CPP_DIR.exists():
+        return False
+    exe = "llama-server.exe" if sys.platform == "win32" else "llama-server"
+    return any(True for _ in LLAMA_CPP_DIR.rglob(exe))
+
+
+def _llama_cpp_url(gpu_info):
+    base = f"https://github.com/ggml-org/llama.cpp/releases/download/{LLAMA_CPP_VERSION}"
+    ver = LLAMA_CPP_VERSION
     system = platform.system()
 
     if system == "Windows":
-        if gpu_type == "cuda":
-            filename = "llama-b6736-bin-win-cuda-12.4-x64.zip"
-        else:
-            filename = "llama-b6736-bin-win-avx2-x64.zip"
-    elif system == "Linux":
-        if gpu_type == "cuda":
-            filename = "llama-b6736-bin-ubuntu-x64-cuda-cu12.4.1.zip"
-        else:
-            filename = "llama-b6736-bin-ubuntu-x64.zip"
-    elif system == "Darwin":
-        if platform.machine() == "arm64":
-            filename = "llama-b6736-bin-macos-arm64.zip"
-        else:
-            filename = "llama-b6736-bin-macos-x64.zip"
-    else:
-        print_status(f"Unsupported platform: {system}")
+        if gpu_info["type"] == "cuda":
+            return f"{base}/llama-{ver}-bin-win-cuda-12.4-x64.zip"
+        return f"{base}/llama-{ver}-bin-win-avx2-x64.zip"
+    if system == "Linux":
+        if gpu_info["type"] == "cuda":
+            return f"{base}/llama-{ver}-bin-ubuntu-x64-cuda-cu12.4.1.zip"
+        return f"{base}/llama-{ver}-bin-ubuntu-x64.zip"
+    if system == "Darwin":
+        arch = "arm64" if platform.machine() == "arm64" else "x64"
+        return f"{base}/llama-{ver}-bin-macos-{arch}.zip"
+    return None
+
+
+def download_llama_cpp(gpu_info):
+    url = _llama_cpp_url(gpu_info)
+    if not url:
+        print_error(f"No llama.cpp build for {platform.system()}")
         return False
 
-    download_url = f"{base_url}/{filename}"
+    LLAMA_CPP_DIR.mkdir(exist_ok=True)
+    filename = url.rsplit("/", 1)[-1]
     zip_path = LLAMA_CPP_DIR / filename
 
+    tag = "CUDA" if gpu_info["type"] == "cuda" else "CPU"
+    print_status(f"Downloading llama.cpp ({tag})...")
+
     try:
-        print_status(f"Downloading from {download_url}...")
-        print_status("This may take a few minutes depending on your connection...")
-        urlretrieve(download_url, zip_path)
-
-        print_status("Extracting llama.cpp...")
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(LLAMA_CPP_DIR)
-
-        # Clean up zip file
+        download_file(url, zip_path, f"llama.cpp {tag}")
+        print_status("Extracting...")
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            zf.extractall(LLAMA_CPP_DIR)
         zip_path.unlink()
 
-        # Make executables executable on Unix-like systems
-        if system != "Windows":
-            for exe in LLAMA_CPP_DIR.glob("**/*"):
-                if exe.is_file() and not exe.suffix:
-                    os.chmod(exe, 0o755)
+        if platform.system() != "Windows":
+            for f in LLAMA_CPP_DIR.rglob("*"):
+                if f.is_file() and not f.suffix:
+                    os.chmod(f, 0o755)
 
-        print_status("llama.cpp installed successfully")
+        print_success("llama.cpp installed")
         return True
-
     except Exception as e:
-        print_status(f"Failed to download llama.cpp: {e}")
+        print_error(f"llama.cpp download failed: {e}")
+        if zip_path.exists():
+            zip_path.unlink()
         return False
 
 
 def check_model_downloaded():
-    """Check if a model is already downloaded in the llm_models directory."""
-    search_dirs = [MODELS_DIR]
-
-    for models_dir in search_dirs:
-        if not models_dir.exists():
-            continue
-
-        # Check for any .gguf file (excluding mmproj files)
-        gguf_files = [f for f in models_dir.glob("*.gguf") if not f.name.startswith("mmproj")]
-        if gguf_files:
-            print_status(f"Found model: {gguf_files[0].name} in {models_dir}")
-            return True
-
+    if not MODELS_DIR.exists():
+        return False
+    gguf = [f for f in MODELS_DIR.glob("*.gguf") if not f.name.startswith("mmproj")]
+    if gguf:
+        print_success(f"Model: {gguf[0].name}")
+        return True
     return False
-
-
-def download_progress_hook(block_num, block_size, total_size):
-    """Progress callback for urlretrieve."""
-    if total_size > 0:
-        downloaded = block_num * block_size
-        percent = min(100, (downloaded / total_size) * 100)
-        if block_num % 50 == 0 or downloaded >= total_size:  # Update every 50 blocks to avoid spam
-            # Use carriage return to overwrite the same line
-            print(f"\r[STARTUP] Download progress: {percent:.1f}% ({downloaded / 1024 / 1024:.1f} MB / {total_size / 1024 / 1024:.1f} MB)", end='', flush=True)
-            # Print newline when complete
-            if downloaded >= total_size:
-                print()
 
 
 def download_model():
-    """Download a language model for inference."""
-    print_status("Downloading language model (this may take several minutes)...")
-
     MODELS_DIR.mkdir(exist_ok=True)
+    dest = MODELS_DIR / DEFAULT_MODEL_FILENAME
 
-    model_options = [
-        {
-            "url": "https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/main/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
-            "filename": "Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
-        },
-    ]
-
-    for i, model_option in enumerate(model_options, 1):
-        print_status(f"Trying model option {i}/{len(model_options)}: {model_option['filename']}...")
-
-        model_path = MODELS_DIR / model_option["filename"]
-
-        try:
-            print_status(f"Downloading {model_option['filename']}...")
-
-            import requests
-            headers = {'User-Agent': 'Mozilla/5.0'}
-
-            response = requests.get(model_option["url"], headers=headers, stream=True, timeout=30)
-            response.raise_for_status()
-
-            total_size = int(response.headers.get('content-length', 0))
-            downloaded = 0
-            block_size = 8192
-
-            with open(model_path, 'wb') as f:
-                for block_num, chunk in enumerate(response.iter_content(chunk_size=block_size)):
-                    if chunk:
-                        f.write(chunk)
-                        downloaded += len(chunk)
-                        download_progress_hook(block_num, block_size, total_size)
-
-            print_status("Model downloaded successfully")
-            return True
-
-        except Exception as e:
-            print_status(f"Failed to download model option {i}: {e}")
-            if model_path.exists():
-                model_path.unlink()
-
-            if i < len(model_options):
-                print_status("Trying next model option...")
-            else:
-                print_status("All model download attempts failed.")
-                print_status("You can manually download a .gguf model to the 'llm_models' folder")
-                return False
-
-    return False
-
-
-def get_model_path():
-    """Get the path to the downloaded model."""
-    if not MODELS_DIR.exists():
-        return None
-
-    gguf_files = list(MODELS_DIR.glob("*.gguf"))
-    if gguf_files:
-        return gguf_files[0]
-
-    return None
-
-
-def cleanup_llama_server():
-    """Cleanup function to stop llama.cpp server on exit."""
-    # Note: Server is now managed by the web interface, not by startup.py
-    # This function is kept for backward compatibility but does nothing
-    pass
-
-
-def start_llama_server(gpu_type):
-    """Start the llama.cpp server in the background."""
-    global llama_server_process
-
-    print_status("Starting llama.cpp server...")
-
-    # Get server executable path
-    if sys.platform == "win32":
-        server_exe = LLAMA_CPP_DIR / "llama-server.exe"
-        # Also check in build/bin for newer versions
-        if not server_exe.exists():
-            server_exe = LLAMA_CPP_DIR / "build" / "bin" / "llama-server.exe"
-        if not server_exe.exists():
-            # Check for the files extracted directly
-            for potential_exe in LLAMA_CPP_DIR.rglob("llama-server.exe"):
-                server_exe = potential_exe
-                break
-    else:
-        server_exe = LLAMA_CPP_DIR / "llama-server"
-        if not server_exe.exists():
-            server_exe = LLAMA_CPP_DIR / "build" / "bin" / "llama-server"
-        if not server_exe.exists():
-            for potential_exe in LLAMA_CPP_DIR.rglob("llama-server"):
-                server_exe = potential_exe
-                break
-
-    if not server_exe.exists():
-        print_status(f"llama-server executable not found at {server_exe}")
-        print_status("Server will not be started. Please check llama.cpp installation.")
-        return False
-
-    model_path = get_model_path()
-    if not model_path:
-        print_status("No model found. Server cannot start.")
-        return False
-
-    # Build command
-    cmd = [
-        str(server_exe),
-        "-m", str(model_path),
-        "--host", "127.0.0.1",
-        "--port", "8080",
-        "-c", "4096",  # context size
-        "--n-gpu-layers", "33" if gpu_type in ["cuda", "metal"] else "0",
-    ]
+    print_status(f"Downloading {DEFAULT_MODEL_FILENAME} (~4.9 GB)")
+    print_status("This will take several minutes...")
 
     try:
-        # Start server as background process
-        print_status(f"Starting server with model: {model_path.name}")
-        llama_server_process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            cwd=str(LLAMA_CPP_DIR)
-        )
-
-        # Register cleanup
-        atexit.register(cleanup_llama_server)
-
-        # Wait a bit to see if it starts successfully
-        time.sleep(5)  # Increased wait time for vision models
-
-        if llama_server_process.poll() is None:
-            print_status("llama.cpp server started successfully on http://127.0.0.1:8080")
-            return True
-        else:
-            print_status("llama.cpp server failed to start")
-            # Try to get error output
-            try:
-                stderr = llama_server_process.stderr.read().decode('utf-8', errors='ignore')
-                if stderr:
-                    print_status(f"Server error: {stderr[:500]}")
-            except:
-                pass
-            return False
-
+        download_file(DEFAULT_MODEL_URL, dest, "Model")
+        print_success("Model downloaded")
+        return True
     except Exception as e:
-        print_status(f"Failed to start llama.cpp server: {e}")
+        print_error(f"Model download failed: {e}")
+        print_status("You can manually place a .gguf model in the 'llm_models' folder")
+        print_status("Re-run this script to resume a partial download")
         return False
 
 
-def setup_llm():
-    """Setup LLM infrastructure (llama.cpp and model)."""
-    print_status("Setting up LLM infrastructure...")
+def setup_llm(gpu_info):
+    CONTEXT_DIR.mkdir(exist_ok=True)
 
-    # Create Context directory if it doesn't exist
-    if not CONTEXT_DIR.exists():
-        CONTEXT_DIR.mkdir(exist_ok=True)
-        print_status("Created Context directory")
-
-    # Detect GPU
-    gpu_type = detect_gpu()
-
-    # Check/install llama.cpp
     if not check_llama_cpp_installed():
-        print_status("llama.cpp not found, installing...")
-        if not download_llama_cpp(gpu_type):
-            print_status("Failed to install llama.cpp. Continuing without LLM support.")
+        if not download_llama_cpp(gpu_info):
             return False
     else:
-        print_status("llama.cpp already installed")
+        print_success("llama.cpp already installed")
 
-    # Check/download model
     if not check_model_downloaded():
-        print_status("Model not found, downloading language model...")
         if not download_model():
-            print_status("Failed to download model. Continuing without LLM support.")
             return False
-    else:
-        print_status("Model already downloaded")
-
-    print_status("LLM infrastructure ready. Server will auto-start when Django loads.")
 
     return True
 
 
+# ─── Django Server ────────────────────────────────────────────
+
 def cleanup_llm_server_on_exit():
-    """Stop any running LLM server when Django exits."""
     pid_file = PROJECT_ROOT / "llama_server.pid"
-
-    if pid_file.exists():
-        try:
-            with open(pid_file, 'r') as f:
-                pid = int(f.read().strip())
-
-            print_status(f"Stopping LLM server (PID: {pid})...")
-
-            if sys.platform == "win32":
-                subprocess.run(['taskkill', '/F', '/PID', str(pid)],
-                             capture_output=True, check=False)
-            else:
-                try:
-                    os.kill(pid, signal.SIGTERM)
-                except ProcessLookupError:
-                    pass
-
-            pid_file.unlink()
-            print_status("LLM server stopped.")
-        except Exception as e:
-            print_status(f"Error stopping LLM server: {e}")
+    if not pid_file.exists():
+        return
+    try:
+        pid = int(pid_file.read_text().strip())
+        print_status(f"Stopping LLM server (PID {pid})...")
+        if sys.platform == "win32":
+            subprocess.run(
+                ["taskkill", "/F", "/PID", str(pid)],
+                capture_output=True, check=False,
+            )
+        else:
+            os.kill(pid, signal.SIGTERM)
+        pid_file.unlink()
+    except (ProcessLookupError, ValueError, OSError):
+        pass
 
 
 def start_django():
-    """Start the Django development server."""
-    print_status("Starting Django development server...")
     manage_py = PROJECT_ROOT / "manage.py"
-
     if not manage_py.exists():
-        print_status("manage.py not found. Please create a Django project first.")
+        print_error("manage.py not found")
         return False
 
-    # Register cleanup handler
     atexit.register(cleanup_llm_server_on_exit)
 
-    # Also handle Ctrl+C gracefully
-    def signal_handler(sig, frame):
-        print_status("\nShutting down...")
+    def on_signal(sig, frame):
+        print("\n")
+        print_status("Shutting down...")
         cleanup_llm_server_on_exit()
         sys.exit(0)
 
-    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGINT, on_signal)
     if sys.platform != "win32":
-        signal.signal(signal.SIGTERM, signal_handler)
+        signal.signal(signal.SIGTERM, on_signal)
 
     try:
-        # Use the venv Python to run Django
+        print_success("Starting Django on http://127.0.0.1:8000")
+        print_status("LLM server will auto-start when Django loads (port 8080)")
+        print_status("Press Ctrl+C to stop\n")
         subprocess.run([str(VENV_PYTHON), str(manage_py), "runserver"], check=True)
     except subprocess.CalledProcessError as e:
-        print_status(f"Django server error: {e}")
+        print_error(f"Django error: {e}")
         return False
     except KeyboardInterrupt:
-        print_status("Server stopped by user.")
         cleanup_llm_server_on_exit()
 
     return True
 
 
+# ─── Main ─────────────────────────────────────────────────────
+
 def main():
-    """Main startup routine."""
-    print_status("Starting RadCount application...")
+    print_header("RadCount Startup")
 
-    # Step 1: Check/create virtual environment
-    if not check_venv_exists():
-        if not create_venv():
-            print_status("Setup failed. Exiting.")
-            sys.exit(1)
+    # ── Pre-flight ──
+    print_header("Pre-flight Checks")
+
+    if not check_python_version():
+        sys.exit(1)
+    if not check_venv_module():
+        sys.exit(1)
+
+    gpu_info = detect_gpu()
+    if gpu_info["type"] == "cuda":
+        vram = f"{gpu_info['vram_mb']} MB" if gpu_info["vram_mb"] else "unknown"
+        cuda = f"CUDA {gpu_info['cuda_version']}" if gpu_info["cuda_version"] else "CUDA"
+        print_success(f"GPU: {gpu_info['name']} ({vram} VRAM, {cuda})")
+        if gpu_info["vram_mb"] and gpu_info["vram_mb"] < MIN_VRAM_WARNING_MB:
+            print_warning(f"Low VRAM ({gpu_info['vram_mb']} MB). 8 GB+ recommended.")
+            print_warning("The LLM may run slowly or fail to load the default model.")
+    elif gpu_info["type"] == "metal":
+        print_success(f"GPU: {gpu_info['name']}")
     else:
-        print_status("Virtual environment found.")
+        print_warning("No GPU detected — LLM will run on CPU (much slower).")
 
-    # Step 2: Sync dependencies
-    if not sync_dependencies():
-        print_status("Dependency synchronization failed. Exiting.")
+    check_disk_space()
+
+    # ── Virtual environment ──
+    print_header("Virtual Environment")
+
+    if not ensure_venv():
+        sys.exit(1)
+    upgrade_pip()
+
+    # ── Dependencies ──
+    print_header("Dependencies")
+
+    install_torch(gpu_info)
+    if not install_requirements():
         sys.exit(1)
 
-    # Step 3: Run migrations
+    # ── Database ──
+    print_header("Database")
+
     if not run_migrations():
-        print_status("Migration failed. Exiting.")
         sys.exit(1)
 
-    # Step 4: Setup LLM infrastructure (download only, don't start server)
-    setup_llm()  # Don't exit on failure, just continue without LLM
+    # ── LLM infrastructure ──
+    print_header("LLM Infrastructure")
 
-    # Step 5: Start Django
-    print_status("Setup complete!")
+    llm_ok = setup_llm(gpu_info)
+    if not llm_ok:
+        print_warning("LLM setup incomplete — web UI will work but LLM features won't.")
+        print_warning("Re-run this script to retry downloads.")
+
+    # ── Launch ──
+    print_header("Ready")
     start_django()
 
 
